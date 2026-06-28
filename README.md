@@ -2,9 +2,9 @@
 
 > A powerful desktop application that records, transcribes, summarizes, and generates actionable items from meetings using advanced AI technology.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Python](https://img.shields.io/badge/python-3.8+-green.svg)
-![Node](https://img.shields.io/badge/node-18+-green.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Node](https://img.shields.io/badge/node-22+-green.svg)
+![JavaScript](https://img.shields.io/badge/100%25-JavaScript-yellow.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ---
@@ -52,17 +52,18 @@ screenshots/
 ### Desktop Framework
 - **Electron** - Cross-platform desktop application
 
-### Backend
-- **Python 3.8+** - Core backend runtime
-- **Flask** - Web framework
-- **Flask-SocketIO** - Real-time communication
-- **SQLAlchemy** - Database ORM
-- **SQLite** - Local database
+### Backend (100% JavaScript)
+- **Node.js 22+** - Core backend runtime
+- **Express** - Web framework
+- **Socket.IO** - Real-time communication
+- **node:sqlite** - Built-in SQLite (no native build step)
+- **SQLite** - Local database (same `data/meetings.db` file as before)
 
 ### AI Services
-- **Deepgram API** - Speech-to-text transcription
-- **Euron.one API** - GPT-4.1 mini for summarization and action item extraction
-- **Deep Translator** - Multi-language translation
+- **Deepgram / AssemblyAI** - Speech-to-text transcription (cloud)
+- **Whisper (optional)** - Local transcription via `whisper-node`
+- **OpenAI / Euron.one / Anthropic** - Summarization and action item extraction
+- **Google Translate** - Multi-language translation
 
 ### Frontend
 - **HTML/CSS/JavaScript** - UI implementation
@@ -74,9 +75,10 @@ screenshots/
 ## 📦 Installation
 
 ### Prerequisites
-- **Python 3.8+**
-- **Node.js 18+**
+- **Node.js 22+** (required for the built-in `node:sqlite` module)
 - **Git**
+
+> No Python needed — the entire backend is JavaScript.
 
 ### Step 1: Clone Repository
 ```bash
@@ -84,25 +86,18 @@ git clone https://github.com/yourusername/ai-meeting-summarizer.git
 cd ai-meeting-summarizer
 ```
 
-### Step 2: Install Python Dependencies
-```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### Step 3: Install Node Dependencies
+### Step 2: Install Dependencies
 ```bash
 npm install
 ```
+
+### Step 3 (optional): Enable Offline / Local Models
+Local Whisper transcription and local LLM summarization are opt-in (they pull
+native binaries):
+```bash
+npm install whisper-node node-llama-cpp
+```
+Then set `TRANSCRIPTION_MODEL=whisper` and/or `USE_LOCAL_MODEL=true` in `.env`.
 
 ### Step 4: Configure Environment Variables
 Create a `.env` file in the root directory:
@@ -133,8 +128,8 @@ npm start
 ```
 
 This command will:
-1. Start the Python backend on `http://127.0.0.1:5000`
-2. Launch the Electron desktop app
+1. Launch the Electron desktop app
+2. Spawn the Node backend on `http://127.0.0.1:5000` (Electron stops it on exit)
 
 ### Recording a Meeting
 
@@ -212,36 +207,48 @@ See [GOOGLE_CALENDAR_SETUP.md](GOOGLE_CALENDAR_SETUP.md) for detailed instructio
 
 ## 📁 Project Structure
 
+The backend follows a layered, DDD-style structure (modeled on the Boltic "neo"
+service): thin routes → domain services (`pkg`) → connections, with shared
+`common` utilities. It is an ESM package using `#app/*` subpath imports.
+
 ```
 ai-meeting-summarizer/
-├── backend/
-│   ├── agents/
-│   │   ├── audio_listener.py      # Audio capture + chunking
-│   │   ├── transcription.py       # Deepgram transcription
-│   │   ├── summarizer.py          # AI summarization
-│   │   ├── action_item_extractor.py
-│   │   ├── calendar_sync.py       # Google Calendar
-│   │   ├── notion_export.py       # Notion integration
-│   │   ├── jira_sync.py           # Jira integration
-│   │   └── translation.py         # Language translation
-│   ├── app.py                     # Flask backend
-│   ├── config.py                  # Configuration
-│   ├── database.py                # Database setup
-│   └── models.py                  # SQLAlchemy models
+├── backend/                          # ESM service package (#app/* imports)
+│   ├── index.js                      # Entry point — boots HTTP + Socket.IO
+│   ├── package.json                  # type:module + imports map
+│   └── app/
+│       ├── server.js                 # Express app factory (getAppServer)
+│       ├── common/
+│       │   ├── config.js             # convict schema — all env vars
+│       │   ├── constants.js          # enums, socket events, languages
+│       │   ├── logger.js
+│       │   ├── error/                # AppError + HTTP error classes
+│       │   └── utils/file.util.js    # route auto-loader helpers
+│       ├── connections/
+│       │   ├── database.js           # node:sqlite connection
+│       │   └── websocket.js          # Socket.IO + recording pipeline
+│       ├── api/
+│       │   ├── middlewares/          # asyncHandler, errorhandler, cors
+│       │   └── routes/main/          # auto-loaded route tree
+│       │       ├── root.route.js     # GET /health
+│       │       ├── api/*.route.js    # /api/meetings, /api/google, ...
+│       │       └── data/audio.route.js
+│       └── pkg/                      # domain services (service.js + validation.js)
+│           ├── meetings/  transcription/  summarizer/  extraction/
+│           ├── calendar/  notion/  jira/  translation/  system/
 ├── electron/
-│   └── main.js                    # Electron main process
+│   └── main.js                       # Electron main (audio capture + spawns backend)
 ├── frontend/
-│   ├── index.html                 # Main UI
-│   ├── app.js                     # Frontend logic
-│   └── styles.css                 # Styling
+│   ├── index.html                    # Main UI
+│   ├── app.js                        # Frontend logic
+│   └── styles.css                    # Styling
 ├── data/
-│   ├── audio/                     # Recorded audio files
-│   ├── meetings.db                # SQLite database
-│   └── google_credentials.json    # Google OAuth (if used)
-├── .env                           # Environment variables
-├── requirements.txt               # Python dependencies
-├── package.json                   # Node dependencies
-└── README.md                      # This file
+│   ├── audio/                        # Recorded audio files (WAV)
+│   ├── meetings.db                   # SQLite database
+│   └── google_credentials.json       # Google OAuth (if used)
+├── .env                              # Environment variables
+├── package.json                      # Electron app + Node dependencies
+└── README.md                         # This file
 ```
 
 ---
@@ -250,16 +257,18 @@ ai-meeting-summarizer/
 
 ### Backend Won't Start
 ```bash
-# Make sure virtual environment is activated
-venv\Scripts\activate  # Windows
-source venv/bin/activate  # macOS/Linux
+# Ensure Node 22+ (required for node:sqlite)
+node -v
 
 # Reinstall dependencies
-pip install -r requirements.txt
+npm install
+
+# Run the backend directly to see logs
+node backend/server.js
 ```
 
 ### No Meetings Showing Up
-- Wait 5 seconds after opening app (backend takes time to start)
+- The frontend retries automatically until the backend connects
 - Check if `data/meetings.db` exists
 - Recordings auto-load after first recording
 
@@ -283,13 +292,10 @@ pip install -r requirements.txt
 ## ⚙️ Configuration
 
 ### Change Live Transcription Interval
-Edit `backend/agents/audio_listener.py`:
-```python
-self.chunk_duration = 10  # Change to 5, 15, etc.
-```
+Edit `LIVE_CHUNK_MS` in `electron/main.js` (default `10000` ms).
 
 ### Customize Summary Detail Level
-Edit `backend/agents/summarizer.py` - modify the `_create_summary_prompt()` method.
+Edit `backend/app/pkg/summarizer/service.js` - modify the `_buildPrompt()` method.
 
 ### Change Database Location
 In `.env`:
@@ -303,11 +309,11 @@ DATABASE_PATH=your/custom/path/meetings.db
 
 ### Run in Debug Mode
 ```bash
-# Backend
-python backend/app.py
+# Backend only (separate terminal)
+npm run start:backend
 
-# Frontend (separate terminal)
-npm run start:electron
+# Full app
+npm start
 ```
 
 ### View Logs
@@ -351,7 +357,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Deepgram** - For excellent speech-to-text API
 - **Euron.one** - For GPT-4.1 mini access
 - **Electron** - For desktop framework
-- **Flask** - For backend framework
+- **Express & Socket.IO** - For the backend framework
 
 ---
 

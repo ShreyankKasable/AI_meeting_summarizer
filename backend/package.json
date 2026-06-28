@@ -1,0 +1,11 @@
+{
+  "name": "ai-meeting-summarizer-backend",
+  "version": "2.0.0",
+  "description": "AI Meeting Summarizer backend — neo-style layered Node.js service",
+  "type": "module",
+  "private": true,
+  "main": "index.js",
+  "imports": {
+    "#app/*.js": "./app/*.js"
+  }
+}

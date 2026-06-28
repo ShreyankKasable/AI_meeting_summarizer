@@ -1,0 +1,143 @@
+/**
+ * Application configuration (convict schema — neo style).
+ *
+ * ALL environment variables are declared here. Access values with
+ * `config.get('path.to.key')`; after validation the values are also extended
+ * onto the config object (`config.foo`) and `config.isDebug` is set, mirroring
+ * neo's `app/common/config.js`.
+ */
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import _ from 'lodash';
+import convict from 'convict';
+import dotenv from 'dotenv';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url)); // backend/app/common
+const BASE_DIR = path.join(HERE, '..', '..', '..'); // project root
+const DATA_DIR = path.join(BASE_DIR, 'data');
+const AUDIO_DIR = path.join(DATA_DIR, 'audio');
+const MODELS_DIR = path.join(BASE_DIR, 'models');
+
+dotenv.config({ path: path.join(BASE_DIR, '.env') });
+
+const config = convict({
+  node_env: {
+    doc: 'Application environment',
+    format: ['development', 'production', 'test'],
+    default: 'development',
+    env: 'NODE_ENV',
+  },
+  port: {
+    doc: 'HTTP port',
+    format: 'port',
+    default: 5000,
+    env: 'PORT',
+  },
+  host: {
+    doc: 'HTTP host',
+    format: String,
+    default: '127.0.0.1',
+    env: 'HOST',
+  },
+  secret_key: {
+    doc: 'Server secret',
+    format: String,
+    default: 'dev-secret-key-change-in-production',
+    env: 'SECRET_KEY',
+  },
+  database_path: {
+    doc: 'SQLite database file path (empty = data/meetings.db)',
+    format: String,
+    default: '',
+    env: 'DATABASE_PATH',
+  },
+  transcription_model: {
+    doc: 'Transcription backend: whisper | deepgram | assemblyai',
+    format: ['whisper', 'deepgram', 'assemblyai'],
+    default: 'whisper',
+    env: 'TRANSCRIPTION_MODEL',
+  },
+  transcription_language: {
+    doc: 'Default transcription language',
+    format: String,
+    default: 'en',
+    env: 'TRANSCRIPTION_LANGUAGE',
+  },
+  live_transcription_interval: {
+    doc: 'Live transcription chunk interval (seconds)',
+    format: 'int',
+    default: 10,
+    env: 'LIVE_TRANSCRIPTION_INTERVAL',
+  },
+  use_local_model: {
+    doc: 'Use a local LLM for summarization',
+    format: Boolean,
+    default: false,
+    env: 'USE_LOCAL_MODEL',
+  },
+  local_model_path: {
+    doc: 'Path to local .gguf model',
+    format: String,
+    default: '',
+    env: 'LOCAL_MODEL_PATH',
+  },
+  openai: {
+    api_key: { format: String, default: '', env: 'OPENAI_API_KEY', sensitive: true },
+  },
+  anthropic: {
+    api_key: { format: String, default: '', env: 'ANTHROPIC_API_KEY', sensitive: true },
+  },
+  deepgram: {
+    api_key: { format: String, default: '', env: 'DEEPGRAM_API_KEY', sensitive: true },
+  },
+  assemblyai: {
+    api_key: { format: String, default: '', env: 'ASSEMBLYAI_API_KEY', sensitive: true },
+  },
+  euron: {
+    enabled: { format: Boolean, default: false, env: 'USE_EURON_API' },
+    api_key: { format: String, default: '', env: 'EURON_API_KEY', sensitive: true },
+    api_base: { format: String, default: 'https://api.euron.one/api/v1/euri', env: 'EURON_API_BASE' },
+    model: { format: String, default: 'gpt-4.1-mini', env: 'EURON_MODEL' },
+  },
+  audio: {
+    sample_rate: { format: 'int', default: 16000, env: 'AUDIO_SAMPLE_RATE' },
+    channels: { format: 'int', default: 1, env: 'AUDIO_CHANNELS' },
+  },
+  google: {
+    client_id: { format: String, default: '', env: 'GOOGLE_CLIENT_ID' },
+    client_secret: { format: String, default: '', env: 'GOOGLE_CLIENT_SECRET' },
+    calendar_enabled: { format: Boolean, default: false, env: 'GOOGLE_CALENDAR_ENABLED' },
+    default_reminder_minutes: { format: 'int', default: 30, env: 'GOOGLE_DEFAULT_REMINDER_MINUTES' },
+  },
+  notion: {
+    enabled: { format: Boolean, default: false, env: 'NOTION_ENABLED' },
+    api_key: { format: String, default: '', env: 'NOTION_API_KEY', sensitive: true },
+    database_id: { format: String, default: '', env: 'NOTION_DATABASE_ID' },
+  },
+  jira: {
+    enabled: { format: Boolean, default: false, env: 'JIRA_ENABLED' },
+    api_url: { format: String, default: '', env: 'JIRA_API_URL' },
+    email: { format: String, default: '', env: 'JIRA_EMAIL' },
+    api_token: { format: String, default: '', env: 'JIRA_API_TOKEN', sensitive: true },
+    project_key: { format: String, default: '', env: 'JIRA_PROJECT_KEY' },
+  },
+});
+
+config.validate({ allowed: 'warn' });
+
+// Computed paths (not env-driven)
+config.set('database_path', config.get('database_path') || path.join(DATA_DIR, 'meetings.db'));
+config.set('local_model_path', config.get('local_model_path') || path.join(MODELS_DIR, 'llama-2-7b-chat.gguf'));
+
+// Ensure required directories exist
+[DATA_DIR, AUDIO_DIR, MODELS_DIR].forEach((dir) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+
+// Flatten values onto the config object and expose helpers (neo parity)
+_.extend(config, config.get());
+config.paths = { BASE_DIR, DATA_DIR, AUDIO_DIR, MODELS_DIR };
+config.isDebug = config.get('node_env') !== 'production';
+
+export default config;

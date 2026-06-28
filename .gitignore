@@ -39,6 +39,8 @@ package-lock.json
 *.db
 *.sqlite
 *.sqlite3
+*.db-wal
+*.db-shm
 data/meetings.db
 
 # Audio files

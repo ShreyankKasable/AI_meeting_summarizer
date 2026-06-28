@@ -8,6 +8,12 @@ let currentMeetingId = null;
 let recordingStartTime = null;
 let timerInterval = null;
 
+// Audio capture state (Web Audio API)
+let audioContext = null;
+let audioStream = null;
+let audioSource = null;
+let audioProcessor = null;
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     initializeNavigation();
@@ -57,16 +63,39 @@ function initializeRecording() {
     stopBtn.addEventListener('click', stopRecording);
 }
 
-function startRecording() {
+async function startRecording() {
     const titleInput = document.getElementById('meetingTitle');
     const title = titleInput.value.trim() || 'Untitled Meeting';
-    
+
     const participantsInput = document.getElementById('meetingParticipants');
     const participants = participantsInput.value.trim();
-    
-    // Send to backend
+
+    // Request microphone access and start capturing audio in the renderer.
+    try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+        showNotification('Microphone Error', 'Could not access microphone: ' + e.message);
+        return;
+    }
+
+    // Tell the backend to create the meeting record.
     ipcRenderer.send('start-recording', { title, participants });
-    
+
+    // Set up a Web Audio pipeline that streams raw PCM blocks to the main process.
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioSource = audioContext.createMediaStreamSource(audioStream);
+    audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+    ipcRenderer.send('recording-audio-start', { sampleRate: audioContext.sampleRate });
+
+    audioProcessor.onaudioprocess = (e) => {
+        const input = e.inputBuffer.getChannelData(0);
+        // Copy and transfer the underlying ArrayBuffer to the main process.
+        const copy = new Float32Array(input);
+        ipcRenderer.send('audio-chunk', copy.buffer);
+    };
+    audioSource.connect(audioProcessor);
+    audioProcessor.connect(audioContext.destination);
+
     // Update UI
     document.getElementById('startRecordBtn').disabled = true;
     document.getElementById('stopRecordBtn').disabled = false;
@@ -95,10 +124,16 @@ function stopRecording() {
         showNotification('Error', 'No active recording found');
         return;
     }
-    
-    // Send to backend
-    ipcRenderer.send('stop-recording', { meeting_id: currentMeetingId });
-    
+
+    // Tear down the audio pipeline and flush the captured WAV via the main process.
+    if (audioProcessor) { audioProcessor.disconnect(); audioProcessor.onaudioprocess = null; audioProcessor = null; }
+    if (audioSource) { audioSource.disconnect(); audioSource = null; }
+    if (audioStream) { audioStream.getTracks().forEach(t => t.stop()); audioStream = null; }
+    if (audioContext) { audioContext.close(); audioContext = null; }
+
+    // Signals main to write the full WAV and trigger the processing pipeline.
+    ipcRenderer.send('recording-audio-stop');
+
     // Update UI
     document.getElementById('startRecordBtn').disabled = false;
     document.getElementById('stopRecordBtn').disabled = true;

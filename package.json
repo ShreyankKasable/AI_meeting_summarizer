@@ -1,11 +1,11 @@
 {
   "name": "ai-meeting-summarizer",
-  "version": "1.0.0",
-  "description": "AI-powered meeting summarizer with action item tracking",
+  "version": "2.0.0",
+  "description": "AI-powered meeting summarizer with action item tracking — pure JavaScript",
   "main": "electron/main.js",
   "scripts": {
-    "start": "concurrently \"npm run start:backend\" \"npm run start:electron\"",
-    "start:backend": "venv\\Scripts\\python.exe backend/app.py",
+    "start": "electron .",
+    "start:backend": "node backend/index.js",
     "start:electron": "electron .",
     "build": "electron-builder"
   },
@@ -19,14 +19,26 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "@notionhq/client": "^2.2.15",
     "axios": "^1.6.7",
+    "compression": "^1.8.1",
+    "convict": "^6.2.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "electron-store": "^8.1.0",
-    "socket.io-client": "^4.6.1"
+    "express": "^4.19.2",
+    "googleapis": "^140.0.1",
+    "helmet": "^8.2.0",
+    "jira-client": "^8.2.2",
+    "lodash": "^4.18.1",
+    "openai": "^4.56.0",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
     "electron": "^28.2.0",
-    "electron-builder": "^24.9.1",
-    "concurrently": "^8.2.2"
+    "electron-builder": "^24.9.1"
   },
   "build": {
     "appId": "com.aimeetingsummarizer.app",
@@ -37,7 +49,8 @@
     "files": [
       "electron/**/*",
       "frontend/**/*",
-      "backend/**/*"
+      "backend/**/*",
+      "data/**/*"
     ],
     "win": {
       "target": "nsis"
@@ -50,4 +63,3 @@
     }
   }
 }
-
