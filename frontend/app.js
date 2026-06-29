@@ -1,5 +1,6 @@
-const { ipcRenderer } = require('electron');
-const axios = require('axios');
+// Resolved by bridge.js: native (Electron) or shim (browser). See frontend/bridge.js.
+const ipcRenderer = window.ipcRenderer;
+const axios = window.axios;
 
 const API_BASE_URL = 'http://127.0.0.1:5000';
 
