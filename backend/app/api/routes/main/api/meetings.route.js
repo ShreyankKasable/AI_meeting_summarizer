@@ -3,24 +3,30 @@ import multer from 'multer';
 import { expressAsyncHandler } from '#app/api/middlewares/asyncHandler.js';
 import { NotFound, UnauthorizedRequest, BadRequest } from '#app/common/error/index.js';
 import config from '#app/common/config.js';
+import { requireAuth } from '#app/api/middlewares/auth.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 import { translationService } from '#app/pkg/translation/service.js';
 import { notionService } from '#app/pkg/notion/service.js';
 import { processingService } from '#app/pkg/processing/service.js';
 import { chatbotService } from '#app/pkg/chat/service.js';
+import { sharesService } from '#app/pkg/shares/service.js';
 import { getIo } from '#app/connections/websocket.js';
 import { validateTitlePayload, validateTranslatePayload, validateChatPayload } from '#app/pkg/meetings/validation.js';
 
 const router = express.Router();
 
+router.use(requireAuth);
+
 // Validate :id once for every route below (runs before any route-specific
 // middleware, including multer) and load the meeting onto req.meeting. This
 // rejects non-numeric ids — e.g. path-traversal payloads like `4%2f..%2f..` —
-// before they ever reach the audio-upload filename builder.
+// before they ever reach the audio-upload filename builder. Also enforces
+// that the meeting belongs to the authenticated host — 404 rather than 403
+// so we don't leak the existence of other hosts' meetings.
 router.param('id', (req, res, next, value) => {
   if (!/^\d+$/.test(value)) return next(new BadRequest('Invalid meeting id'));
   const meeting = meetingsService.getMeetingById(Number(value));
-  if (!meeting) return next(new NotFound('Meeting not found'));
+  if (!meeting || meeting.host_id !== req.user.id) return next(new NotFound('Meeting not found'));
   req.meeting = meeting;
   return next();
 });
@@ -55,7 +61,7 @@ function uploadAudio (req, res, next) {
 
 // GET /api/meetings
 router.get('/', (req, res) => {
-  res.json(meetingsService.getAllMeetings());
+  res.json(meetingsService.getAllMeetings({ hostId: req.user.id }));
 });
 
 // GET /api/meetings/:id
@@ -74,6 +80,7 @@ router.post('/:id/audio', uploadAudio, expressAsyncHandler(async (req, res) => {
   if (!req.file) throw new BadRequest('No audio file uploaded');
   const result = await processingService.processRecording({
     io: getIo(),
+    hostId: req.user.id,
     meetingId: Number(req.params.id),
     audioFile: req.file.path,
   });
@@ -85,6 +92,7 @@ router.post('/:id/audio-chunk', uploadAudio, expressAsyncHandler(async (req, res
   if (!req.file) throw new BadRequest('No audio chunk uploaded');
   await processingService.processLiveChunk({
     io: getIo(),
+    hostId: req.user.id,
     meetingId: Number(req.params.id),
     chunkFile: req.file.path,
   });
@@ -136,5 +144,32 @@ router.post('/:id/export-notion', expressAsyncHandler(async (req, res) => {
   const pageId = await notionService.exportMeeting(req.meeting);
   res.json({ success: true, page_id: pageId, message: 'Meeting exported to Notion successfully' });
 }));
+
+// GET /api/meetings/:id/share — the currently active share link, if any
+router.get('/:id/share', (req, res) => {
+  res.json({ share: sharesService.getActiveShare(Number(req.params.id)) });
+});
+
+// POST /api/meetings/:id/share — create a new share link (or return the
+// existing active one if the host didn't ask to force a fresh one)
+router.post('/:id/share', (req, res) => {
+  const expiresIn = ['never', '7d', '30d'].includes(req.body?.expires_in) ? req.body.expires_in : 'never';
+  const existing = sharesService.getActiveShare(Number(req.params.id));
+  const share = existing || sharesService.createShare(Number(req.params.id), expiresIn);
+  res.json({ success: true, share });
+});
+
+// POST /api/meetings/:id/share/revoke
+router.post('/:id/share/revoke', (req, res) => {
+  sharesService.revokeShare(Number(req.params.id));
+  res.json({ success: true });
+});
+
+// POST /api/meetings/:id/share/regenerate
+router.post('/:id/share/regenerate', (req, res) => {
+  const expiresIn = ['never', '7d', '30d'].includes(req.body?.expires_in) ? req.body.expires_in : 'never';
+  const share = sharesService.regenerateShare(Number(req.params.id), expiresIn);
+  res.json({ success: true, share });
+});
 
 export default router;

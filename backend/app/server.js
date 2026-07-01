@@ -22,10 +22,10 @@ export async function getAppServer (serverType = 'main') {
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   app.use(corsHandler);
 
-  // Serve the frontend so the app can run in a browser at http://localhost:5000
-  app.use(express.static(path.join(config.paths.BASE_DIR, 'frontend')));
-  // Vendored browser libraries (axios) for the browser flow.
-  app.use('/vendor', express.static(path.join(config.paths.BASE_DIR, 'node_modules', 'axios', 'dist')));
+  // Serve the built React app (`npm run build` in frontend/) so it can run
+  // in a browser at http://localhost:5000.
+  const frontendDist = path.join(config.paths.BASE_DIR, 'frontend', 'dist');
+  app.use(express.static(frontendDist));
 
   let routes;
   try {
@@ -35,6 +35,12 @@ export async function getAppServer (serverType = 'main') {
     throw error;
   }
   if (routes) app.use(routes.default);
+
+  // SPA fallback: any non-API GET (e.g. /share/:token) serves the app shell
+  // so the client-side view switching in App.jsx can take over.
+  app.get(/^(?!\/api\/).*/, (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
 
   // 404 + error handlers
   app.use((req, res, next) => next(new NotFound(`not found: ${req.originalUrl}`)));

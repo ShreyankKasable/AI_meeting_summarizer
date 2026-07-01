@@ -1,0 +1,81 @@
+module.exports = {
+    extends: ["airbnb", "prettier"],
+    plugins: ["prettier", "react-hooks"],
+    env: {
+        commonjs: true,
+        es2021: true,
+        browser: true,
+        node: true,
+        jest: true,
+    },
+    parser: "@babel/eslint-parser",
+    parserOptions: {
+        requireConfigFile: false,
+        sourceType: "module",
+        ecmaVersion: 12,
+        ecmaFeatures: {
+            jsx: true,
+        },
+        babelOptions: {
+            presets: ["@babel/preset-react"],
+        },
+    },
+    settings: {
+        "import/resolver": {
+            node: {
+                paths: ["src"],
+                extensions: [".js", ".jsx"],
+            },
+        },
+    },
+    rules: {
+        "prettier/prettier": [
+            "error",
+            { singleQuote: false, tabWidth: 4, quoteProps: "preserve", endOfLine: "auto" },
+        ],
+        "no-underscore-dangle": "off",
+        "no-param-reassign": "off",
+        "no-console": "off",
+        "consistent-return": "off",
+        "no-restricted-syntax": "off",
+        "prefer-destructuring": "off",
+        "arrow-body-style": "off",
+        "object-shorthand": "off",
+        "no-shadow": "off",
+        "no-unused-vars": "warn",
+        "no-plusplus": "off",
+        "no-nested-ternary": "off",
+        "no-await-in-loop": "off",
+        camelcase: "off",
+
+        "import/prefer-default-export": "off",
+        "import/no-named-as-default": "off",
+        "import/first": "off",
+        "import/no-extraneous-dependencies": "off",
+        "import/no-cycle": "off",
+        "import/order": "off",
+        "import/extensions": "off",
+        "import/no-unresolved": "off",
+
+        "react/jsx-filename-extension": "off",
+        "react/prop-types": "off",
+        "react/jsx-props-no-spreading": "off",
+        "react/jsx-curly-brace-presence": "off",
+        "react/no-array-index-key": "off",
+        "react/button-has-type": "off",
+        "react/destructuring-assignment": "off",
+        "react/react-in-jsx-scope": "off",
+        "react/function-component-definition": "off",
+        "react/jsx-pascal-case": "off",
+        "react/no-unknown-property": ["error", { ignore: ["css"] }],
+
+        "react-hooks/exhaustive-deps": "off",
+        "react-hooks/rules-of-hooks": "error",
+
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/no-static-element-interactions": "off",
+        "jsx-a11y/label-has-associated-control": "off",
+        "jsx-a11y/media-has-caption": "off",
+        "jsx-a11y/alt-text": "off",
+    },
+};

@@ -12,11 +12,11 @@ const nowIso = () => new Date().toISOString();
 
 export class MeetingsService {
   // ── meetings ───────────────────────────────────────────────────────────────
-  createMeeting ({ title, startTime, participants = [] } = {}) {
+  createMeeting ({ title, startTime, participants = [], hostId = null } = {}) {
     const db = getDb();
     const info = db.prepare(
-      'INSERT INTO meetings (title, start_time, created_at) VALUES (?, ?, ?)'
-    ).run(title || 'Untitled Meeting', startTime || nowIso(), nowIso());
+      'INSERT INTO meetings (title, start_time, host_id, created_at) VALUES (?, ?, ?, ?)'
+    ).run(title || 'Untitled Meeting', startTime || nowIso(), hostId, nowIso());
 
     const meetingId = Number(info.lastInsertRowid);
 
@@ -60,9 +60,12 @@ export class MeetingsService {
     return formatMeeting(meeting, items, parts);
   }
 
-  getAllMeetings () {
+  getAllMeetings ({ hostId } = {}) {
     const db = getDb();
-    return db.prepare('SELECT * FROM meetings ORDER BY start_time DESC').all().map((m) => {
+    const rows = hostId
+      ? db.prepare('SELECT * FROM meetings WHERE host_id = ? ORDER BY start_time DESC').all(hostId)
+      : db.prepare('SELECT * FROM meetings ORDER BY start_time DESC').all();
+    return rows.map((m) => {
       const items = db.prepare('SELECT * FROM action_items WHERE meeting_id = ? ORDER BY created_at').all(m.id);
       const parts = db.prepare('SELECT * FROM participants WHERE meeting_id = ?').all(m.id);
       return formatMeeting(m, items, parts);
@@ -125,6 +128,7 @@ export class MeetingsService {
 function formatMeeting (m, actionItems = [], participants = []) {
   return {
     id: m.id,
+    host_id: m.host_id || null,
     title: m.title,
     start_time: m.start_time || null,
     end_time: m.end_time || null,

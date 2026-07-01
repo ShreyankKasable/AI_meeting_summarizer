@@ -64,11 +64,43 @@ export function initDb () {
       created_at DATETIME,
       FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      email         VARCHAR(255) NOT NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      created_at    DATETIME
+    );
+
+    CREATE TABLE IF NOT EXISTS meeting_shares (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      meeting_id INTEGER NOT NULL,
+      token      VARCHAR(64) NOT NULL UNIQUE,
+      expires_at DATETIME,
+      revoked_at DATETIME,
+      created_at DATETIME,
+      FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
+    );
   `);
   dropColumnIfExists(database, 'action_items', 'synced_to_calendar');
   dropColumnIfExists(database, 'action_items', 'synced_to_jira');
+  addColumnIfMissing(database, 'meetings', 'host_id', 'host_id INTEGER REFERENCES users(id)');
   logger.info('Database initialized successfully');
   return database;
+}
+
+// Adds a new column to an existing DB file (no-op if already present, and a
+// no-op on fresh DBs since the CREATE TABLE above doesn't need it either way).
+// Mirrors dropColumnIfExists but for ADD COLUMN.
+function addColumnIfMissing (database, table, column, ddl) {
+  const columns = database.prepare(`PRAGMA table_info(${table})`).all();
+  if (columns.some((c) => c.name === column)) return;
+  try {
+    database.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+    logger.info(`Added column ${table}.${column}`);
+  } catch (e) {
+    logger.warn(`Could not add ${table}.${column}:`, e.message);
+  }
 }
 
 // Removes a leftover column from an existing DB file (no-op on fresh DBs,

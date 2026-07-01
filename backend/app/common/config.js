@@ -41,7 +41,7 @@ const config = convict({
     env: 'HOST',
   },
   secret_key: {
-    doc: 'Server secret',
+    doc: 'Server secret / JWT signing key',
     format: String,
     default: 'dev-secret-key-change-in-production',
     env: 'SECRET_KEY',

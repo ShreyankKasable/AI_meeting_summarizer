@@ -16,21 +16,41 @@ import logger from '#app/common/logger.js';
 import { SOCKET_EVENTS } from '#app/common/constants.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 import { processingService } from '#app/pkg/processing/service.js';
+import { authService } from '#app/pkg/auth/service.js';
 
 let io = null;
+
+const hostRoom = (hostId) => `host:${hostId}`;
 
 export function setupSocket (httpServer) {
   io = new Server(httpServer, { cors: { origin: '*' } });
 
+  // Reject connections without a valid host JWT — the handshake token is the
+  // same one issued by /api/auth/login, sent as `auth: { token }`.
+  io.use((socket, next) => {
+    try {
+      const payload = authService.verifyToken(socket.handshake.auth?.token || '');
+      socket.data.hostId = payload.sub;
+      return next();
+    } catch {
+      return next(new Error('Unauthorized'));
+    }
+  });
+
   io.on('connection', (socket) => {
     logger.info('Client connected');
+    socket.join(hostRoom(socket.data.hostId));
     socket.emit(SOCKET_EVENTS.CONNECTION_STATUS, { status: 'connected' });
 
     socket.on(SOCKET_EVENTS.START_RECORDING, (data = {}) => handleStartRecording(socket, data));
     socket.on(SOCKET_EVENTS.AUDIO_CHUNK_READY, (data = {}) =>
-      processingService.processLiveChunk({ io, meetingId: data.meeting_id, chunkFile: data.chunk_file }));
+      processingService.processLiveChunk({
+        io, hostId: socket.data.hostId, meetingId: data.meeting_id, chunkFile: data.chunk_file,
+      }));
     socket.on(SOCKET_EVENTS.STOP_RECORDING, (data = {}) =>
-      processingService.processRecording({ io, meetingId: data.meeting_id, audioFile: data.audio_file }).catch(() => {}));
+      processingService.processRecording({
+        io, hostId: socket.data.hostId, meetingId: data.meeting_id, audioFile: data.audio_file,
+      }).catch(() => {}));
 
     socket.on('disconnect', () => logger.info('Client disconnected'));
   });
@@ -49,7 +69,9 @@ function handleStartRecording (socket, data) {
     ? participantsStr.split(',').map((s) => s.trim()).filter(Boolean)
     : (participantsStr || []);
 
-  const meeting = meetingsService.createMeeting({ title, startTime: new Date().toISOString(), participants });
+  const meeting = meetingsService.createMeeting({
+    title, startTime: new Date().toISOString(), participants, hostId: socket.data.hostId,
+  });
   logger.info(`Created meeting ${meeting.id} with title: ${title}`);
   socket.emit(SOCKET_EVENTS.RECORDING_STARTED, { meeting_id: meeting.id, title });
 }

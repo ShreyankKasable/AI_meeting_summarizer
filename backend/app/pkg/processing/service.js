@@ -18,8 +18,8 @@ import { summarizerService } from '#app/pkg/summarizer/service.js';
 import { extractionService } from '#app/pkg/extraction/service.js';
 
 export class ProcessingService {
-  async processRecording ({ io, meetingId, audioFile }) {
-    const emit = (event, payload) => { if (io) io.emit(event, payload); };
+  async processRecording ({ io, hostId, meetingId, audioFile }) {
+    const emit = (event, payload) => { if (io) (hostId ? io.to(`host:${hostId}`) : io).emit(event, payload); };
     logger.info(`Processing recording for meeting ${meetingId}, file: ${audioFile}`);
     try {
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.TRANSCRIBING });
@@ -49,12 +49,14 @@ export class ProcessingService {
     }
   }
 
-  async processLiveChunk ({ io, meetingId, chunkFile }) {
+  async processLiveChunk ({ io, hostId, meetingId, chunkFile }) {
     if (!chunkFile) return;
     try {
       const result = await transcriptionService.transcribe(chunkFile);
       const text = (result?.text || '').trim();
-      if (text && io) io.emit(SOCKET_EVENTS.LIVE_TRANSCRIPT_UPDATE, { meeting_id: meetingId, text });
+      if (text && io) {
+        (hostId ? io.to(`host:${hostId}`) : io).emit(SOCKET_EVENTS.LIVE_TRANSCRIPT_UPDATE, { meeting_id: meetingId, text });
+      }
     } catch (e) {
       logger.error('[LIVE] Error processing chunk:', e.message);
     } finally {
