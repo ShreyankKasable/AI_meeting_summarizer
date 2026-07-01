@@ -3,11 +3,10 @@
  * summary and action items, persists them, and broadcasts progress over
  * Socket.IO.
  *
- * Shared by the Socket.IO `stop_recording` handler (Electron desktop flow) and
- * the REST `POST /api/meetings/:id/audio` upload route (browser flow), so both
- * entry points run the exact same pipeline. Progress is broadcast with
- * `io.emit(...)` so any connected client (the Electron main relay or a browser
- * tab) receives it.
+ * Shared by the Socket.IO `stop_recording` handler and the REST
+ * `POST /api/meetings/:id/audio` upload route, so both entry points run the
+ * exact same pipeline. Progress is broadcast with `io.emit(...)` so any
+ * connected browser tab receives it.
  */
 import fs from 'node:fs';
 import path from 'node:path';

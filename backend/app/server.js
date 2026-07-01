@@ -23,7 +23,6 @@ export async function getAppServer (serverType = 'main') {
   app.use(corsHandler);
 
   // Serve the frontend so the app can run in a browser at http://localhost:5000
-  // (the Electron renderer loads the same files from disk via file://).
   app.use(express.static(path.join(config.paths.BASE_DIR, 'frontend')));
   // Vendored browser libraries (axios) for the browser flow.
   app.use('/vendor', express.static(path.join(config.paths.BASE_DIR, 'node_modules', 'axios', 'dist')));

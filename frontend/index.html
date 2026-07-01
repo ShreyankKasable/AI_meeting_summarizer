@@ -235,19 +235,9 @@
         </div>
     </div>
 
-    <!-- Detect environment: Electron (nodeIntegration) exposes require(); a browser does not. -->
-    <script>
-      window.__ELECTRON__ = (function () {
-        try { return typeof require === 'function' && !!require('electron'); } catch (e) { return false; }
-      })();
-    </script>
-    <!-- In a browser, load Socket.IO client + axios as globals (served by the backend). -->
-    <script>
-      if (!window.__ELECTRON__) {
-        document.write('<scr' + 'ipt src="/socket.io/socket.io.js"></scr' + 'ipt>');
-        document.write('<scr' + 'ipt src="/vendor/axios.min.js"></scr' + 'ipt>');
-      }
-    </script>
+    <!-- Load Socket.IO client + axios as globals (served by the backend). -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/vendor/axios.min.js"></script>
     <script src="bridge.js"></script>
     <script src="app.js"></script>
 </body>

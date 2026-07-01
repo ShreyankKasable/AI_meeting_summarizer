@@ -1,8 +1,8 @@
 /**
  * Socket.IO setup and the live recording pipeline.
  *
- * Events mirror the original Flask-SocketIO contract so the Electron main
- * process connects unchanged:
+ * Events mirror the original Flask-SocketIO contract so browser clients
+ * connect unchanged:
  *   start_recording -> recording_started
  *   audio_chunk_ready -> live_transcript_update   (10s live chunks)
  *   stop_recording -> processing_status* -> meeting_processed

@@ -1,25 +1,9 @@
 /**
- * Platform bridge — makes the same app.js run in two environments:
- *
- *   • Electron renderer (file://)  → real ipcRenderer + axios via require()
- *   • Browser (http://localhost)   → a shim that maps the same IPC channels to
- *                                     direct Socket.IO + HTTP audio upload
- *
- * After this script runs, `window.ipcRenderer` and `window.axios` are available
- * with identical shapes, so app.js doesn't care which environment it's in.
- *
- * `window.__ELECTRON__` is set by an inline bootstrap in index.html.
+ * Browser bridge — builds an ipcRenderer-compatible shim so app.js can stay
+ * written against a single `window.ipcRenderer` / `window.axios` API, mapping
+ * IPC-style channels to direct Socket.IO + HTTP audio upload calls.
  */
 (function () {
-  // ── Electron: use the native modules, behavior unchanged ────────────────────
-  if (window.__ELECTRON__) {
-    const electron = require('electron');
-    window.ipcRenderer = electron.ipcRenderer;
-    window.axios = require('axios');
-    return;
-  }
-
-  // ── Browser: build an ipcRenderer-compatible shim ───────────────────────────
   // `axios` and `io` are loaded as globals by <script> tags in index.html.
   window.axios = window.axios || axios;
   const socket = io(); // same-origin Socket.IO connection

@@ -67,10 +67,6 @@ desktop.ini
 *.swo
 *~
 
-# Electron
-out/
-dist-electron/
-
 # Testing
 .pytest_cache/
 .coverage
