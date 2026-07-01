@@ -1,5 +1,6 @@
 /**
- * Transcription service — local Whisper (optional), Deepgram, or AssemblyAI.
+ * Transcription service — local Whisper (optional), Deepgram, AssemblyAI, or
+ * the Hugging Face Inference Providers API (free-tier Whisper).
  * Returns { text, segments, language }.
  */
 import fs from 'node:fs';
@@ -34,6 +35,7 @@ export class TranscriptionService {
 
     if (this.modelType === 'deepgram') return this._deepgram(audioFile);
     if (this.modelType === 'assemblyai') return this._assemblyai(audioFile);
+    if (this.modelType === 'huggingface') return this._huggingface(audioFile);
     return this._whisper(audioFile);
   }
 
@@ -100,6 +102,31 @@ export class TranscriptionService {
       }
     } catch (e) {
       logger.error('AssemblyAI transcription error:', e.message);
+      return this._fallback(audioFile);
+    }
+  }
+
+  async _huggingface (audioFile) {
+    try {
+      const apiKey = config.get('huggingface.api_key');
+      if (!apiKey) throw new Error('HUGGINGFACE_API_KEY not configured');
+      const model = config.get('huggingface.asr_model');
+      const audioData = fs.readFileSync(audioFile);
+      const res = await axios.post(
+        `https://router.huggingface.co/hf-inference/models/${model}`,
+        audioData,
+        {
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'audio/wav', Accept: 'application/json' },
+          timeout: 60000,
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        }
+      );
+      const transcript = res.data?.text || '';
+      logger.info(`Hugging Face transcription successful: ${transcript.length} characters`);
+      return { text: transcript, segments: [], language: 'en' };
+    } catch (e) {
+      logger.error('Hugging Face transcription error:', e.response?.data ? JSON.stringify(e.response.data) : e.message);
       return this._fallback(audioFile);
     }
   }

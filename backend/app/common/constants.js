@@ -38,8 +38,6 @@ export const SOCKET_EVENTS = {
   STOP_RECORDING: 'stop_recording',
   PROCESSING_STATUS: 'processing_status',
   MEETING_PROCESSED: 'meeting_processed',
-  SYNC_ACTION_ITEMS: 'sync_action_items',
-  SYNC_COMPLETE: 'sync_complete',
   ERROR: 'error',
 };
 

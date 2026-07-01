@@ -20,9 +20,7 @@
 - 🔔 **Desktop Notifications** - Real-time notifications for all major events
 
 ### Integrations
-- 📅 **Google Calendar Sync** - Export action items as calendar events
 - 📝 **Notion Export** - Send meeting notes to Notion pages
-- 🎯 **Jira Task Sync** - Create Jira tasks from action items
 - 🌐 **Language Translation** - Translate meetings to 12+ languages
 
 ### Additional Features
@@ -48,9 +46,6 @@ screenshots/
 ---
 
 ## 🛠️ Tech Stack
-
-### Desktop Framework
-- **Electron** - Cross-platform desktop application
 
 ### Backend (100% JavaScript)
 - **Node.js 22+** - Core backend runtime
@@ -127,9 +122,8 @@ DATABASE_PATH=data/meetings.db
 npm start
 ```
 
-This command will:
-1. Launch the Electron desktop app
-2. Spawn the Node backend on `http://127.0.0.1:5000` (Electron stops it on exit)
+This starts the Node backend, which also serves the frontend, at
+`http://127.0.0.1:5000` — open that URL in a browser to use the app.
 
 ### Recording a Meeting
 
@@ -152,28 +146,11 @@ This command will:
 
 ### Syncing Tasks
 
-#### Google Calendar
-1. Go to **Settings** → **Integrations**
-2. Click **"Connect to Google"**
-3. Authorize in browser
-4. Open any meeting
-5. Click **"📅 Sync to Google Calendar"**
-
 #### Notion
 1. Get Notion API key from [notion.so/my-integrations](https://notion.so/my-integrations)
 2. Go to **Settings** → **Integrations**
 3. Enter API key in **Notion** field
 4. Click **"📝 Export to Notion"** from any meeting
-
-#### Jira
-1. Go to **Settings** → **Integrations** → **Jira**
-2. Enter:
-   - Server URL (e.g., `https://yourcompany.atlassian.net`)
-   - Email
-   - API Token
-   - Project Key
-3. Click **"Configure Jira"**
-4. Click **"🎯 Sync to Jira"** from any meeting
 
 ---
 
@@ -189,19 +166,11 @@ This command will:
 2. Get API key
 3. Add to `.env` as `EURON_API_KEY`
 
-### Google Calendar (Optional)
-See [GOOGLE_CALENDAR_SETUP.md](GOOGLE_CALENDAR_SETUP.md) for detailed instructions.
-
 ### Notion (Optional)
 1. Go to [notion.so/my-integrations](https://notion.so/my-integrations)
 2. Create new integration
 3. Copy API key
 4. Add to Settings in app
-
-### Jira (Optional)
-1. Go to Jira account settings
-2. Create API token
-3. Add credentials in Settings
 
 ---
 
@@ -231,23 +200,20 @@ ai-meeting-summarizer/
 │       │   ├── middlewares/          # asyncHandler, errorhandler, cors
 │       │   └── routes/main/          # auto-loaded route tree
 │       │       ├── root.route.js     # GET /health
-│       │       ├── api/*.route.js    # /api/meetings, /api/google, ...
+│       │       ├── api/*.route.js    # /api/meetings, /api/notion, ...
 │       │       └── data/audio.route.js
 │       └── pkg/                      # domain services (service.js + validation.js)
 │           ├── meetings/  transcription/  summarizer/  extraction/
-│           ├── calendar/  notion/  jira/  translation/  system/
-├── electron/
-│   └── main.js                       # Electron main (audio capture + spawns backend)
+│           ├── notion/  translation/  system/  chat/
 ├── frontend/
 │   ├── index.html                    # Main UI
 │   ├── app.js                        # Frontend logic
 │   └── styles.css                    # Styling
 ├── data/
 │   ├── audio/                        # Recorded audio files (WAV)
-│   ├── meetings.db                   # SQLite database
-│   └── google_credentials.json       # Google OAuth (if used)
+│   └── meetings.db                   # SQLite database
 ├── .env                              # Environment variables
-├── package.json                      # Electron app + Node dependencies
+├── package.json                      # Node dependencies
 └── README.md                         # This file
 ```
 
@@ -277,11 +243,6 @@ node backend/server.js
 - Verify internet connection
 - Look for `[LIVE]` messages in terminal
 
-### Google Calendar Sync Fails
-- Ensure `google_credentials.json` is in `data/` folder
-- Click "Connect to Google" in Settings first
-- Check Google Calendar API is enabled
-
 ### Audio Playback Not Working
 - Audio files stored in `data/audio/`
 - Check browser console for errors
@@ -292,7 +253,7 @@ node backend/server.js
 ## ⚙️ Configuration
 
 ### Change Live Transcription Interval
-Edit `LIVE_CHUNK_MS` in `electron/main.js` (default `10000` ms).
+Edit `LIVE_CHUNK_MS` in `frontend/bridge.js` (default `10000` ms).
 
 ### Customize Summary Detail Level
 Edit `backend/app/pkg/summarizer/service.js` - modify the `_buildPrompt()` method.
@@ -309,16 +270,12 @@ DATABASE_PATH=your/custom/path/meetings.db
 
 ### Run in Debug Mode
 ```bash
-# Backend only (separate terminal)
-npm run start:backend
-
-# Full app
 npm start
 ```
 
 ### View Logs
 - Backend logs: Terminal running `npm start`
-- Frontend logs: Electron DevTools (Ctrl+Shift+I)
+- Frontend logs: Browser DevTools (F12)
 
 ---
 
@@ -356,7 +313,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Deepgram** - For excellent speech-to-text API
 - **Euron.one** - For GPT-4.1 mini access
-- **Electron** - For desktop framework
 - **Express & Socket.IO** - For the backend framework
 
 ---

@@ -41,9 +41,7 @@ export function initDb () {
       due_date           DATETIME,
       priority           VARCHAR(50) DEFAULT 'medium',
       completed          BOOLEAN DEFAULT 0,
-      synced_to_calendar BOOLEAN DEFAULT 0,
       synced_to_notion   BOOLEAN DEFAULT 0,
-      synced_to_jira     BOOLEAN DEFAULT 0,
       external_id        VARCHAR(255),
       created_at         DATETIME,
       FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
@@ -57,9 +55,34 @@ export function initDb () {
       role       VARCHAR(100),
       FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      meeting_id INTEGER NOT NULL,
+      role       VARCHAR(20) NOT NULL,
+      content    TEXT NOT NULL,
+      created_at DATETIME,
+      FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
+    );
   `);
+  dropColumnIfExists(database, 'action_items', 'synced_to_calendar');
+  dropColumnIfExists(database, 'action_items', 'synced_to_jira');
   logger.info('Database initialized successfully');
   return database;
+}
+
+// Removes a leftover column from an existing DB file (no-op on fresh DBs,
+// since the CREATE TABLE above no longer defines it). Guarded with try/catch
+// since DROP COLUMN requires SQLite 3.35+.
+function dropColumnIfExists (database, table, column) {
+  const columns = database.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some((c) => c.name === column)) return;
+  try {
+    database.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
+    logger.info(`Dropped unused column ${table}.${column}`);
+  } catch (e) {
+    logger.warn(`Could not drop ${table}.${column}:`, e.message);
+  }
 }
 
 export function disconnect () {

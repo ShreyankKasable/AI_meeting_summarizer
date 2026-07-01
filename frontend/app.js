@@ -256,29 +256,100 @@ async function showMeetingDetail(meetingId) {
             <div style="max-height: 300px; overflow-y: auto; background: var(--background); padding: 1rem; border-radius: 8px;">
                 ${escapeHtml(getTranscriptText(meeting.transcript))}
             </div>
-            
+
+            <h3 class="mt-2">💬 Ask about this meeting</h3>
+            <div id="chatMessages" style="max-height: 250px; overflow-y: auto; background: var(--background); padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                <div class="loading">Loading chat...</div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="chatInput" placeholder="Ask a question about this meeting..."
+                       style="flex: 1; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background: var(--background);">
+                <button class="btn btn-primary" id="chatSendBtn">Send</button>
+            </div>
+
             <div class="mt-2">
-                <button class="btn btn-primary" onclick="syncMeetingTasks(${meetingId})">
-                    🔄 Sync to Services
-                </button>
-                <button class="btn btn-secondary" onclick="syncToGoogleCalendar(${meetingId})" style="margin-left: 0.5rem;">
-                    📅 Sync to Google Calendar
-                </button>
-                <button class="btn btn-secondary" onclick="exportToNotion(${meetingId})" style="margin-left: 0.5rem;">
+                <button class="btn btn-secondary" onclick="exportToNotion(${meetingId})">
                     📝 Export to Notion
-                </button>
-                <button class="btn btn-secondary" onclick="syncToJira(${meetingId})" style="margin-left: 0.5rem;">
-                    🎯 Sync to Jira
                 </button>
                 <button class="btn btn-secondary" onclick="showTranslationOptions(${meetingId})" style="margin-left: 0.5rem;">
                     🌐 Translate
                 </button>
             </div>
         `;
-        
+
         modal.classList.add('active');
+
+        loadChatHistory(meetingId);
+        document.getElementById('chatSendBtn').addEventListener('click', () => sendChatMessage(meetingId));
+        document.getElementById('chatInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendChatMessage(meetingId);
+        });
     } catch (error) {
         console.error('Error loading meeting detail:', error);
+    }
+}
+
+// ============ MEETING CHATBOT ============
+
+async function loadChatHistory(meetingId) {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/meetings/${meetingId}/chat`);
+        renderChatMessages(response.data);
+    } catch (error) {
+        console.error('Error loading chat history:', error);
+        const container = document.getElementById('chatMessages');
+        if (container) container.innerHTML = '<div class="loading">Failed to load chat history</div>';
+    }
+}
+
+function renderChatMessages(messages) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    if (!messages.length) {
+        container.innerHTML = '<div class="loading">Ask a question about this meeting to get started.</div>';
+        return;
+    }
+    container.innerHTML = messages.map(chatBubble).join('');
+    container.scrollTop = container.scrollHeight;
+}
+
+function chatBubble(message) {
+    const isUser = message.role === 'user';
+    return `
+        <div style="margin-bottom: 0.75rem; text-align: ${isUser ? 'right' : 'left'};">
+            <div style="display: inline-block; max-width: 80%; padding: 0.5rem 0.75rem; border-radius: 8px; background: ${isUser ? 'var(--primary-color)' : 'var(--border-color)'}; color: ${isUser ? '#fff' : 'inherit'};">
+                ${escapeHtml(message.content)}
+            </div>
+        </div>
+    `;
+}
+
+async function sendChatMessage(meetingId) {
+    const input = document.getElementById('chatInput');
+    const question = input.value.trim();
+    if (!question) return;
+
+    const container = document.getElementById('chatMessages');
+    if (container && container.querySelector('.loading')) container.innerHTML = '';
+
+    input.value = '';
+    input.disabled = true;
+    container.insertAdjacentHTML('beforeend', chatBubble({ role: 'user', content: question }));
+    container.scrollTop = container.scrollHeight;
+
+    const settings = JSON.parse(localStorage.getItem('appSettings') || '{}');
+    const provider = settings.chatProvider || '';
+
+    try {
+        const response = await axios.post(`${API_BASE_URL}/api/meetings/${meetingId}/chat`, { question, provider });
+        container.insertAdjacentHTML('beforeend', chatBubble({ role: 'assistant', content: response.data.answer }));
+        container.scrollTop = container.scrollHeight;
+    } catch (error) {
+        console.error('Error asking chatbot:', error);
+        alert('Failed to get an answer: ' + (error.response?.data?.error || error.message));
+    } finally {
+        input.disabled = false;
+        input.focus();
     }
 }
 
@@ -354,35 +425,12 @@ async function toggleActionItem(itemId) {
     }
 }
 
-function syncMeetingTasks(meetingId) {
-    const services = [];
-    
-    // Show dialog to select services
-    const selected = confirm('Sync to Google Calendar? (OK = Yes, Cancel = No)');
-    if (selected) services.push('google_calendar');
-    
-    const notionSelected = confirm('Sync to Notion? (OK = Yes, Cancel = No)');
-    if (notionSelected) services.push('notion');
-    
-    const jiraSelected = confirm('Sync to Jira? (OK = Yes, Cancel = No)');
-    if (jiraSelected) services.push('jira');
-    
-    if (services.length > 0) {
-        ipcRenderer.send('sync-tasks', { meeting_id: meetingId, services });
-        showNotification('Syncing', 'Syncing action items to selected services...');
-    }
-}
-
 // Settings
 function initializeSettings() {
     document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
-    document.getElementById('connectGoogleBtn').addEventListener('click', connectGoogleCalendar);
     document.getElementById('notionApiKey').addEventListener('blur', configureNotion);
-    document.getElementById('connectJiraBtn').addEventListener('click', configureJira);
     loadSettings();
-    checkGoogleAuthStatus();
     checkNotionStatus();
-    checkJiraStatus();
 }
 
 function loadSettings() {
@@ -395,6 +443,9 @@ function loadSettings() {
     if (settings.useLocalModel !== undefined) {
         document.getElementById('useLocalModel').checked = settings.useLocalModel;
     }
+    if (settings.chatProvider !== undefined) {
+        document.getElementById('chatProvider').value = settings.chatProvider;
+    }
     if (settings.enableNotifications !== undefined) {
         document.getElementById('enableNotifications').checked = settings.enableNotifications;
     }
@@ -404,9 +455,8 @@ function saveSettings() {
     const settings = {
         transcriptionModel: document.getElementById('transcriptionModel').value,
         useLocalModel: document.getElementById('useLocalModel').checked,
+        chatProvider: document.getElementById('chatProvider').value,
         notionApiKey: document.getElementById('notionApiKey').value,
-        jiraUrl: document.getElementById('jiraUrl').value,
-        jiraToken: document.getElementById('jiraToken').value,
         enableNotifications: document.getElementById('enableNotifications').checked
     };
     
@@ -485,13 +535,6 @@ function setupIPCListeners() {
         }, 1000);
     });
     
-    ipcRenderer.on('sync-complete', (event, data) => {
-        let message = 'Sync results:\n';
-        for (const [service, result] of Object.entries(data.results)) {
-            message += `${service}: ${result.success ? 'Success' : 'Failed'}\n`;
-        }
-        alert(message);
-    });
     
     ipcRenderer.on('new-meeting', () => {
         switchToView('recording');
@@ -734,89 +777,6 @@ async function saveMeetingTitle(meetingId) {
     }
 }
 
-// ============ GOOGLE CALENDAR SYNC ============
-
-async function checkGoogleAuthStatus() {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/api/google/auth-status`);
-        const btn = document.getElementById('connectGoogleBtn');
-        
-        if (!response.data.available) {
-            btn.textContent = '❌ Not Available';
-            btn.disabled = true;
-            btn.title = 'Google Calendar API not installed';
-        } else if (response.data.authenticated) {
-            btn.textContent = '✅ Connected';
-            btn.classList.add('btn-success');
-            btn.disabled = true;
-        } else {
-            btn.textContent = 'Connect to Google';
-            btn.classList.remove('btn-success');
-            btn.disabled = false;
-        }
-    } catch (error) {
-        console.error('Error checking Google auth status:', error);
-        const btn = document.getElementById('connectGoogleBtn');
-        // Don't disable on error - still allow connection attempt
-        btn.textContent = 'Connect to Google';
-        btn.classList.remove('btn-success');
-        btn.disabled = false;
-    }
-}
-
-async function connectGoogleCalendar() {
-    try {
-        // First check if available
-        const statusResponse = await axios.get(`${API_BASE_URL}/api/google/auth-status`);
-        if (!statusResponse.data.available) {
-            alert('Google Calendar API is not installed.\n\nTo enable this feature, restart the backend and ensure the packages are installed.');
-            return;
-        }
-        
-        const response = await axios.get(`${API_BASE_URL}/api/google/auth-url`);
-        const authUrl = response.data.auth_url;
-        
-        // Open OAuth URL in new window
-        const authWindow = window.open(authUrl, 'Google Calendar Auth', 'width=600,height=700');
-        
-        // Poll for window close
-        const pollTimer = setInterval(() => {
-            if (authWindow.closed) {
-                clearInterval(pollTimer);
-                checkGoogleAuthStatus();
-            }
-        }, 1000);
-    } catch (error) {
-        console.error('Error connecting to Google Calendar:', error);
-        alert('Failed to connect to Google Calendar: ' + (error.response?.data?.error || error.message));
-    }
-}
-
-async function syncToGoogleCalendar(meetingId) {
-    try {
-        const response = await axios.post(`${API_BASE_URL}/api/meetings/${meetingId}/sync-all-calendar`);
-        
-        if (response.data.success) {
-            alert(`Synced ${response.data.synced_count} action items to Google Calendar!`);
-            
-            if (response.data.errors.length > 0) {
-                console.error('Sync errors:', response.data.errors);
-            }
-            
-            // Reload meeting details
-            showMeetingDetail(meetingId);
-        }
-    } catch (error) {
-        console.error('Error syncing to Google Calendar:', error);
-        
-        if (error.response?.status === 401) {
-            alert('Please connect to Google Calendar first (Settings > Integrations)');
-        } else {
-            alert('Failed to sync to Google Calendar: ' + (error.response?.data?.error || error.message));
-        }
-    }
-}
-
 // ============ NOTION EXPORT ============
 
 async function checkNotionStatus() {
@@ -878,83 +838,6 @@ async function exportToNotion(meetingId) {
             alert('Please configure Notion API key first (Settings > Integrations)');
         } else {
             alert('Failed to export to Notion: ' + (error.response?.data?.error || error.message));
-        }
-    }
-}
-
-// ============ JIRA SYNC ============
-
-async function checkJiraStatus() {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/api/jira/status`);
-        updateJiraStatusUI(response.data.connected);
-    } catch (error) {
-        console.error('Error checking Jira status:', error);
-    }
-}
-
-function updateJiraStatusUI(connected) {
-    const btn = document.getElementById('connectJiraBtn');
-    if (connected) {
-        btn.textContent = '✅ Connected';
-        btn.classList.add('btn-success');
-    } else {
-        btn.textContent = 'Configure Jira';
-        btn.classList.remove('btn-success');
-    }
-}
-
-async function configureJira() {
-    const serverUrl = document.getElementById('jiraServerUrl').value.trim();
-    const email = document.getElementById('jiraEmail').value.trim();
-    const apiToken = document.getElementById('jiraApiToken').value.trim();
-    const projectKey = document.getElementById('jiraProjectKey').value.trim();
-    
-    if (!serverUrl || !email || !apiToken || !projectKey) {
-        alert('Please fill in all Jira fields');
-        return;
-    }
-    
-    try {
-        const response = await axios.post(`${API_BASE_URL}/api/jira/configure`, {
-            server_url: serverUrl,
-            email: email,
-            api_token: apiToken,
-            project_key: projectKey
-        });
-        
-        if (response.data.success) {
-            updateJiraStatusUI(true);
-            alert('Jira configured successfully!');
-        }
-    } catch (error) {
-        console.error('Error configuring Jira:', error);
-        updateJiraStatusUI(false);
-        alert('Failed to configure Jira: ' + (error.response?.data?.error || error.message));
-    }
-}
-
-async function syncToJira(meetingId) {
-    try {
-        const response = await axios.post(`${API_BASE_URL}/api/meetings/${meetingId}/sync-all-jira`);
-        
-        if (response.data.success) {
-            alert(`Synced ${response.data.synced_count} action items to Jira!`);
-            
-            if (response.data.errors.length > 0) {
-                console.error('Sync errors:', response.data.errors);
-            }
-            
-            // Reload meeting details
-            showMeetingDetail(meetingId);
-        }
-    } catch (error) {
-        console.error('Error syncing to Jira:', error);
-        
-        if (error.response?.status === 401) {
-            alert('Please configure Jira first (Settings > Integrations)');
-        } else {
-            alert('Failed to sync to Jira: ' + (error.response?.data?.error || error.message));
         }
     }
 }

@@ -5,14 +5,27 @@ import { NotFound, UnauthorizedRequest, BadRequest } from '#app/common/error/ind
 import config from '#app/common/config.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 import { translationService } from '#app/pkg/translation/service.js';
-import { calendarService } from '#app/pkg/calendar/service.js';
 import { notionService } from '#app/pkg/notion/service.js';
-import { jiraService } from '#app/pkg/jira/service.js';
 import { processingService } from '#app/pkg/processing/service.js';
+import { chatbotService } from '#app/pkg/chat/service.js';
 import { getIo } from '#app/connections/websocket.js';
-import { validateTitlePayload, validateTranslatePayload } from '#app/pkg/meetings/validation.js';
+import { validateTitlePayload, validateTranslatePayload, validateChatPayload } from '#app/pkg/meetings/validation.js';
 
 const router = express.Router();
+
+// Validate :id once for every route below (runs before any route-specific
+// middleware, including multer) and load the meeting onto req.meeting. This
+// rejects non-numeric ids — e.g. path-traversal payloads like `4%2f..%2f..` —
+// before they ever reach the audio-upload filename builder.
+router.param('id', (req, res, next, value) => {
+  if (!/^\d+$/.test(value)) return next(new BadRequest('Invalid meeting id'));
+  const meeting = meetingsService.getMeetingById(Number(value));
+  if (!meeting) return next(new NotFound('Meeting not found'));
+  req.meeting = meeting;
+  return next();
+});
+
+const MAX_AUDIO_BYTES = 200 * 1024 * 1024; // 200MB — generous headroom for a long 16kHz mono WAV
 
 // Multer storage for browser audio uploads → data/audio/<meeting|chunk>_<id>_<ts>.wav
 const audioUpload = multer({
@@ -23,7 +36,22 @@ const audioUpload = multer({
       cb(null, `${prefix}_${req.params.id}_${Date.now()}.wav`);
     },
   }),
+  limits: { fileSize: MAX_AUDIO_BYTES },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('audio/')) return cb(new BadRequest(`Unsupported file type: ${file.mimetype}`));
+    return cb(null, true);
+  },
 });
+
+// Wraps multer's callback-style middleware so its errors (bad mimetype,
+// file-too-large) become clean AppErrors instead of raw MulterErrors.
+function uploadAudio (req, res, next) {
+  audioUpload.single('audio')(req, res, (err) => {
+    if (!err) return next();
+    if (err instanceof multer.MulterError) return next(new BadRequest(err.message));
+    return next(err);
+  });
+}
 
 // GET /api/meetings
 router.get('/', (req, res) => {
@@ -31,10 +59,8 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/meetings/:id
-router.get('/:id', (req, res, next) => {
-  const meeting = meetingsService.getMeetingById(Number(req.params.id));
-  if (!meeting) return next(new NotFound('Meeting not found'));
-  return res.json(meeting);
+router.get('/:id', (req, res) => {
+  res.json(req.meeting);
 });
 
 // GET /api/meetings/:id/action-items
@@ -44,7 +70,7 @@ router.get('/:id/action-items', (req, res) => {
 
 // POST /api/meetings/:id/audio — browser flow: upload the full recording WAV,
 // then run the same processing pipeline as the desktop stop_recording path.
-router.post('/:id/audio', audioUpload.single('audio'), expressAsyncHandler(async (req, res) => {
+router.post('/:id/audio', uploadAudio, expressAsyncHandler(async (req, res) => {
   if (!req.file) throw new BadRequest('No audio file uploaded');
   const result = await processingService.processRecording({
     io: getIo(),
@@ -55,7 +81,7 @@ router.post('/:id/audio', audioUpload.single('audio'), expressAsyncHandler(async
 }));
 
 // POST /api/meetings/:id/audio-chunk — browser flow: live transcription chunk.
-router.post('/:id/audio-chunk', audioUpload.single('audio'), expressAsyncHandler(async (req, res) => {
+router.post('/:id/audio-chunk', uploadAudio, expressAsyncHandler(async (req, res) => {
   if (!req.file) throw new BadRequest('No audio chunk uploaded');
   await processingService.processLiveChunk({
     io: getIo(),
@@ -66,18 +92,14 @@ router.post('/:id/audio-chunk', audioUpload.single('audio'), expressAsyncHandler
 }));
 
 // PUT /api/meetings/:id/title
-router.put('/:id/title', validateTitlePayload, (req, res, next) => {
-  const meeting = meetingsService.getMeetingById(Number(req.params.id));
-  if (!meeting) return next(new NotFound('Meeting not found'));
+router.put('/:id/title', validateTitlePayload, (req, res) => {
   const updated = meetingsService.updateMeetingTitle(Number(req.params.id), req.body.title);
   return res.json({ success: true, meeting: updated });
 });
 
 // POST /api/meetings/:id/translate
 router.post('/:id/translate', validateTranslatePayload, expressAsyncHandler(async (req, res) => {
-  const meeting = meetingsService.getMeetingById(Number(req.params.id));
-  if (!meeting) throw new NotFound('Meeting not found');
-
+  const { meeting } = req;
   const transcriptText = meeting.transcript && typeof meeting.transcript === 'object'
     ? meeting.transcript.text || ''
     : meeting.transcript || '';
@@ -96,55 +118,23 @@ router.post('/:id/translate', validateTranslatePayload, expressAsyncHandler(asyn
   });
 }));
 
-// POST /api/meetings/:id/sync-all-calendar
-router.post('/:id/sync-all-calendar', expressAsyncHandler(async (req, res) => {
-  const meeting = meetingsService.getMeetingById(Number(req.params.id));
-  if (!meeting) throw new NotFound('Meeting not found');
-  if (!calendarService.isAuthenticated()) throw new UnauthorizedRequest('Not authenticated with Google Calendar');
+// GET /api/meetings/:id/chat — chat history for this meeting
+router.get('/:id/chat', (req, res) => {
+  res.json(chatbotService.getHistory(Number(req.params.id)));
+});
 
-  let syncedCount = 0;
-  const errors = [];
-  for (const item of meeting.action_items) {
-    if (item.synced_to_calendar) continue;
-    try {
-      const eventId = await calendarService.syncActionItem(item); // eslint-disable-line no-await-in-loop
-      meetingsService.updateActionItemSyncStatus(item.id, { calendar: true, externalId: eventId });
-      syncedCount += 1;
-    } catch (e) {
-      errors.push(`Item ${item.id}: ${e.message}`);
-    }
-  }
-  res.json({ success: true, synced_count: syncedCount, total_items: meeting.action_items.length, errors });
+// POST /api/meetings/:id/chat — ask a question; the LLM tool-calls the
+// transcript before answering.
+router.post('/:id/chat', validateChatPayload, expressAsyncHandler(async (req, res) => {
+  const answer = await chatbotService.ask(Number(req.params.id), req.body.question, req.body.provider);
+  res.json({ success: true, answer });
 }));
 
 // POST /api/meetings/:id/export-notion
 router.post('/:id/export-notion', expressAsyncHandler(async (req, res) => {
-  const meeting = meetingsService.getMeetingById(Number(req.params.id));
-  if (!meeting) throw new NotFound('Meeting not found');
   if (!notionService.isAuthenticated()) throw new UnauthorizedRequest('Notion not configured');
-  const pageId = await notionService.exportMeeting(meeting);
+  const pageId = await notionService.exportMeeting(req.meeting);
   res.json({ success: true, page_id: pageId, message: 'Meeting exported to Notion successfully' });
-}));
-
-// POST /api/meetings/:id/sync-all-jira
-router.post('/:id/sync-all-jira', expressAsyncHandler(async (req, res) => {
-  const meeting = meetingsService.getMeetingById(Number(req.params.id));
-  if (!meeting) throw new NotFound('Meeting not found');
-  if (!jiraService.isAuthenticated()) throw new UnauthorizedRequest('Jira not configured');
-
-  let syncedCount = 0;
-  const errors = [];
-  for (const item of meeting.action_items) {
-    if (item.synced_to_jira) continue;
-    try {
-      const issueKey = await jiraService.syncActionItem(item); // eslint-disable-line no-await-in-loop
-      meetingsService.updateActionItemSyncStatus(item.id, { jira: true, externalId: issueKey });
-      syncedCount += 1;
-    } catch (e) {
-      errors.push(`Item ${item.id}: ${e.message}`);
-    }
-  }
-  res.json({ success: true, synced_count: syncedCount, total_items: meeting.action_items.length, errors });
 }));
 
 export default router;

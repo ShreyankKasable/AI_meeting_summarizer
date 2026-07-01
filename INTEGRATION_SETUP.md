@@ -6,57 +6,6 @@ All integrations are configured in the `.env` file. Configure once and use forev
 
 ---
 
-## 📅 Google Calendar Integration
-
-### What You Can Do:
-- ✅ Create calendar events from action items
-- ✅ Set automatic reminders
-- ✅ Sync task deadlines
-- ✅ Update event status when tasks complete
-
-### Setup Steps:
-
-1. **Go to Google Cloud Console**
-   ```
-   https://console.cloud.google.com/
-   ```
-
-2. **Create/Select Project**
-   - Click "Select a project" → "New Project"
-   - Name it: "AI Meeting Summarizer"
-   - Click "Create"
-
-3. **Enable Google Calendar API**
-   - Go to "APIs & Services" → "Library"
-   - Search for "Google Calendar API"
-   - Click "Enable"
-
-4. **Create OAuth Credentials**
-   - Go to "APIs & Services" → "Credentials"
-   - Click "+ CREATE CREDENTIALS" → "OAuth client ID"
-   - Application type: "Desktop app"
-   - Name: "AI Meeting Summarizer"
-   - Click "Create"
-
-5. **Download Credentials**
-   - Click the download button (⬇️) next to your OAuth client
-   - Save as `google_credentials.json`
-   - Move it to: `data/google_credentials.json`
-
-6. **Configure .env**
-   ```env
-   GOOGLE_CALENDAR_ENABLED=true
-   GOOGLE_DEFAULT_REMINDER_MINUTES=30
-   GOOGLE_CREATE_ALL_DAY_EVENTS=false
-   ```
-
-7. **First Time Use**
-   - Click "Connect to Google" in app settings
-   - Authorize in browser
-   - Done! Now you can sync action items to Calendar
-
----
-
 ## 📝 Notion Integration
 
 ### What You Can Do:
@@ -105,59 +54,6 @@ All integrations are configured in the `.env` file. Configure once and use forev
 7. **Use It**
    - Click "📝 Export to Notion" from any meeting
    - View your meeting in Notion!
-
----
-
-## 🎯 Jira Integration
-
-### What You Can Do:
-- ✅ Create Jira tasks from action items
-- ✅ Auto-assign to team members
-- ✅ Set priority levels (High/Medium/Low)
-- ✅ Link tasks to meeting notes
-- ✅ Update task status
-
-### Setup Steps:
-
-1. **Create Jira API Token**
-   ```
-   https://id.atlassian.com/manage-profile/security/api-tokens
-   ```
-
-2. **Click "Create API token"**
-   - Label: "AI Meeting Summarizer"
-   - Click "Create"
-   - Copy the token immediately!
-
-3. **Get Your Jira Details**
-   - **Server URL**: Your Jira site (e.g., `https://yourcompany.atlassian.net`)
-   - **Email**: Your Jira account email
-   - **Project Key**: Go to your project → Settings → Details → Key
-
-4. **Configure .env**
-   ```env
-   JIRA_ENABLED=true
-   JIRA_API_URL=https://yourcompany.atlassian.net
-   JIRA_EMAIL=your.email@company.com
-   JIRA_API_TOKEN=your_api_token_here
-   JIRA_PROJECT_KEY=PROJ
-   JIRA_DEFAULT_ISSUE_TYPE=Task
-   JIRA_DEFAULT_PRIORITY=Medium
-   JIRA_AUTO_ASSIGN=true
-   ```
-
-5. **Advanced Settings (Optional)**
-   ```env
-   JIRA_PRIORITY_HIGH=High
-   JIRA_PRIORITY_MEDIUM=Medium
-   JIRA_PRIORITY_LOW=Low
-   JIRA_LABEL_PREFIX=meeting-
-   JIRA_ADD_MEETING_LINK=true
-   ```
-
-6. **Use It**
-   - Click "🎯 Sync to Jira" from any meeting
-   - All action items become Jira tasks!
 
 ---
 
@@ -308,40 +204,19 @@ OPENAI_API_KEY=sk-your-key-here
 # AI
 OPENAI_API_KEY=sk-your-key-here
 
-# Google Calendar
-GOOGLE_CALENDAR_ENABLED=true
-
 # Notion
 NOTION_ENABLED=true
 NOTION_API_KEY=secret_your-token
-
-# Jira
-JIRA_ENABLED=true
-JIRA_API_URL=https://yourcompany.atlassian.net
-JIRA_EMAIL=you@company.com
-JIRA_API_TOKEN=your-token
-JIRA_PROJECT_KEY=PROJ
 ```
 
 ---
 
 ## 📞 Troubleshooting
 
-### Google Calendar Not Working
-- Ensure `google_credentials.json` is in `data/` folder
-- Click "Connect to Google" in Settings
-- Check Google Calendar API is enabled in Cloud Console
-
 ### Notion Export Fails
 - Verify Notion integration is shared with your page/database
 - Check API key starts with `secret_`
 - Ensure page permissions are correct
-
-### Jira Sync Issues
-- Verify Jira URL doesn't have trailing `/`
-- Check API token is current (they can expire)
-- Ensure project key is correct (uppercase)
-- Verify user has permission to create tasks
 
 ### API Key Errors
 - Check for extra spaces in `.env` file
@@ -364,9 +239,7 @@ JIRA_PROJECT_KEY=PROJ
 
 - [ ] Basic transcription working (Whisper)
 - [ ] AI summarization configured (OpenAI/Claude/Local)
-- [ ] Google Calendar connected (optional)
 - [ ] Notion integration set up (optional)
-- [ ] Jira integration configured (optional)
 - [ ] Tested first meeting recording
 - [ ] Verified all integrations working
 

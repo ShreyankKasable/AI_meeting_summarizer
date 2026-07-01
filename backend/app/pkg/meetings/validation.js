@@ -20,3 +20,10 @@ export function validateTranslatePayload (req, res, next) {
   req.body.language = language;
   return next();
 }
+
+export function validateChatPayload (req, res, next) {
+  const question = (req.body?.question || '').trim();
+  if (!question) return next(new BadRequest('Question cannot be empty'));
+  req.body.question = question;
+  return next();
+}

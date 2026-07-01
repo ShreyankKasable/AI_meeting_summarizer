@@ -43,6 +43,6 @@ Double-click `RUN.bat`.
 ---
 
 ## All Settings:
-Edit the `.env` file to configure integrations (Google Calendar, Notion, Jira, OpenAI/Euron, etc.).
+Edit the `.env` file to configure integrations (Notion, OpenAI/Euron, etc.).
 
 See `INTEGRATION_SETUP.md` for the detailed configuration guide.

@@ -109,12 +109,10 @@ export class MeetingsService {
     return this.getActionItemById(id);
   }
 
-  updateActionItemSyncStatus (id, { calendar, notion, jira, externalId } = {}) {
+  updateActionItemSyncStatus (id, { notion, externalId } = {}) {
     const fields = [];
     const vals = [];
-    if (calendar !== undefined) { fields.push('synced_to_calendar = ?'); vals.push(calendar ? 1 : 0); }
     if (notion !== undefined) { fields.push('synced_to_notion = ?'); vals.push(notion ? 1 : 0); }
-    if (jira !== undefined) { fields.push('synced_to_jira = ?'); vals.push(jira ? 1 : 0); }
     if (externalId !== undefined) { fields.push('external_id = ?'); vals.push(externalId); }
     if (fields.length) {
       getDb().prepare(`UPDATE action_items SET ${fields.join(', ')} WHERE id = ?`).run(...vals, id);
@@ -148,9 +146,7 @@ function formatActionItem (a) {
     due_date: a.due_date || null,
     priority: a.priority,
     completed: !!a.completed,
-    synced_to_calendar: !!a.synced_to_calendar,
     synced_to_notion: !!a.synced_to_notion,
-    synced_to_jira: !!a.synced_to_jira,
     external_id: a.external_id,
     created_at: a.created_at || null,
   };

@@ -53,8 +53,8 @@ const config = convict({
     env: 'DATABASE_PATH',
   },
   transcription_model: {
-    doc: 'Transcription backend: whisper | deepgram | assemblyai',
-    format: ['whisper', 'deepgram', 'assemblyai'],
+    doc: 'Transcription backend: whisper | deepgram | assemblyai | huggingface',
+    format: ['whisper', 'deepgram', 'assemblyai', 'huggingface'],
     default: 'whisper',
     env: 'TRANSCRIPTION_MODEL',
   },
@@ -94,6 +94,11 @@ const config = convict({
   assemblyai: {
     api_key: { format: String, default: '', env: 'ASSEMBLYAI_API_KEY', sensitive: true },
   },
+  huggingface: {
+    api_key: { format: String, default: '', env: 'HUGGINGFACE_API_KEY', sensitive: true },
+    asr_model: { format: String, default: 'openai/whisper-large-v3', env: 'HUGGINGFACE_ASR_MODEL' },
+    chat_model: { format: String, default: 'openai/gpt-oss-120b', env: 'HUGGINGFACE_CHAT_MODEL' },
+  },
   euron: {
     enabled: { format: Boolean, default: false, env: 'USE_EURON_API' },
     api_key: { format: String, default: '', env: 'EURON_API_KEY', sensitive: true },
@@ -104,23 +109,10 @@ const config = convict({
     sample_rate: { format: 'int', default: 16000, env: 'AUDIO_SAMPLE_RATE' },
     channels: { format: 'int', default: 1, env: 'AUDIO_CHANNELS' },
   },
-  google: {
-    client_id: { format: String, default: '', env: 'GOOGLE_CLIENT_ID' },
-    client_secret: { format: String, default: '', env: 'GOOGLE_CLIENT_SECRET' },
-    calendar_enabled: { format: Boolean, default: false, env: 'GOOGLE_CALENDAR_ENABLED' },
-    default_reminder_minutes: { format: 'int', default: 30, env: 'GOOGLE_DEFAULT_REMINDER_MINUTES' },
-  },
   notion: {
     enabled: { format: Boolean, default: false, env: 'NOTION_ENABLED' },
     api_key: { format: String, default: '', env: 'NOTION_API_KEY', sensitive: true },
     database_id: { format: String, default: '', env: 'NOTION_DATABASE_ID' },
-  },
-  jira: {
-    enabled: { format: Boolean, default: false, env: 'JIRA_ENABLED' },
-    api_url: { format: String, default: '', env: 'JIRA_API_URL' },
-    email: { format: String, default: '', env: 'JIRA_EMAIL' },
-    api_token: { format: String, default: '', env: 'JIRA_API_TOKEN', sensitive: true },
-    project_key: { format: String, default: '', env: 'JIRA_PROJECT_KEY' },
   },
 });
 

@@ -73,7 +73,6 @@
   socket.on('live_transcript_update', (d) => emit('live-transcript-update', d));
   socket.on('processing_status', (d) => emit('processing-status', d));
   socket.on('meeting_processed', (d) => emit('meeting-processed', d));
-  socket.on('sync_complete', (d) => emit('sync-complete', d));
   socket.on('error', (d) => emit('error', d));
 
   window.ipcRenderer = {
@@ -110,9 +109,6 @@
               uploadAudio('audio', s).catch((err) => emit('error', { message: `Upload failed: ${err.message}` }));
             }
           }
-          break;
-        case 'sync-tasks':
-          socket.emit('sync_action_items', payload);
           break;
         case 'show-notification':
           showBrowserNotification(payload);

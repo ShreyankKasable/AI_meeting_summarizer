@@ -51,9 +51,7 @@ export class SystemService {
       },
       capabilities: this.capabilities(),
       integrations: {
-        google_calendar: !!config.get('google.client_id'),
         notion: !!config.get('notion.api_key'),
-        jira: !!(config.get('jira.api_url') && config.get('jira.api_token')),
       },
     };
   }

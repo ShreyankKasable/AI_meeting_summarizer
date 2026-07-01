@@ -188,25 +188,24 @@
                                 <input type="checkbox" id="useLocalModel">
                                 <span class="setting-description">Use local model for privacy</span>
                             </div>
+                            <div class="setting-item">
+                                <label>Chatbot Provider</label>
+                                <select id="chatProvider">
+                                    <option value="">Auto (use configured key)</option>
+                                    <option value="openai">OpenAI</option>
+                                    <option value="anthropic">Anthropic (Claude)</option>
+                                    <option value="euron">Euron</option>
+                                    <option value="huggingface">Hugging Face</option>
+                                </select>
+                                <span class="setting-description">LLM used to answer questions about a meeting</span>
+                            </div>
                         </div>
 
                         <div class="settings-section">
                             <h3>🔗 Integrations</h3>
                             <div class="setting-item">
-                                <label>Google Calendar</label>
-                                <button class="btn btn-secondary" id="connectGoogleBtn">Connect</button>
-                            </div>
-                            <div class="setting-item">
                                 <label>Notion</label>
                                 <input type="text" id="notionApiKey" placeholder="Enter Notion API key">
-                            </div>
-                            <div class="setting-item">
-                                <label>Jira Configuration</label>
-                                <input type="text" id="jiraServerUrl" placeholder="Jira Server URL (e.g. https://yourcompany.atlassian.net)" style="width: 100%; margin-bottom: 0.5rem;">
-                                <input type="email" id="jiraEmail" placeholder="Your Jira Email" style="width: 100%; margin-bottom: 0.5rem;">
-                                <input type="password" id="jiraApiToken" placeholder="Jira API Token" style="width: 100%; margin-bottom: 0.5rem;">
-                                <input type="text" id="jiraProjectKey" placeholder="Project Key (e.g. PROJ)" style="width: 100%; margin-bottom: 0.5rem;">
-                                <button class="btn btn-secondary" id="connectJiraBtn">Configure Jira</button>
                             </div>
                         </div>
 

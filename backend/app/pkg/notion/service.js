@@ -42,18 +42,26 @@ export class NotionService {
     const text = items.length
       ? items.map((i) => `${i.completed ? '✅' : '⬜'} ${i.description} [${i.priority}]${i.assignee ? ` - ${i.assignee}` : ''}`).join('\n')
       : 'No action items';
-    const page = await this.client.pages.create({
-      parent: { type: 'workspace', workspace: true },
-      properties: { title: { title: [{ text: { content: meeting.title } }] } },
-      children: [
-        heading('Meeting Details'),
-        para(`Date: ${meeting.start_time || 'N/A'}\nDuration: ${duration(meeting.start_time, meeting.end_time)}`),
-        heading('Summary'),
-        para(meeting.summary || 'No summary available'),
-        heading('Action Items'),
-        todo(text, false),
-      ],
-    });
+    let page;
+    try {
+      page = await this.client.pages.create({
+        parent: { type: 'workspace', workspace: true },
+        properties: { title: { title: [{ text: { content: meeting.title } }] } },
+        children: [
+          heading('Meeting Details'),
+          para(`Date: ${meeting.start_time || 'N/A'}\nDuration: ${duration(meeting.start_time, meeting.end_time)}`),
+          heading('Summary'),
+          para(meeting.summary || 'No summary available'),
+          heading('Action Items'),
+          todo(text, false),
+        ],
+      });
+    } catch (e) {
+      throw new Error(
+        `Notion export failed: ${e.message}. Most internal Notion integrations can't create pages at the ` +
+        'workspace root — set NOTION_DATABASE_ID in .env to export into a database you\'ve shared with the integration instead.'
+      );
+    }
     return page.id;
   }
 
