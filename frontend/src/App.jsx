@@ -19,6 +19,12 @@ const Layout = styled.div`
     display: flex;
     background: var(--Color-Background-Subtle);
     color: var(--Color-Text-Default);
+
+    /* Below Navbar's breakpoint, its sidebar hides and a top bar + dropdown
+       take over instead — stack them above Main rather than beside it. */
+    @media (max-width: 1024px) {
+        flex-direction: column;
+    }
 `;
 
 const Main = styled.main`

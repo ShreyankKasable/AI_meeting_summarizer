@@ -25,19 +25,32 @@ router.param('token', (req, res, next, value) => {
   return next();
 });
 
+// Participants aren't authenticated, so each browser generates a random id
+// (persisted client-side) and sends it here — this is what gives each
+// participant their own private chat thread instead of sharing one with
+// every other participant (and the host) on the same meeting.
+function requireParticipantId (req, res, next) {
+  const participantId = req.headers['x-participant-id'];
+  if (!participantId || typeof participantId !== 'string' || participantId.length > 100) {
+    return next(new BadRequest('Missing X-Participant-Id header'));
+  }
+  req.actorKey = `participant:${participantId}`;
+  return next();
+}
+
 // GET /api/public/share/:token — read-only meeting content
 router.get('/:token', (req, res) => {
   res.json(req.meeting);
 });
 
 // GET /api/public/share/:token/chat
-router.get('/:token/chat', (req, res) => {
-  res.json(chatbotService.getHistory(req.meeting.id));
+router.get('/:token/chat', requireParticipantId, (req, res) => {
+  res.json(chatbotService.getHistory(req.meeting.id, req.actorKey));
 });
 
 // POST /api/public/share/:token/chat
-router.post('/:token/chat', validateChatPayload, expressAsyncHandler(async (req, res) => {
-  const answer = await chatbotService.ask(req.meeting.id, req.body.question, req.body.provider);
+router.post('/:token/chat', requireParticipantId, validateChatPayload, expressAsyncHandler(async (req, res) => {
+  const answer = await chatbotService.ask(req.meeting.id, req.body.question, req.body.provider, req.actorKey);
   res.json({ success: true, answer });
 }));
 

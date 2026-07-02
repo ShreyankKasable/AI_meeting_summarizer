@@ -126,15 +126,19 @@ router.post('/:id/translate', validateTranslatePayload, expressAsyncHandler(asyn
   });
 }));
 
-// GET /api/meetings/:id/chat — chat history for this meeting
+// GET /api/meetings/:id/chat — chat history for this meeting. Scoped to the
+// authenticated host's own thread — a different host (or a participant) on
+// the same meeting has a separate thread, not this one.
 router.get('/:id/chat', (req, res) => {
-  res.json(chatbotService.getHistory(Number(req.params.id)));
+  res.json(chatbotService.getHistory(Number(req.params.id), `host:${req.user.id}`));
 });
 
 // POST /api/meetings/:id/chat — ask a question; the LLM tool-calls the
 // transcript before answering.
 router.post('/:id/chat', validateChatPayload, expressAsyncHandler(async (req, res) => {
-  const answer = await chatbotService.ask(Number(req.params.id), req.body.question, req.body.provider);
+  const answer = await chatbotService.ask(
+    Number(req.params.id), req.body.question, req.body.provider, `host:${req.user.id}`
+  );
   res.json({ success: true, answer });
 }));
 

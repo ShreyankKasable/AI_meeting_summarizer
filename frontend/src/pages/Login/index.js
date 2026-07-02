@@ -8,6 +8,7 @@ import Alert from "common/components/Alert";
 import { H1, H2, Body2 } from "common/global-styled-components";
 import { login as loginThunk } from "common/redux/actions/sessionActions";
 import SignupForm from "./SignupForm";
+import JoinMeetingForm from "./JoinMeetingForm";
 
 const Screen = styled.div`
     min-height: 100vh;
@@ -107,7 +108,7 @@ const Login = () => {
     const dispatch = useDispatch();
     const status = useSelector((state) => state.sessionDetails.status);
 
-    const [mode, setMode] = useState("login"); // "login" | "signup"
+    const [mode, setMode] = useState("login"); // "login" | "signup" | "join"
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -124,6 +125,10 @@ const Login = () => {
 
     if (mode === "signup") {
         return <SignupForm onBackToLogin={() => setMode("login")} />;
+    }
+
+    if (mode === "join") {
+        return <JoinMeetingForm onBackToLogin={() => setMode("login")} />;
     }
 
     return (
@@ -170,6 +175,12 @@ const Login = () => {
                         Don&apos;t have a host account?{" "}
                         <ToggleLink type="button" onClick={() => setMode("signup")}>
                             Create an account
+                        </ToggleLink>
+                    </ToggleRow>
+                    <ToggleRow>
+                        Attending a meeting?{" "}
+                        <ToggleLink type="button" onClick={() => setMode("join")} id="join-meeting-link">
+                            Join with a meeting code
                         </ToggleLink>
                     </ToggleRow>
                 </Card>

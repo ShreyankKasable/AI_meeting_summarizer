@@ -59,6 +59,7 @@ export function initDb () {
     CREATE TABLE IF NOT EXISTS chat_messages (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
       meeting_id INTEGER NOT NULL,
+      actor_key  VARCHAR(80) NOT NULL,
       role       VARCHAR(20) NOT NULL,
       content    TEXT NOT NULL,
       created_at DATETIME,
@@ -85,6 +86,10 @@ export function initDb () {
   dropColumnIfExists(database, 'action_items', 'synced_to_calendar');
   dropColumnIfExists(database, 'action_items', 'synced_to_jira');
   addColumnIfMissing(database, 'meetings', 'host_id', 'host_id INTEGER REFERENCES users(id)');
+  // Existing rows predate per-actor threads — bucket them under a shared key
+  // so they don't retroactively appear as any specific host's or
+  // participant's thread; new messages always carry a real actor_key.
+  addColumnIfMissing(database, 'chat_messages', 'actor_key', "actor_key VARCHAR(80) NOT NULL DEFAULT 'legacy'");
   logger.info('Database initialized successfully');
   return database;
 }

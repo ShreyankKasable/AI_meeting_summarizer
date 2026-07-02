@@ -21,19 +21,23 @@ const SYSTEM_PROMPT =
 const nowIso = () => new Date().toISOString();
 
 export class ChatbotService {
-  getHistory (meetingId) {
+  // `actorKey` scopes the thread — e.g. `host:<hostId>` or
+  // `participant:<participantId>` — so each distinct person chatting about a
+  // meeting gets their own private conversation rather than one shared
+  // thread per meeting.
+  getHistory (meetingId, actorKey) {
     return getDb()
-      .prepare('SELECT * FROM chat_messages WHERE meeting_id = ? ORDER BY id')
-      .all(meetingId)
+      .prepare('SELECT * FROM chat_messages WHERE meeting_id = ? AND actor_key = ? ORDER BY id')
+      .all(meetingId, actorKey)
       .map((r) => ({ id: r.id, role: r.role, content: r.content, created_at: r.created_at }));
   }
 
-  async ask (meetingId, question, provider) {
+  async ask (meetingId, question, provider, actorKey) {
     const meeting = meetingsService.getMeetingById(meetingId);
     if (!meeting) throw new Error('Meeting not found');
 
-    const priorHistory = this.getHistory(meetingId);
-    this._saveMessage(meetingId, 'user', question);
+    const priorHistory = this.getHistory(meetingId, actorKey);
+    this._saveMessage(meetingId, actorKey, 'user', question);
 
     const transcriptText = meeting.transcript && typeof meeting.transcript === 'object'
       ? meeting.transcript.text || ''
@@ -50,14 +54,14 @@ export class ChatbotService {
       answer = 'No AI provider is configured. Add an API key in Settings to use the chatbot.';
     }
 
-    this._saveMessage(meetingId, 'assistant', answer);
+    this._saveMessage(meetingId, actorKey, 'assistant', answer);
     return answer;
   }
 
-  _saveMessage (meetingId, role, content) {
+  _saveMessage (meetingId, actorKey, role, content) {
     getDb().prepare(
-      'INSERT INTO chat_messages (meeting_id, role, content, created_at) VALUES (?, ?, ?, ?)'
-    ).run(meetingId, role, content, nowIso());
+      'INSERT INTO chat_messages (meeting_id, actor_key, role, content, created_at) VALUES (?, ?, ?, ?, ?)'
+    ).run(meetingId, actorKey, role, content, nowIso());
   }
 
   _resolveProvider (requested) {
