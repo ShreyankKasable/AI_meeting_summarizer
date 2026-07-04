@@ -5,7 +5,6 @@
  * risk of the two auth modes crossing.
  */
 import express from 'express';
-import { expressAsyncHandler } from '#app/api/middlewares/asyncHandler.js';
 import { NotFound, BadRequest } from '#app/common/error/index.js';
 import { sharesService } from '#app/pkg/shares/service.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
@@ -49,29 +48,37 @@ router.get('/:token/chat', requireParticipantId, (req, res) => {
 });
 
 // POST /api/public/share/:token/chat
-router.post('/:token/chat', requireParticipantId, validateChatPayload, expressAsyncHandler(async (req, res) => {
-  const answer = await chatbotService.ask(req.meeting.id, req.body.question, req.body.provider, req.actorKey);
-  res.json({ success: true, answer });
-}));
+router.post('/:token/chat', requireParticipantId, validateChatPayload, async (req, res, next) => {
+  try {
+    const answer = await chatbotService.ask(req.meeting.id, req.body.question, req.body.provider, req.actorKey);
+    res.json({ success: true, answer });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // POST /api/public/share/:token/translate
-router.post('/:token/translate', validateTranslatePayload, expressAsyncHandler(async (req, res) => {
-  const transcriptText = req.meeting.transcript && typeof req.meeting.transcript === 'object'
-    ? req.meeting.transcript.text || ''
-    : req.meeting.transcript || '';
-  if (!transcriptText) throw new BadRequest('No transcript available');
+router.post('/:token/translate', validateTranslatePayload, async (req, res, next) => {
+  try {
+    const transcriptText = req.meeting.transcript && typeof req.meeting.transcript === 'object'
+      ? req.meeting.transcript.text || ''
+      : req.meeting.transcript || '';
+    if (!transcriptText) throw new BadRequest('No transcript available');
 
-  const translatedTranscript = await translationService.translateText(transcriptText, req.body.language);
-  const translatedSummary = req.meeting.summary
-    ? await translationService.translateText(req.meeting.summary, req.body.language)
-    : null;
+    const translatedTranscript = await translationService.translateText(transcriptText, req.body.language);
+    const translatedSummary = req.meeting.summary
+      ? await translationService.translateText(req.meeting.summary, req.body.language)
+      : null;
 
-  res.json({
-    success: true,
-    language: req.body.language,
-    translated_transcript: translatedTranscript,
-    translated_summary: translatedSummary,
-  });
-}));
+    res.json({
+      success: true,
+      language: req.body.language,
+      translated_transcript: translatedTranscript,
+      translated_summary: translatedSummary,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

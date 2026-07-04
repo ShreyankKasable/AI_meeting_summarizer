@@ -1,6 +1,5 @@
 import express from 'express';
 import multer from 'multer';
-import { expressAsyncHandler } from '#app/api/middlewares/asyncHandler.js';
 import { NotFound, UnauthorizedRequest, BadRequest } from '#app/common/error/index.js';
 import config from '#app/common/config.js';
 import { requireAuth } from '#app/api/middlewares/auth.js';
@@ -76,28 +75,36 @@ router.get('/:id/action-items', (req, res) => {
 
 // POST /api/meetings/:id/audio — browser flow: upload the full recording WAV,
 // then run the same processing pipeline as the desktop stop_recording path.
-router.post('/:id/audio', uploadAudio, expressAsyncHandler(async (req, res) => {
-  if (!req.file) throw new BadRequest('No audio file uploaded');
-  const result = await processingService.processRecording({
-    io: getIo(),
-    hostId: req.user.id,
-    meetingId: Number(req.params.id),
-    audioFile: req.file.path,
-  });
-  res.json({ success: true, ...result });
-}));
+router.post('/:id/audio', uploadAudio, async (req, res, next) => {
+  try {
+    if (!req.file) throw new BadRequest('No audio file uploaded');
+    const result = await processingService.processRecording({
+      io: getIo(),
+      hostId: req.user.id,
+      meetingId: Number(req.params.id),
+      audioFile: req.file.path,
+    });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // POST /api/meetings/:id/audio-chunk — browser flow: live transcription chunk.
-router.post('/:id/audio-chunk', uploadAudio, expressAsyncHandler(async (req, res) => {
-  if (!req.file) throw new BadRequest('No audio chunk uploaded');
-  await processingService.processLiveChunk({
-    io: getIo(),
-    hostId: req.user.id,
-    meetingId: Number(req.params.id),
-    chunkFile: req.file.path,
-  });
-  res.json({ success: true });
-}));
+router.post('/:id/audio-chunk', uploadAudio, async (req, res, next) => {
+  try {
+    if (!req.file) throw new BadRequest('No audio chunk uploaded');
+    await processingService.processLiveChunk({
+      io: getIo(),
+      hostId: req.user.id,
+      meetingId: Number(req.params.id),
+      chunkFile: req.file.path,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // PUT /api/meetings/:id/title
 router.put('/:id/title', validateTitlePayload, (req, res) => {
@@ -106,25 +113,29 @@ router.put('/:id/title', validateTitlePayload, (req, res) => {
 });
 
 // POST /api/meetings/:id/translate
-router.post('/:id/translate', validateTranslatePayload, expressAsyncHandler(async (req, res) => {
-  const { meeting } = req;
-  const transcriptText = meeting.transcript && typeof meeting.transcript === 'object'
-    ? meeting.transcript.text || ''
-    : meeting.transcript || '';
-  if (!transcriptText) throw new BadRequest('No transcript available');
+router.post('/:id/translate', validateTranslatePayload, async (req, res, next) => {
+  try {
+    const { meeting } = req;
+    const transcriptText = meeting.transcript && typeof meeting.transcript === 'object'
+      ? meeting.transcript.text || ''
+      : meeting.transcript || '';
+    if (!transcriptText) throw new BadRequest('No transcript available');
 
-  const translatedTranscript = await translationService.translateText(transcriptText, req.body.language);
-  const translatedSummary = meeting.summary
-    ? await translationService.translateText(meeting.summary, req.body.language)
-    : null;
+    const translatedTranscript = await translationService.translateText(transcriptText, req.body.language);
+    const translatedSummary = meeting.summary
+      ? await translationService.translateText(meeting.summary, req.body.language)
+      : null;
 
-  res.json({
-    success: true,
-    language: req.body.language,
-    translated_transcript: translatedTranscript,
-    translated_summary: translatedSummary,
-  });
-}));
+    res.json({
+      success: true,
+      language: req.body.language,
+      translated_transcript: translatedTranscript,
+      translated_summary: translatedSummary,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /api/meetings/:id/chat — chat history for this meeting. Scoped to the
 // authenticated host's own thread — a different host (or a participant) on
@@ -135,19 +146,27 @@ router.get('/:id/chat', (req, res) => {
 
 // POST /api/meetings/:id/chat — ask a question; the LLM tool-calls the
 // transcript before answering.
-router.post('/:id/chat', validateChatPayload, expressAsyncHandler(async (req, res) => {
-  const answer = await chatbotService.ask(
-    Number(req.params.id), req.body.question, req.body.provider, `host:${req.user.id}`
-  );
-  res.json({ success: true, answer });
-}));
+router.post('/:id/chat', validateChatPayload, async (req, res, next) => {
+  try {
+    const answer = await chatbotService.ask(
+      Number(req.params.id), req.body.question, req.body.provider, `host:${req.user.id}`
+    );
+    res.json({ success: true, answer });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // POST /api/meetings/:id/export-notion
-router.post('/:id/export-notion', expressAsyncHandler(async (req, res) => {
-  if (!notionService.isAuthenticated()) throw new UnauthorizedRequest('Notion not configured');
-  const pageId = await notionService.exportMeeting(req.meeting);
-  res.json({ success: true, page_id: pageId, message: 'Meeting exported to Notion successfully' });
-}));
+router.post('/:id/export-notion', async (req, res, next) => {
+  try {
+    if (!notionService.isAuthenticated()) throw new UnauthorizedRequest('Notion not configured');
+    const pageId = await notionService.exportMeeting(req.meeting);
+    res.json({ success: true, page_id: pageId, message: 'Meeting exported to Notion successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /api/meetings/:id/share — the currently active share link, if any
 router.get('/:id/share', (req, res) => {
