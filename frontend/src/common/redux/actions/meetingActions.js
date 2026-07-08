@@ -38,3 +38,8 @@ export const toggleActionItem = (meetingId, itemId) => async (dispatch) => {
 };
 
 export const exportToNotion = (id) => () => MeetingService.exportNotion(id);
+
+export const renameSpeaker = (meetingId, speaker, name) => async (dispatch) => {
+    const { data } = await MeetingService.renameSpeaker(meetingId, speaker, name);
+    dispatch(upsertMeeting(data.meeting));
+};

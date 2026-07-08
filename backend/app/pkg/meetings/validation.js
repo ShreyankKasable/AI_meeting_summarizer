@@ -27,3 +27,14 @@ export function validateChatPayload (req, res, next) {
   req.body.question = question;
   return next();
 }
+
+export function validateSpeakerNamePayload (req, res, next) {
+  const speaker = (req.body?.speaker || '').trim();
+  const name = (req.body?.name || '').trim();
+  if (!speaker) return next(new BadRequest('speaker is required'));
+  if (!name) return next(new BadRequest('name cannot be empty'));
+  if (name.length > 100) return next(new BadRequest('name is too long'));
+  req.body.speaker = speaker;
+  req.body.name = name;
+  return next();
+}

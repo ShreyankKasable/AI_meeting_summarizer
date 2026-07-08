@@ -6,7 +6,7 @@ import Button from "common/components/Button";
 import Tabs from "common/components/Tabs";
 import { H1 } from "common/global-styled-components";
 import { formatDate, getTranscriptText } from "common/utils/utils";
-import { fetchMeeting, toggleActionItem, exportToNotion } from "common/redux/actions/meetingActions";
+import { fetchMeeting, toggleActionItem, exportToNotion, renameSpeaker } from "common/redux/actions/meetingActions";
 import { setHostView } from "common/redux/actions/sessionActions";
 import { HOST_VIEWS } from "common/constants";
 import MeetingService from "services/meeting.service";
@@ -159,9 +159,13 @@ const MeetingContentView = () => {
             <Split>
                 <TranscriptPane
                     text={translatedText ?? transcriptText}
+                    segments={translatedText ? null : meeting.transcript?.segments}
+                    speakerNames={meeting.transcript?.speakerNames}
                     audioSrc={meeting.audio_file_path}
                     onTranslate={handleTranslate}
                     translating={translating}
+                    editable
+                    onRenameSpeaker={(speaker, name) => dispatch(renameSpeaker(activeId, speaker, name))}
                 />
                 <SidePanel>
                     <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />

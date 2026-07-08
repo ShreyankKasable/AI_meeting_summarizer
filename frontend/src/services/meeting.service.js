@@ -43,6 +43,9 @@ const MeetingService = {
     regenerateShare(id, expiresIn) {
         return ApiService.post(URLS.meetingShareRegenerate(id), { data: { expires_in: expiresIn } });
     },
+    renameSpeaker(id, speaker, name) {
+        return ApiService.put(URLS.meetingSpeakers(id), { data: { speaker, name } });
+    },
 
     uploadAudio(id, blob) {
         const formData = new FormData();

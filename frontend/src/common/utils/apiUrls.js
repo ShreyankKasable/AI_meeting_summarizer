@@ -19,6 +19,7 @@ const URLS = {
     meetingShare: (id) => `${BASE_URL}/api/meetings/${id}/share`,
     meetingShareRevoke: (id) => `${BASE_URL}/api/meetings/${id}/share/revoke`,
     meetingShareRegenerate: (id) => `${BASE_URL}/api/meetings/${id}/share/regenerate`,
+    meetingSpeakers: (id) => `${BASE_URL}/api/meetings/${id}/speakers`,
 
     // public (token-gated, unauthenticated)
     publicShare: (token) => `${BASE_URL}/api/public/share/${token}`,

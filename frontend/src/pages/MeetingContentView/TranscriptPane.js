@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
 import styled from "styled-components";
-import { Search, Download } from "lucide-react";
+import { Search, Download, Pencil } from "lucide-react";
 import { Body2, Body3 } from "common/global-styled-components";
 import { SUPPORTED_LANGUAGES } from "common/constants";
+import Avatar from "common/components/Avatar";
 import AudioScrubber from "./AudioScrubber";
 
 const Wrapper = styled.div`
@@ -77,6 +78,108 @@ const Highlight = styled.mark`
     color: var(--Color-Text-Action);
 `;
 
+const Turn = styled.div`
+    display: flex;
+    gap: var(--Size-Gap-M);
+
+    & + & {
+        margin-top: var(--Size-Gap-L);
+    }
+`;
+
+const TurnBody = styled.div`
+    flex: 1;
+    min-width: 0;
+`;
+
+const TurnHeader = styled.div`
+    display: flex;
+    align-items: baseline;
+    gap: var(--Size-Gap-S);
+`;
+
+const SpeakerName = styled(Body2)`
+    font-weight: var(--bold);
+`;
+
+const Timestamp = styled(Body3)`
+    color: var(--Color-Text-Subtlest);
+`;
+
+const RenameButton = styled.button`
+    background: none;
+    border: none;
+    padding: 0;
+    display: inline-flex;
+    color: var(--Color-Icon-Subtle);
+`;
+
+const RenameInput = styled.input`
+    font-size: var(--body-4-d);
+    font-weight: var(--bold);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-S);
+    padding: 2px var(--Size-Padding-S);
+`;
+
+// One speaker turn: avatar, name (editable in host view via the pencil icon),
+// timestamp, and the spoken text for that turn.
+const SpeakerTurn = ({ segment, displayName, search, editable, onRename }) => {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(displayName);
+
+    const startEdit = () => {
+        setDraft(displayName);
+        setEditing(true);
+    };
+
+    const save = () => {
+        setEditing(false);
+        const trimmed = draft.trim();
+        if (trimmed && trimmed !== displayName) onRename?.(segment.speaker, trimmed);
+    };
+
+    return (
+        <Turn>
+            <Avatar name={displayName} size="small" />
+            <TurnBody>
+                <TurnHeader>
+                    {editing ? (
+                        <RenameInput
+                            autoFocus
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            onBlur={save}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") save();
+                                if (e.key === "Escape") setEditing(false);
+                            }}
+                        />
+                    ) : (
+                        <SpeakerName>{displayName}</SpeakerName>
+                    )}
+                    {typeof segment.start === "number" && (
+                        <Timestamp>{formatSeconds(segment.start)}</Timestamp>
+                    )}
+                    {editable && !editing && (
+                        <RenameButton type="button" title="Rename speaker" onClick={startEdit}>
+                            <Pencil size={12} />
+                        </RenameButton>
+                    )}
+                </TurnHeader>
+                <Body2 style={{ marginTop: 2 }}>{highlight(segment.text, search)}</Body2>
+            </TurnBody>
+        </Turn>
+    );
+};
+
+function formatSeconds(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds || 0));
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m}:${String(rem).padStart(2, "0")}`;
+}
+
 function highlight(text, term) {
     if (!term) return text;
     const parts = text.split(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"));
@@ -96,12 +199,30 @@ function downloadText(filename, text) {
 }
 
 // `text` is the (possibly translated) transcript to display; `onTranslate`
-// is called with a language code when the dropdown changes.
-const TranscriptPane = ({ text, audioSrc, onTranslate, translating = false }) => {
+// is called with a language code when the dropdown changes. `segments` (when
+// present and no translation is active) renders speaker-attributed turns
+// instead of a flat paragraph; `editable` shows the rename-speaker affordance
+// (host view only — participants get a read-only transcript).
+const TranscriptPane = ({
+    text,
+    segments,
+    speakerNames = {},
+    audioSrc,
+    onTranslate,
+    translating = false,
+    editable = false,
+    onRenameSpeaker,
+}) => {
     const [search, setSearch] = useState("");
     const [language, setLanguage] = useState("");
 
+    const showTurns = Array.isArray(segments) && segments.length > 0;
+
     const content = useMemo(() => highlight(text || "No transcript available yet.", search), [text, search]);
+    const flatDownloadText = useMemo(() => {
+        if (!showTurns) return text || "";
+        return segments.map((s) => `${speakerNames[s.speaker] || s.speaker}: ${s.text}`).join("\n\n");
+    }, [showTurns, segments, speakerNames, text]);
 
     const handleLanguageChange = (e) => {
         const lang = e.target.value;
@@ -134,7 +255,7 @@ const TranscriptPane = ({ text, audioSrc, onTranslate, translating = false }) =>
                 <IconButton
                     type="button"
                     title="Download transcript"
-                    onClick={() => downloadText("transcript.txt", text || "")}
+                    onClick={() => downloadText("transcript.txt", flatDownloadText)}
                 >
                     <Download size={16} />
                 </IconButton>
@@ -142,6 +263,17 @@ const TranscriptPane = ({ text, audioSrc, onTranslate, translating = false }) =>
             <Body>
                 {translating ? (
                     <Body3>Translating...</Body3>
+                ) : showTurns ? (
+                    segments.map((segment, i) => (
+                        <SpeakerTurn
+                            key={i}
+                            segment={segment}
+                            displayName={speakerNames[segment.speaker] || segment.speaker}
+                            search={search}
+                            editable={editable}
+                            onRename={onRenameSpeaker}
+                        />
+                    ))
                 ) : (
                     <Body2 style={{ whiteSpace: "pre-wrap", lineHeight: "var(--line-height-140)" }}>{content}</Body2>
                 )}

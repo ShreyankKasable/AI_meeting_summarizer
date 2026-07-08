@@ -121,6 +121,8 @@ const MeetingContentViewParticipant = ({ token }) => {
             <Split>
                 <TranscriptPane
                     text={translatedText ?? transcriptText}
+                    segments={translatedText ? null : meeting.transcript?.segments}
+                    speakerNames={meeting.transcript?.speakerNames}
                     audioSrc={meeting.audio_file_path}
                     onTranslate={handleTranslate}
                     translating={translating}

@@ -51,6 +51,21 @@ export class MeetingsService {
     return this.getMeetingById(id);
   }
 
+  // Tags a diarized "Speaker N" label with the host-supplied real name for
+  // this meeting. Names live inside the transcript JSON blob (speakerNames)
+  // rather than a separate table, since they're meaningless outside the
+  // transcript they were assigned against — the same speaker label in a
+  // different meeting's recording is not necessarily the same person.
+  renameSpeaker (id, speaker, name) {
+    const db = getDb();
+    const row = db.prepare('SELECT transcript FROM meetings WHERE id = ?').get(id);
+    if (!row) return null;
+    const transcript = safeJson(row.transcript) || {};
+    transcript.speakerNames = { ...(transcript.speakerNames || {}), [speaker]: name };
+    db.prepare('UPDATE meetings SET transcript = ? WHERE id = ?').run(JSON.stringify(transcript), id);
+    return this.getMeetingById(id);
+  }
+
   getMeetingById (id) {
     const db = getDb();
     const meeting = db.prepare('SELECT * FROM meetings WHERE id = ?').get(id);

@@ -10,7 +10,9 @@ import { processingService } from '#app/pkg/processing/service.js';
 import { chatbotService } from '#app/pkg/chat/service.js';
 import { sharesService } from '#app/pkg/shares/service.js';
 import { getIo } from '#app/connections/websocket.js';
-import { validateTitlePayload, validateTranslatePayload, validateChatPayload } from '#app/pkg/meetings/validation.js';
+import {
+  validateTitlePayload, validateTranslatePayload, validateChatPayload, validateSpeakerNamePayload,
+} from '#app/pkg/meetings/validation.js';
 
 const router = express.Router();
 
@@ -166,6 +168,13 @@ router.post('/:id/export-notion', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// PUT /api/meetings/:id/speakers — tag a diarized "Speaker N" label with a
+// real name for this meeting's transcript.
+router.put('/:id/speakers', validateSpeakerNamePayload, (req, res) => {
+  const updated = meetingsService.renameSpeaker(Number(req.params.id), req.body.speaker, req.body.name);
+  res.json({ success: true, meeting: updated });
 });
 
 // GET /api/meetings/:id/share — the currently active share link, if any

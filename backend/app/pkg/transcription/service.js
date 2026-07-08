@@ -60,7 +60,7 @@ export class TranscriptionService {
       if (!apiKey) throw new Error('DEEPGRAM_API_KEY not configured');
       const audioData = fs.readFileSync(audioFile);
       const res = await axios.post(
-        'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true',
+        'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&diarize=true',
         audioData,
         {
           headers: { Authorization: `Token ${apiKey}`, 'Content-Type': 'audio/wav' },
@@ -69,9 +69,10 @@ export class TranscriptionService {
           maxContentLength: Infinity,
         }
       );
-      const transcript = res.data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+      const alt = res.data?.results?.channels?.[0]?.alternatives?.[0];
+      const transcript = alt?.transcript || '';
       logger.info(`Deepgram transcription successful: ${transcript.length} characters`);
-      return { text: transcript, segments: [], language: 'en' };
+      return { text: transcript, segments: segmentsFromDeepgramWords(alt?.words), language: 'en' };
     } catch (e) {
       logger.error('Deepgram transcription error:', e.message);
       return this._fallback(audioFile);
@@ -91,12 +92,22 @@ export class TranscriptionService {
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
       });
-      const create = await axios.post(`${base}/transcript`, { audio_url: upload.data.upload_url }, { headers });
+      const create = await axios.post(
+        `${base}/transcript`,
+        { audio_url: upload.data.upload_url, speaker_labels: true },
+        { headers }
+      );
       const id = create.data.id;
 
       for (;;) {
         const poll = await axios.get(`${base}/transcript/${id}`, { headers }); // eslint-disable-line no-await-in-loop
-        if (poll.data.status === 'completed') return { text: poll.data.text || '', segments: [], language: 'en' };
+        if (poll.data.status === 'completed') {
+          return {
+            text: poll.data.text || '',
+            segments: segmentsFromAssemblyAiUtterances(poll.data.utterances),
+            language: 'en',
+          };
+        }
         if (poll.data.status === 'error') throw new Error(poll.data.error || 'AssemblyAI error');
         await new Promise((r) => setTimeout(r, 2000)); // eslint-disable-line no-await-in-loop
       }
@@ -141,6 +152,45 @@ export class TranscriptionService {
       language: 'en',
     };
   }
+}
+
+// Renumbers whatever raw speaker ids a provider used (0/1/2, 'A'/'B', ...) to
+// "Speaker 1", "Speaker 2", ... in order of first appearance, so both
+// providers produce the same label shape.
+function relabelSpeakers (rawSegments) {
+  const labelByRawId = new Map();
+  return rawSegments.map(({ rawSpeaker, text, start, end }) => {
+    if (!labelByRawId.has(rawSpeaker)) {
+      labelByRawId.set(rawSpeaker, `Speaker ${labelByRawId.size + 1}`);
+    }
+    return { speaker: labelByRawId.get(rawSpeaker), text, start, end };
+  });
+}
+
+// Deepgram (with diarize=true) returns per-word speaker indices, not
+// pre-grouped turns — group consecutive same-speaker words into segments.
+function segmentsFromDeepgramWords (words) {
+  if (!Array.isArray(words) || !words.length) return [];
+  const raw = [];
+  for (const w of words) {
+    const last = raw[raw.length - 1];
+    if (last && last.rawSpeaker === w.speaker) {
+      last.text += ` ${w.punctuated_word || w.word}`;
+      last.end = w.end;
+    } else {
+      raw.push({ rawSpeaker: w.speaker, text: w.punctuated_word || w.word, start: w.start, end: w.end });
+    }
+  }
+  return relabelSpeakers(raw);
+}
+
+// AssemblyAI (with speaker_labels: true) already returns pre-grouped turns.
+function segmentsFromAssemblyAiUtterances (utterances) {
+  if (!Array.isArray(utterances) || !utterances.length) return [];
+  const raw = utterances.map((u) => ({
+    rawSpeaker: u.speaker, text: u.text, start: u.start / 1000, end: u.end / 1000,
+  }));
+  return relabelSpeakers(raw);
 }
 
 export const transcriptionService = new TranscriptionService();
