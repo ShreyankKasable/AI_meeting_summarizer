@@ -51,7 +51,7 @@ export class ChatbotService {
     } else if (resolved === 'openai' || resolved === 'euron' || resolved === 'huggingface') {
       answer = await this._askOpenAICompatible(resolved, question, priorHistory, getTranscript);
     } else {
-      answer = 'No AI provider is configured. Add an API key in Settings to use the chatbot.';
+      answer = 'No AI provider is configured on the server. Please contact the workspace administrator.';
     }
 
     this._saveMessage(meetingId, actorKey, 'assistant', answer);
@@ -72,6 +72,8 @@ export class ChatbotService {
       huggingface: !!config.get('huggingface.api_key'),
     };
     if (requested && available[requested]) return requested;
+    const selected = config.get('llm_provider');
+    if (available[selected]) return selected;
     if (available.euron) return 'euron';
     if (available.openai) return 'openai';
     if (available.anthropic) return 'anthropic';
@@ -86,7 +88,7 @@ export class ChatbotService {
     if (providerKey === 'huggingface') {
       return { apiKey: config.get('huggingface.api_key'), baseURL: 'https://router.huggingface.co/v1', model: config.get('huggingface.chat_model') };
     }
-    return { apiKey: config.get('openai.api_key'), baseURL: undefined, model: 'gpt-4-turbo-preview' };
+    return { apiKey: config.get('openai.api_key'), baseURL: undefined, model: config.get('openai.model') };
   }
 
   async _askOpenAICompatible (providerKey, question, priorHistory, getTranscript) {
@@ -131,7 +133,7 @@ export class ChatbotService {
     try {
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
       const client = new Anthropic({ apiKey: config.get('anthropic.api_key') });
-      const model = 'claude-3-5-sonnet-20241022';
+      const model = config.get('anthropic.model');
 
       const tools = [{ name: TOOL_NAME, description: TOOL_DESCRIPTION, input_schema: { type: 'object', properties: {} } }];
 

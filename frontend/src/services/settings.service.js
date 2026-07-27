@@ -5,8 +5,8 @@ const SettingsService = {
     get() {
         return ApiService.get(URLS.settings);
     },
-    // `field` is the exact backend field name for that provider (e.g.
-    // "api_key", or "asr_model"/"chat_model" for huggingface).
+    // `field` is the exact safe backend field for that provider, such as
+    // "model", "asr_model", or "chat_model". AI API keys are server-owned.
     update(provider, field, value) {
         return ApiService.put(URLS.settings, { data: { provider, field, value } });
     },

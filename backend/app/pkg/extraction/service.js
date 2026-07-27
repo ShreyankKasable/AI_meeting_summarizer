@@ -8,8 +8,7 @@ import logger from '#app/common/logger.js';
 export class ExtractionService {
   constructor () {
     this.useLocal = config.get('use_local_model');
-    this.openaiClient = null;
-    this.modelName = null;
+    this.openAIClients = {};
     this.anthropicClient = null;
     this._ready = this._init();
   }
@@ -18,12 +17,18 @@ export class ExtractionService {
     if (this.useLocal) return;
     if (config.get('euron.enabled') && config.get('euron.api_key')) {
       const { default: OpenAI } = await import('openai');
-      this.openaiClient = new OpenAI({ apiKey: config.get('euron.api_key'), baseURL: config.get('euron.api_base') });
-      this.modelName = config.get('euron.model');
-    } else if (config.get('openai.api_key')) {
+      this.openAIClients.euron = new OpenAI({ apiKey: config.get('euron.api_key'), baseURL: config.get('euron.api_base') });
+    }
+    if (config.get('openai.api_key')) {
       const { default: OpenAI } = await import('openai');
-      this.openaiClient = new OpenAI({ apiKey: config.get('openai.api_key') });
-      this.modelName = 'gpt-4-turbo-preview';
+      this.openAIClients.openai = new OpenAI({ apiKey: config.get('openai.api_key') });
+    }
+    if (config.get('huggingface.api_key')) {
+      const { default: OpenAI } = await import('openai');
+      this.openAIClients.huggingface = new OpenAI({
+        apiKey: config.get('huggingface.api_key'),
+        baseURL: 'https://router.huggingface.co/v1',
+      });
     }
     if (config.get('anthropic.api_key')) {
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
@@ -38,8 +43,9 @@ export class ExtractionService {
       : (transcriptData || '');
     const prompt = this._buildPrompt(text, summary);
 
-    if (this.openaiClient) return this._extractOpenAI(prompt);
-    if (this.anthropicClient) return this._extractClaude(prompt);
+    const provider = this._resolveProvider();
+    if (provider === 'anthropic') return this._extractClaude(prompt);
+    if (provider) return this._extractOpenAI(prompt, provider);
     return this._fallback(text);
   }
 
@@ -77,10 +83,11 @@ Example output format:
 Action Items (JSON array):`;
   }
 
-  async _extractOpenAI (prompt) {
+  async _extractOpenAI (prompt, provider) {
     try {
-      const response = await this.openaiClient.chat.completions.create({
-        model: this.modelName,
+      const client = this.openAIClients[provider];
+      const response = await client.chat.completions.create({
+        model: this._modelFor(provider),
         messages: [
           { role: 'system', content: 'You are an expert at extracting action items from meeting transcripts. Always respond with valid JSON.' },
           { role: 'user', content: prompt },
@@ -98,7 +105,7 @@ Action Items (JSON array):`;
   async _extractClaude (prompt) {
     try {
       const response = await this.anthropicClient.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: config.get('anthropic.model'),
         max_tokens: 2000,
         temperature: 0.2,
         messages: [{ role: 'user', content: prompt }],
@@ -108,6 +115,28 @@ Action Items (JSON array):`;
       logger.error('Anthropic action item extraction error:', e.message);
       return [];
     }
+  }
+
+  _resolveProvider () {
+    const available = {
+      openai: !!this.openAIClients.openai,
+      anthropic: !!this.anthropicClient,
+      euron: !!this.openAIClients.euron,
+      huggingface: !!this.openAIClients.huggingface,
+    };
+    const selected = config.get('llm_provider');
+    if (available[selected]) return selected;
+    if (available.euron) return 'euron';
+    if (available.openai) return 'openai';
+    if (available.anthropic) return 'anthropic';
+    if (available.huggingface) return 'huggingface';
+    return null;
+  }
+
+  _modelFor (provider) {
+    if (provider === 'euron') return config.get('euron.model');
+    if (provider === 'huggingface') return config.get('huggingface.chat_model');
+    return config.get('openai.model');
   }
 
   _parse (content) {

@@ -33,9 +33,11 @@ export class TranscriptionService {
     }
     logger.info('Transcribing audio file:', audioFile);
 
-    if (this.modelType === 'deepgram') return this._deepgram(audioFile);
-    if (this.modelType === 'assemblyai') return this._assemblyai(audioFile);
-    if (this.modelType === 'huggingface') return this._huggingface(audioFile);
+    const modelType = config.get('transcription_model');
+    if (modelType === 'deepgram') return this._deepgram(audioFile);
+    if (modelType === 'assemblyai') return this._assemblyai(audioFile);
+    if (modelType === 'huggingface') return this._huggingface(audioFile);
+    if (!this.whisper) await this._loadWhisper();
     return this._whisper(audioFile);
   }
 
@@ -43,7 +45,7 @@ export class TranscriptionService {
     if (!this.whisper) return this._fallback(audioFile);
     try {
       const result = await this.whisper(audioFile, {
-        modelName: 'base',
+        modelName: config.get('whisper.model'),
         whisperOptions: { word_timestamps: false },
       });
       const segments = (result || []).map((r) => ({ start: r.start, end: r.end, text: r.speech }));
@@ -58,9 +60,10 @@ export class TranscriptionService {
     try {
       const apiKey = config.get('deepgram.api_key');
       if (!apiKey) throw new Error('DEEPGRAM_API_KEY not configured');
+      const model = encodeURIComponent(config.get('deepgram.model'));
       const audioData = fs.readFileSync(audioFile);
       const res = await axios.post(
-        'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&diarize=true',
+        `https://api.deepgram.com/v1/listen?model=${model}&smart_format=true&diarize=true`,
         audioData,
         {
           headers: { Authorization: `Token ${apiKey}`, 'Content-Type': 'audio/wav' },
@@ -94,7 +97,7 @@ export class TranscriptionService {
       });
       const create = await axios.post(
         `${base}/transcript`,
-        { audio_url: upload.data.upload_url, speaker_labels: true },
+        { audio_url: upload.data.upload_url, speaker_labels: true, speech_model: config.get('assemblyai.model') },
         { headers }
       );
       const id = create.data.id;
@@ -146,7 +149,7 @@ export class TranscriptionService {
     return {
       text:
         `[Audio recorded from ${audioFile}]\n\nTranscription temporarily unavailable. Please:\n` +
-        '1. Set TRANSCRIPTION_MODEL=deepgram or assemblyai with a valid API key\n' +
+        '1. Configure TRANSCRIPTION_MODEL and the matching server API key\n' +
         '2. Or install whisper-node for local transcription',
       segments: [],
       language: 'en',

@@ -41,14 +41,9 @@ const Wrapper = styled.div`
 
 const Header = styled.div`
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
-    gap: var(--Size-Gap-XXL);
+    gap: var(--Size-Gap-XL);
     margin-bottom: var(--Size-Gap-XXL);
-
-    @media (max-width: 900px) {
-        grid-template-columns: 1fr;
-    }
 `;
 
 const TitleBlock = styled.div`
@@ -69,12 +64,8 @@ const MetaRow = styled.div`
 const Actions = styled.div`
     display: flex;
     gap: var(--Size-Gap-M);
-    justify-content: flex-end;
+    justify-content: flex-start;
     flex-wrap: wrap;
-
-    @media (max-width: 900px) {
-        justify-content: flex-start;
-    }
 `;
 
 const Split = styled.div`
@@ -89,15 +80,44 @@ const Split = styled.div`
     }
 `;
 
-const SidePanel = styled.div`
+const TranscriptColumn = styled.div`
     min-height: 0;
     display: flex;
     flex-direction: column;
+`;
+
+const TranscriptPaneShell = styled.div`
+    flex: 1;
+    min-height: 0;
+`;
+
+const SidePanel = styled.div`
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
     background: var(--Color-Background-Default);
-    border: 1px solid var(--Color-Border-Subtle);
+    border: 12px solid var(--Color-Background-Action);
     border-radius: var(--Size-CornerRadius-XXL);
-    box-shadow: var(--Color-Shadow-Card);
+    box-shadow: 0 18px 42px rgba(15, 118, 110, 0.22), var(--Color-Shadow-Card);
     overflow: hidden;
+
+    @media (max-width: 1120px) {
+        min-height: 620px;
+    }
+`;
+
+const PanelTitle = styled.div`
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--Size-Padding-XL);
+    background: var(--Color-Background-Action);
+    color: var(--Color-Text-Inverse);
+    font-size: var(--body-2-d);
+    font-weight: var(--bold);
+    text-align: center;
 `;
 
 const TabContent = styled.div`
@@ -118,6 +138,12 @@ const TABS = [
     { id: "summary", label: "Summary" },
     { id: "actions", label: "Actions" },
 ];
+
+const PANEL_TITLES = {
+    chat: "Chat with AI",
+    summary: "Summary",
+    actions: "Actions",
+};
 
 const MeetingContentView = () => {
     const dispatch = useDispatch();
@@ -212,42 +238,46 @@ const MeetingContentView = () => {
 
     return (
         <Wrapper>
-            <Header>
-                <TitleBlock>
-                    <MetaRow>
-                        <Badge tone="neutral">
-                            <Calendar size={13} />
-                            {formatDate(meeting.start_time)}
-                        </Badge>
-                    </MetaRow>
-                    <H1 style={{ fontSize: "var(--h2-d)" }}>{meeting.title}</H1>
-                </TitleBlock>
-                <Actions>
-                    <Button mode="secondary" onClick={handleExportNotion}>
-                        <FileText size={16} />
-                        Export to Notion
-                    </Button>
-                    <Button onClick={() => dispatch(setHostView(HOST_VIEWS.Share))}>
-                        <Share2 size={16} />
-                        Share
-                    </Button>
-                </Actions>
-            </Header>
-
             <Split>
-                <TranscriptPane
-                    text={translatedText ?? transcriptText}
-                    segments={translatedText ? null : meeting.transcript?.segments}
-                    speakerNames={meeting.transcript?.speakerNames}
-                    audioSrc={meeting.audio_file_path}
-                    onTranslate={handleTranslate}
-                    translating={translating}
-                    editable
-                    onRenameSpeaker={(speaker, name) =>
-                        dispatch(renameSpeaker(activeId, speaker, name))
-                    }
-                />
+                <TranscriptColumn>
+                    <Header>
+                        <TitleBlock>
+                            <MetaRow>
+                                <Badge tone="neutral">
+                                    <Calendar size={13} />
+                                    {formatDate(meeting.start_time)}
+                                </Badge>
+                            </MetaRow>
+                            <H1 style={{ fontSize: "var(--h2-d)" }}>{meeting.title}</H1>
+                        </TitleBlock>
+                        <Actions>
+                            <Button mode="secondary" onClick={handleExportNotion}>
+                                <FileText size={16} />
+                                Export to Notion
+                            </Button>
+                            <Button onClick={() => dispatch(setHostView(HOST_VIEWS.Share))}>
+                                <Share2 size={16} />
+                                Share
+                            </Button>
+                        </Actions>
+                    </Header>
+                    <TranscriptPaneShell>
+                        <TranscriptPane
+                            text={translatedText ?? transcriptText}
+                            segments={translatedText ? null : meeting.transcript?.segments}
+                            speakerNames={meeting.transcript?.speakerNames}
+                            audioSrc={meeting.audio_file_path}
+                            onTranslate={handleTranslate}
+                            translating={translating}
+                            editable
+                            onRenameSpeaker={(speaker, name) =>
+                                dispatch(renameSpeaker(activeId, speaker, name))
+                            }
+                        />
+                    </TranscriptPaneShell>
+                </TranscriptColumn>
                 <SidePanel>
+                    <PanelTitle>{PANEL_TITLES[activeTab]}</PanelTitle>
                     <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
                     <TabContent>
                         {activeTab === "chat" && (

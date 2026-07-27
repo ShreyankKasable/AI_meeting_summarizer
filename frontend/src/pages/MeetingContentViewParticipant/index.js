@@ -99,10 +99,23 @@ const SidePanel = styled.div`
     display: flex;
     flex-direction: column;
     background: var(--Color-Background-Default);
-    border: 1px solid var(--Color-Border-Subtle);
+    border: 12px solid var(--Color-Background-Action);
     border-radius: var(--Size-CornerRadius-XXL);
-    box-shadow: var(--Color-Shadow-Card);
+    box-shadow: 0 18px 42px rgba(15, 118, 110, 0.22), var(--Color-Shadow-Card);
     overflow: hidden;
+`;
+
+const PanelTitle = styled.div`
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--Size-Padding-XL);
+    background: var(--Color-Background-Action);
+    color: var(--Color-Text-Inverse);
+    font-size: var(--body-2-d);
+    font-weight: var(--bold);
+    text-align: center;
 `;
 
 const TabContent = styled.div`
@@ -122,6 +135,12 @@ const TABS = [
     { id: "summary", label: "Summary" },
     { id: "actions", label: "Actions" },
 ];
+
+const PANEL_TITLES = {
+    chat: "Chat with AI",
+    summary: "Summary",
+    actions: "Actions",
+};
 
 const MeetingContentViewParticipant = ({ token }) => {
     const [meeting, setMeeting] = useState(null);
@@ -231,6 +250,7 @@ const MeetingContentViewParticipant = ({ token }) => {
                         translating={translating}
                     />
                     <SidePanel>
+                        <PanelTitle>{PANEL_TITLES[activeTab]}</PanelTitle>
                         <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
                         <TabContent>
                             {activeTab === "chat" && (

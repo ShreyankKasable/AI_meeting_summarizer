@@ -69,7 +69,8 @@ const TabButton = styled.button`
     white-space: nowrap;
 
     svg {
-        color: ${({ $active }) => ($active ? "var(--Color-Icon-Action)" : "var(--Color-Icon-Subtle)")};
+        color: ${({ $active }) =>
+            $active ? "var(--Color-Icon-Action)" : "var(--Color-Icon-Subtle)"};
     }
 
     &:hover {
@@ -132,8 +133,14 @@ const Settings = () => {
                     <H1 style={{ fontSize: "var(--h2-d)", marginTop: "var(--Size-Gap-L)" }}>
                         AI Engine Configuration
                     </H1>
-                    <Body2 style={{ color: "var(--Color-Text-Subtle)", marginTop: "var(--Size-Gap-M)" }}>
-                        Configure the providers and integrations powering transcription, summaries, and chat.
+                    <Body2
+                        style={{
+                            color: "var(--Color-Text-Subtle)",
+                            marginTop: "var(--Size-Gap-M)",
+                        }}
+                    >
+                        Configure the providers and integrations powering transcription, summaries,
+                        and chat.
                     </Body2>
                 </div>
                 {saving ? (
@@ -154,7 +161,12 @@ const Settings = () => {
             <Layout>
                 <TabRail>
                     {TABS.map(({ id, label, icon: Icon }) => (
-                        <TabButton key={id} type="button" $active={activeTab === id} onClick={() => setActiveTab(id)}>
+                        <TabButton
+                            key={id}
+                            type="button"
+                            $active={activeTab === id}
+                            onClick={() => setActiveTab(id)}
+                        >
                             <Icon size={16} />
                             {label}
                         </TabButton>
@@ -180,8 +192,12 @@ const Settings = () => {
                         </LoadingGrid>
                     ) : (
                         <>
-                            {activeTab === "providers" && <AiProvidersTab status={status} onSave={handleSave} />}
-                            {activeTab === "integrations" && <IntegrationsTab status={status} onSave={handleSave} />}
+                            {activeTab === "providers" && (
+                                <AiProvidersTab status={status} onSave={handleSave} />
+                            )}
+                            {activeTab === "integrations" && (
+                                <IntegrationsTab status={status} onSave={handleSave} />
+                            )}
                             {activeTab === "notifications" && <NotificationsTab />}
                         </>
                     )}

@@ -70,6 +70,12 @@ const config = convict({
     default: 10,
     env: 'LIVE_TRANSCRIPTION_INTERVAL',
   },
+  llm_provider: {
+    doc: 'LLM backend: openai | anthropic | euron | huggingface',
+    format: ['openai', 'anthropic', 'euron', 'huggingface'],
+    default: 'openai',
+    env: 'LLM_PROVIDER',
+  },
   use_local_model: {
     doc: 'Use a local LLM for summarization',
     format: Boolean,
@@ -82,17 +88,24 @@ const config = convict({
     default: '',
     env: 'LOCAL_MODEL_PATH',
   },
+  whisper: {
+    model: { format: String, default: 'base', env: 'WHISPER_MODEL' },
+  },
   openai: {
     api_key: { format: String, default: '', env: 'OPENAI_API_KEY', sensitive: true },
+    model: { format: String, default: 'gpt-4-turbo-preview', env: 'OPENAI_MODEL' },
   },
   anthropic: {
     api_key: { format: String, default: '', env: 'ANTHROPIC_API_KEY', sensitive: true },
+    model: { format: String, default: 'claude-3-5-sonnet-20241022', env: 'ANTHROPIC_MODEL' },
   },
   deepgram: {
     api_key: { format: String, default: '', env: 'DEEPGRAM_API_KEY', sensitive: true },
+    model: { format: String, default: 'nova-2', env: 'DEEPGRAM_MODEL' },
   },
   assemblyai: {
     api_key: { format: String, default: '', env: 'ASSEMBLYAI_API_KEY', sensitive: true },
+    model: { format: String, default: 'best', env: 'ASSEMBLYAI_MODEL' },
   },
   huggingface: {
     api_key: { format: String, default: '', env: 'HUGGINGFACE_API_KEY', sensitive: true },

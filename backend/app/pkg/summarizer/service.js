@@ -8,8 +8,7 @@ import logger from '#app/common/logger.js';
 export class SummarizerService {
   constructor () {
     this.useLocal = config.get('use_local_model');
-    this.openaiClient = null;
-    this.modelName = null;
+    this.openAIClients = {};
     this.anthropicClient = null;
     this._ready = this._init();
   }
@@ -26,14 +25,21 @@ export class SummarizerService {
     }
     if (config.get('euron.enabled') && config.get('euron.api_key')) {
       const { default: OpenAI } = await import('openai');
-      this.openaiClient = new OpenAI({ apiKey: config.get('euron.api_key'), baseURL: config.get('euron.api_base') });
-      this.modelName = config.get('euron.model');
-      logger.info(`OK: Using Euron.one API with model: ${this.modelName}`);
-    } else if (config.get('openai.api_key')) {
+      this.openAIClients.euron = new OpenAI({ apiKey: config.get('euron.api_key'), baseURL: config.get('euron.api_base') });
+      logger.info(`OK: Euron.one API available with model: ${config.get('euron.model')}`);
+    }
+    if (config.get('openai.api_key')) {
       const { default: OpenAI } = await import('openai');
-      this.openaiClient = new OpenAI({ apiKey: config.get('openai.api_key') });
-      this.modelName = 'gpt-4-turbo-preview';
-      logger.info('OK: Using official OpenAI API');
+      this.openAIClients.openai = new OpenAI({ apiKey: config.get('openai.api_key') });
+      logger.info('OK: OpenAI API available');
+    }
+    if (config.get('huggingface.api_key')) {
+      const { default: OpenAI } = await import('openai');
+      this.openAIClients.huggingface = new OpenAI({
+        apiKey: config.get('huggingface.api_key'),
+        baseURL: 'https://router.huggingface.co/v1',
+      });
+      logger.info('OK: Hugging Face router API available');
     }
     if (config.get('anthropic.api_key')) {
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
@@ -49,55 +55,64 @@ export class SummarizerService {
     const prompt = this._buildPrompt(text);
 
     if (this.useLocal && this._llama) return this._summarizeLocal(prompt);
-    if (this.openaiClient) return this._summarizeOpenAI(prompt);
-    if (this.anthropicClient) return this._summarizeClaude(prompt);
+    const provider = this._resolveProvider();
+    if (provider === 'anthropic') return this._summarizeClaude(prompt);
+    if (provider) return this._summarizeOpenAI(prompt, provider);
     return this._fallback(text);
   }
 
   _buildPrompt (transcript) {
-    return `You are an expert meeting analyst and summarizer. Analyze the following meeting transcript and provide a COMPREHENSIVE, DETAILED summary.
+    return `You are an expert meeting analyst and summarizer. Analyze the following meeting transcript and provide a COMPREHENSIVE, DETAILED summary in clean Markdown.
 
-Your summary should be thorough and include:
+Formatting requirements:
+- Return Markdown only. Do not wrap the response in a code block.
+- Use section headings with ##.
+- Use bullet lists for grouped details.
+- Use bold labels for important fields, for example **Decision** or **Owner**.
+- Avoid Markdown tables and HTML.
+- Keep wording clear enough that someone who missed the meeting can understand the discussion.
 
-1. **Meeting Overview**
+Your summary should be thorough and include these Markdown sections:
+
+## Meeting Overview
    - Purpose and context of the meeting
    - Overall tone and atmosphere
    - Duration and flow
 
-2. **Main Topics Discussed**
+## Main Topics Discussed
    - List ALL major topics/themes covered
    - For each topic, provide 2-3 sentences of detail
    - Include any background context mentioned
 
-3. **Key Points and Insights**
+## Key Points and Insights
    - Important facts, data, or metrics mentioned
    - Critical insights or observations shared
    - Any concerns or challenges raised
    - Opportunities or ideas discussed
 
-4. **Decisions Made**
+## Decisions Made
    - All concrete decisions or agreements
    - Who made or approved each decision
    - Reasoning behind each decision
 
-5. **Action Items and Next Steps**
+## Action Items and Next Steps
    - Detailed list of tasks assigned
    - Who is responsible for each task
    - Deadlines mentioned
    - Dependencies between tasks
 
-6. **Discussion Details**
+## Discussion Details
    - Key questions asked and answers provided
    - Different viewpoints or opinions expressed
    - Any debates or discussions that occurred
    - Consensus reached on various points
 
-7. **Participants and Contributions**
+## Participants and Contributions
    - Who spoke and their roles (if identifiable)
    - Main contributions from each participant
    - Level of engagement
 
-8. **Follow-up Items**
+## Follow-up Items
    - Future meetings planned
    - Information or resources needed
    - Open questions requiring answers
@@ -105,15 +120,16 @@ Your summary should be thorough and include:
 Meeting Transcript:
 ${transcript}
 
-Please provide a well-structured, DETAILED summary with specific examples and quotes where relevant. Make it comprehensive enough that someone who missed the meeting can fully understand what happened:`;
+Please provide the final answer as polished Markdown with specific examples and short quotes where relevant:`;
   }
 
-  async _summarizeOpenAI (prompt) {
+  async _summarizeOpenAI (prompt, provider) {
     try {
-      const response = await this.openaiClient.chat.completions.create({
-        model: this.modelName,
+      const client = this.openAIClients[provider];
+      const response = await client.chat.completions.create({
+        model: this._modelFor(provider),
         messages: [
-          { role: 'system', content: 'You are an expert meeting analyst who provides comprehensive, detailed summaries. Always be thorough and include specific details, quotes, and context.' },
+          { role: 'system', content: 'You are an expert meeting analyst who provides comprehensive, detailed meeting summaries in clean Markdown. Always return Markdown only, with headings and bullet lists.' },
           { role: 'user', content: prompt },
         ],
         temperature: 0.3,
@@ -129,9 +145,10 @@ Please provide a well-structured, DETAILED summary with specific examples and qu
   async _summarizeClaude (prompt) {
     try {
       const response = await this.anthropicClient.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: config.get('anthropic.model'),
         max_tokens: 1500,
         temperature: 0.3,
+        system: 'You are an expert meeting analyst who provides comprehensive, detailed meeting summaries in clean Markdown. Always return Markdown only, with headings and bullet lists.',
         messages: [{ role: 'user', content: prompt }],
       });
       return response.content[0].text;
@@ -139,6 +156,28 @@ Please provide a well-structured, DETAILED summary with specific examples and qu
       logger.error('Anthropic summarization error:', e.message);
       return null;
     }
+  }
+
+  _resolveProvider () {
+    const available = {
+      openai: !!this.openAIClients.openai,
+      anthropic: !!this.anthropicClient,
+      euron: !!this.openAIClients.euron,
+      huggingface: !!this.openAIClients.huggingface,
+    };
+    const selected = config.get('llm_provider');
+    if (available[selected]) return selected;
+    if (available.euron) return 'euron';
+    if (available.openai) return 'openai';
+    if (available.anthropic) return 'anthropic';
+    if (available.huggingface) return 'huggingface';
+    return null;
+  }
+
+  _modelFor (provider) {
+    if (provider === 'euron') return config.get('euron.model');
+    if (provider === 'huggingface') return config.get('huggingface.chat_model');
+    return config.get('openai.model');
   }
 
   async _summarizeLocal (prompt) {
