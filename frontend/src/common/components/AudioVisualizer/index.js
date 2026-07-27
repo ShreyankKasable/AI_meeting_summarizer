@@ -7,26 +7,23 @@ const Wrapper = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 4px;
     width: 100%;
-    max-width: 640px;
-    height: 96px;
+    height: 104px;
 `;
 
 const Bar = styled.div`
     flex: 1;
-    max-width: 4px;
+    max-width: 5px;
     min-height: 4px;
     border-radius: var(--Size-CornerRadius-Full);
-    background: var(--Color-Background-Action);
-    opacity: 0.4;
-    transition: height 0.08s ease, opacity 0.08s ease;
+    background: linear-gradient(180deg, #54d1c4, var(--Color-Background-Action));
+    opacity: 0.36;
+    transition:
+        height 0.08s ease,
+        opacity 0.08s ease;
 `;
 
-// 64-bar waveform. If `analyser` (a Web Audio AnalyserNode) is supplied and
-// `active` is true, bars reflect real frequency data; otherwise they idle
-// with a gentle sine-wave animation so the component still looks alive
-// before recording starts.
 const AudioVisualizer = ({ analyser, active = false }) => {
     const barRefs = useRef([]);
     const rafRef = useRef(null);
@@ -41,11 +38,11 @@ const AudioVisualizer = ({ analyser, active = false }) => {
                 const step = Math.floor(dataArray.length / BAR_COUNT) || 1;
                 for (let i = 0; i < BAR_COUNT; i++) {
                     const value = dataArray[i * step] || 0;
-                    const height = Math.max(4, (value / 255) * 96);
+                    const height = Math.max(4, (value / 255) * 104);
                     const bar = barRefs.current[i];
                     if (bar) {
                         bar.style.height = `${height}px`;
-                        bar.style.opacity = String(0.4 + (value / 255) * 0.6);
+                        bar.style.opacity = String(0.38 + (value / 255) * 0.62);
                     }
                 }
             } else {
@@ -54,8 +51,8 @@ const AudioVisualizer = ({ analyser, active = false }) => {
                     const wave = Math.sin(idleTRef.current + i * 0.35) * 0.5 + 0.5;
                     const bar = barRefs.current[i];
                     if (bar) {
-                        bar.style.height = `${8 + wave * 16}px`;
-                        bar.style.opacity = String(0.25 + wave * 0.25);
+                        bar.style.height = `${10 + wave * 18}px`;
+                        bar.style.opacity = String(0.18 + wave * 0.28);
                     }
                 }
             }
@@ -67,7 +64,7 @@ const AudioVisualizer = ({ analyser, active = false }) => {
     }, [analyser, active]);
 
     return (
-        <Wrapper>
+        <Wrapper aria-hidden="true">
             {Array.from({ length: BAR_COUNT }).map((_, i) => (
                 <Bar key={i} ref={(el) => (barRefs.current[i] = el)} />
             ))}

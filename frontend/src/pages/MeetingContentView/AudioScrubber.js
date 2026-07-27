@@ -1,52 +1,85 @@
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import { Play, Pause, Rewind, FastForward, Volume2 } from "lucide-react";
+import { FastForward, Pause, Play, Rewind, Volume2 } from "lucide-react";
 import { Body3 } from "common/global-styled-components";
 import { formatElapsed } from "common/utils/utils";
 
 const Bar = styled.div`
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto auto auto 1fr auto auto;
     align-items: center;
     gap: var(--Size-Gap-L);
     padding: var(--Size-Padding-L) var(--Size-Padding-XL);
-    background: var(--Color-Background-Subtle-2);
+    background: var(--Color-Background-Subtle);
     border-top: 1px solid var(--Color-Border-Subtle);
+
+    @media (max-width: 640px) {
+        grid-template-columns: auto auto auto 1fr;
+        gap: var(--Size-Gap-M);
+    }
 `;
 
 const PlayButton = styled.button`
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: 50%;
-    background: var(--Color-Background-Action);
+    border-radius: var(--Size-CornerRadius-Full);
+    background: var(--Color-Background-Bold);
     color: var(--Color-Text-Inverse);
+    box-shadow: 0 12px 24px rgba(17, 19, 22, 0.18);
+    transition: all var(--transition-fast);
+
+    &:hover {
+        transform: translateY(-1px);
+    }
 `;
 
 const Track = styled.div`
     flex: 1;
-    height: 6px;
-    background: var(--Color-Border-Default);
+    height: 8px;
+    background: var(--Color-Background-Subtle-3);
     border-radius: var(--Size-CornerRadius-Full);
     position: relative;
     cursor: pointer;
+    overflow: hidden;
 `;
 
 const Fill = styled.div`
     position: absolute;
     inset: 0;
-    width: ${({ pct }) => pct}%;
+    width: ${({ $pct }) => $pct}%;
     background: var(--Color-Background-Action);
     border-radius: var(--Size-CornerRadius-Full);
 `;
 
 const IconButton = styled.button`
-    background: none;
-    border: none;
-    color: var(--Color-Icon-Subtle);
+    width: 32px;
+    height: 32px;
     display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--Color-Background-Default);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-M);
+    color: var(--Color-Icon-Subtle);
+    transition: all var(--transition-fast);
+
+    &:hover {
+        color: var(--Color-Text-Bold);
+        border-color: var(--Color-Border-Bold);
+    }
+`;
+
+const Time = styled(Body3)`
+    font-family: var(--mono-font);
+    color: var(--Color-Text-Subtle);
+
+    @media (max-width: 640px) {
+        display: none;
+    }
 `;
 
 const AudioScrubber = ({ src }) => {
@@ -97,20 +130,20 @@ const AudioScrubber = ({ src }) => {
     return (
         <Bar>
             <audio ref={audioRef} src={src} preload="metadata" />
-            <IconButton type="button" onClick={() => seek(-10)} title="Rewind 10s">
-                <Rewind size={16} />
+            <IconButton type="button" onClick={() => seek(-10)} title="Rewind 10 seconds" aria-label="Rewind 10 seconds">
+                <Rewind size={15} />
             </IconButton>
-            <PlayButton type="button" onClick={togglePlay}>
+            <PlayButton type="button" onClick={togglePlay} aria-label={playing ? "Pause audio" : "Play audio"}>
                 {playing ? <Pause size={16} /> : <Play size={16} />}
             </PlayButton>
-            <IconButton type="button" onClick={() => seek(10)} title="Forward 10s">
-                <FastForward size={16} />
+            <IconButton type="button" onClick={() => seek(10)} title="Forward 10 seconds" aria-label="Forward 10 seconds">
+                <FastForward size={15} />
             </IconButton>
-            <Body3>{formatElapsed(currentMs)}</Body3>
-            <Track onClick={seekToClick}>
-                <Fill pct={pct} />
+            <Time>{formatElapsed(currentMs)}</Time>
+            <Track onClick={seekToClick} role="slider" aria-label="Audio position" aria-valuenow={Math.round(pct)}>
+                <Fill $pct={pct} />
             </Track>
-            <Body3>{formatElapsed(durationMs)}</Body3>
+            <Time>{formatElapsed(durationMs)}</Time>
             <Volume2 size={16} color="var(--Color-Icon-Subtle)" />
         </Bar>
     );

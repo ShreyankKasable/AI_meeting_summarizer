@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import styled from "styled-components";
-import { Mic } from "lucide-react";
+import { Mic, Users } from "lucide-react";
 import Modal from "common/components/Modal";
 import Input from "common/components/Input";
 import Button from "common/components/Button";
+import Badge from "common/components/Badge";
+import { Body3 } from "common/global-styled-components";
 import { setHostView } from "common/redux/actions/sessionActions";
 import { HOST_VIEWS } from "common/constants";
 import { emitStartRecording } from "services/socket.service";
@@ -15,9 +17,31 @@ const Form = styled.form`
     gap: var(--Size-Gap-XL);
 `;
 
-// Starting a recording is a socket emit (start_recording -> recording_started
-// lands the meeting id in redux via useSocket), not a REST POST — see
-// common/hooks/useSocket.js.
+const Intro = styled.div`
+    display: grid;
+    gap: var(--Size-Gap-M);
+    padding: var(--Size-Padding-XL);
+    margin-bottom: var(--Size-Gap-XL);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-XL);
+    background: var(--Color-Background-Subtle);
+`;
+
+const IconLine = styled.div`
+    display: flex;
+    align-items: center;
+    gap: var(--Size-Gap-M);
+`;
+
+const Actions = styled.div`
+    display: flex;
+    gap: var(--Size-Gap-M);
+
+    @media (max-width: 480px) {
+        flex-direction: column-reverse;
+    }
+`;
+
 const NewMeetingModal = ({ onClose }) => {
     const dispatch = useDispatch();
     const [title, setTitle] = useState("");
@@ -32,13 +56,24 @@ const NewMeetingModal = ({ onClose }) => {
 
     return (
         <Modal title="New Meeting" onClose={onClose} id="new-meeting-modal">
+            <Intro>
+                <Badge tone="action">
+                    <Mic size={13} />
+                    Recording setup
+                </Badge>
+                <IconLine>
+                    <Users size={16} color="var(--Color-Icon-Subtle)" />
+                    <Body3>Participant names can be added now or cleaned up after transcription.</Body3>
+                </IconLine>
+            </Intro>
             <Form onSubmit={handleSubmit}>
                 <Input
                     label="Meeting Title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., Weekly Sync"
+                    placeholder="Weekly product review"
                     id="new-meeting-title"
+                    autoFocus
                 />
                 <Input
                     label="Participants"
@@ -48,10 +83,15 @@ const NewMeetingModal = ({ onClose }) => {
                     placeholder="Comma-separated names"
                     id="new-meeting-participants"
                 />
-                <Button type="submit" block id="start-recording-btn">
-                    <Mic size={16} />
-                    Start Recording
-                </Button>
+                <Actions>
+                    <Button type="button" mode="secondary" block onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" block id="start-recording-btn">
+                        <Mic size={16} />
+                        Start Recording
+                    </Button>
+                </Actions>
             </Form>
         </Modal>
     );

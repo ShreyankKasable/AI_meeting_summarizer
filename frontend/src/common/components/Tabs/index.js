@@ -3,29 +3,32 @@ import styled from "styled-components";
 
 const Strip = styled.div`
     display: flex;
+    gap: var(--Size-Gap-S);
+    padding: var(--Size-Padding-S);
+    background: var(--Color-Background-Subtle);
     border-bottom: 1px solid var(--Color-Border-Subtle);
 `;
 
 const TabButton = styled.button`
     flex: 1;
-    padding: var(--Size-Padding-L) var(--Size-Padding-M);
-    background: none;
-    border: none;
-    border-bottom: 2px solid ${({ active }) => (active ? "var(--Color-Border-Action)" : "transparent")};
-    color: ${({ active }) => (active ? "var(--Color-Text-Action)" : "var(--Color-Text-Subtlest)")};
-    font-size: var(--body-4-d);
-    font-weight: var(--bold);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
-    transition: all 0.15s ease;
+    min-height: 36px;
+    padding: 0 var(--Size-Padding-L);
+    background: ${({ active }) => (active ? "var(--Color-Background-Default)" : "transparent")};
+    border: 1px solid ${({ active }) => (active ? "var(--Color-Border-Subtle)" : "transparent")};
+    border-radius: var(--Size-CornerRadius-M);
+    color: ${({ active }) => (active ? "var(--Color-Text-Bold)" : "var(--Color-Text-Subtle)")};
+    box-shadow: ${({ active }) => (active ? "0 1px 2px rgba(17, 19, 22, 0.06)" : "none")};
+    font-size: var(--body-3-d);
+    font-weight: var(--semi-bold);
+    letter-spacing: 0;
+    transition: all var(--transition-fast);
 
     &:hover {
-        color: var(--Color-Text-Action);
+        color: var(--Color-Text-Bold);
+        background: ${({ active }) => (active ? "var(--Color-Background-Default)" : "rgba(255, 255, 255, 0.72)")};
     }
 `;
 
-// Controlled tab strip. `tabs` is [{ id, label }]; `activeId`/`onChange` are
-// owned by the parent so it can render whatever content goes with each tab.
 const Tabs = ({ tabs, activeId, onChange }) => {
     return (
         <Strip role="tablist">

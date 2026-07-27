@@ -1,14 +1,14 @@
 import React, { useEffect, useRef } from "react";
 import styled from "styled-components";
-import { Body2 } from "common/global-styled-components";
+import { MessageSquareText } from "lucide-react";
+import { Body2, Body3 } from "common/global-styled-components";
 
 const Panel = styled.div`
-    width: 100%;
-    max-width: 640px;
-    max-height: 200px;
+    width: min(100%, 760px);
+    max-height: 240px;
     overflow-y: auto;
-    margin-top: var(--Size-Gap-XXL);
-    padding: var(--Size-Padding-XL);
+    margin: 0 auto;
+    padding: var(--Size-Padding-XXL);
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
     border-radius: var(--Size-CornerRadius-XL);
@@ -16,22 +16,42 @@ const Panel = styled.div`
     text-align: left;
 `;
 
+const Header = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--Size-Gap-XL);
+    margin-bottom: var(--Size-Gap-L);
+`;
+
 const Label = styled.div`
+    display: inline-flex;
+    align-items: center;
+    gap: var(--Size-Gap-S);
     font-size: var(--body-4-d);
     font-weight: var(--bold);
     letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
     color: var(--Color-Text-Action);
-    margin-bottom: var(--Size-Gap-M);
 `;
 
-const Placeholder = styled(Body2)`
+const Count = styled(Body3)`
     color: var(--Color-Text-Subtlest);
 `;
 
-// Live transcript entries, dimmer for older text and full-opacity for the
-// most recent — appended in real time from the live_transcript_update socket
-// event (see common/hooks/useSocket.js).
+const Placeholder = styled.div`
+    min-height: 88px;
+    display: grid;
+    place-items: center;
+    border: 1px dashed var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-L);
+    color: var(--Color-Text-Subtlest);
+`;
+
+const TranscriptText = styled(Body2)`
+    line-height: var(--line-height-160);
+`;
+
 const TranscriptPanel = ({ entries = [] }) => {
     const scrollRef = useRef(null);
 
@@ -41,17 +61,25 @@ const TranscriptPanel = ({ entries = [] }) => {
 
     return (
         <Panel ref={scrollRef}>
-            <Label>Live Transcript</Label>
+            <Header>
+                <Label>
+                    <MessageSquareText size={14} />
+                    Live Transcript
+                </Label>
+                <Count>{entries.length} chunks</Count>
+            </Header>
             {entries.length === 0 ? (
-                <Placeholder>Listening for speech...</Placeholder>
+                <Placeholder>
+                    <Body3>Listening for speech...</Body3>
+                </Placeholder>
             ) : (
-                <Body2 style={{ lineHeight: "var(--line-height-140)" }}>
+                <TranscriptText>
                     {entries.map((text, i) => (
-                        <span key={i} style={{ opacity: i === entries.length - 1 ? 1 : 0.6 }}>
+                        <span key={i} style={{ opacity: i === entries.length - 1 ? 1 : 0.56 }}>
                             {text}{" "}
                         </span>
                     ))}
-                </Body2>
+                </TranscriptText>
             )}
         </Panel>
     );

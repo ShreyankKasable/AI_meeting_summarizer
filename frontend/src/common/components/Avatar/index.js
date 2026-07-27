@@ -3,29 +3,23 @@ import styled, { css } from "styled-components";
 
 const sizes = {
     small: css`
-        width: 24px;
-        height: 24px;
+        width: 26px;
+        height: 26px;
         font-size: var(--body-5-d);
     `,
     default: css`
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         font-size: var(--body-4-d);
     `,
     large: css`
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
         font-size: var(--body-3-d);
     `,
 };
 
-const PALETTE = [
-    "var(--Color-Background-Action)",
-    "var(--Color-Text-Success)",
-    "#924700",
-    "var(--Color-Text-Danger)",
-    "#4648d4",
-];
+const PALETTE = ["#0f766e", "#8a5a13", "#315f99", "#8b3d74", "#57606f"];
 
 const paletteIndex = (seed) => {
     const s = String(seed || "");
@@ -44,6 +38,7 @@ const Circle = styled.div`
     color: var(--Color-Text-Inverse);
     background: ${({ bg }) => bg};
     border: 2px solid var(--Color-Background-Default);
+    box-shadow: 0 1px 3px rgba(17, 19, 22, 0.12);
     overflow: hidden;
     ${({ size }) => sizes[size] || sizes.default};
 
@@ -62,8 +57,6 @@ const initials = (name) =>
         .map((p) => p[0]?.toUpperCase())
         .join("") || "?";
 
-// Circular avatar — renders an image if `src` is given, otherwise initials
-// derived from `name` on a colour picked deterministically from the name.
 const Avatar = ({ name, src, size = "default", ...props }) => {
     return (
         <Circle bg={PALETTE[paletteIndex(name)]} size={size} {...props}>

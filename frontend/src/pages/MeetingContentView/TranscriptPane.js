@@ -1,59 +1,118 @@
 import React, { useMemo, useState } from "react";
 import styled from "styled-components";
-import { Search, Download, Pencil } from "lucide-react";
-import { Body2, Body3 } from "common/global-styled-components";
+import { Download, Languages, Loader2, Pencil, Search } from "lucide-react";
+import { H3, Body2, Body3 } from "common/global-styled-components";
 import { SUPPORTED_LANGUAGES } from "common/constants";
 import Avatar from "common/components/Avatar";
+import Badge from "common/components/Badge";
+import { SkeletonBlock, SkeletonStack } from "common/components/Skeleton";
 import AudioScrubber from "./AudioScrubber";
 
 const Wrapper = styled.div`
     display: flex;
     flex-direction: column;
+    min-height: 0;
     height: 100%;
     background: var(--Color-Background-Default);
-    border-radius: var(--Size-CornerRadius-XL);
+    border-radius: var(--Size-CornerRadius-XXL);
     border: 1px solid var(--Color-Border-Subtle);
+    box-shadow: var(--Color-Shadow-Card);
     overflow: hidden;
 `;
 
 const Header = styled.div`
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
     align-items: center;
-    gap: var(--Size-Gap-L);
-    padding: var(--Size-Padding-L) var(--Size-Padding-XL);
+    gap: var(--Size-Gap-XL);
+    padding: var(--Size-Padding-XL) var(--Size-Padding-XXL);
     border-bottom: 1px solid var(--Color-Border-Subtle);
+    background: rgba(255, 255, 255, 0.88);
+
+    @media (max-width: 760px) {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
 `;
 
-const Title = styled(Body2)`
-    font-weight: var(--bold);
+const TitleGroup = styled.div`
+    display: flex;
+    align-items: center;
+    gap: var(--Size-Gap-M);
+`;
+
+const Controls = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--Size-Gap-M);
+    flex-wrap: wrap;
+
+    @media (max-width: 760px) {
+        justify-content: stretch;
+    }
+`;
+
+const SelectWrap = styled.div`
+    position: relative;
+    min-width: 178px;
+
+    svg {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--Color-Icon-Subtle);
+        pointer-events: none;
+    }
 `;
 
 const Select = styled.select`
-    font-size: var(--body-4-d);
+    width: 100%;
+    min-height: 38px;
+    padding: 0 32px 0 34px;
+    font-size: var(--body-3-d);
+    color: var(--Color-Text-Default);
     border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-M);
-    padding: var(--Size-Padding-S) var(--Size-Padding-M);
     background: var(--Color-Background-Default);
+    outline: none;
+
+    &:focus {
+        border-color: var(--Color-Border-Action);
+        box-shadow: var(--Color-Shadow-Focus);
+    }
 `;
 
 const SearchBox = styled.div`
     position: relative;
-    flex: 1;
-    max-width: 220px;
+    width: 230px;
+
+    @media (max-width: 760px) {
+        width: 100%;
+        flex: 1;
+    }
 `;
 
 const SearchInput = styled.input`
     width: 100%;
-    padding: var(--Size-Padding-S) var(--Size-Padding-S) var(--Size-Padding-S) 30px;
-    font-size: var(--body-4-d);
+    min-height: 38px;
+    padding: 0 var(--Size-Padding-L) 0 34px;
+    font-size: var(--body-3-d);
     border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Default);
     outline: none;
+
+    &:focus {
+        border-color: var(--Color-Border-Action);
+        box-shadow: var(--Color-Shadow-Focus);
+    }
 `;
 
 const SearchIcon = styled.div`
     position: absolute;
-    left: 8px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--Color-Icon-Subtle);
@@ -61,29 +120,52 @@ const SearchIcon = styled.div`
 `;
 
 const IconButton = styled.button`
-    background: none;
-    border: none;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Default);
     color: var(--Color-Icon-Subtle);
-    display: flex;
+    transition: all var(--transition-fast);
+
+    &:hover {
+        color: var(--Color-Text-Bold);
+        border-color: var(--Color-Border-Bold);
+        transform: translateY(-1px);
+    }
 `;
 
 const Body = styled.div`
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: var(--Size-Padding-XL);
+    padding: var(--Size-Padding-XXL);
 `;
 
 const Highlight = styled.mark`
-    background: var(--Color-Background-Accent-Action);
-    color: var(--Color-Text-Action);
+    background: #fff2b8;
+    color: var(--Color-Text-Bold);
+    border-radius: var(--Size-CornerRadius-XS);
+    padding: 0 2px;
 `;
 
 const Turn = styled.div`
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr;
     gap: var(--Size-Gap-M);
+    padding: var(--Size-Padding-L);
+    border-radius: var(--Size-CornerRadius-L);
+    transition: background var(--transition-fast);
+
+    &:hover {
+        background: var(--Color-Background-Subtle);
+    }
 
     & + & {
-        margin-top: var(--Size-Gap-L);
+        margin-top: var(--Size-Gap-M);
     }
 `;
 
@@ -94,36 +176,72 @@ const TurnBody = styled.div`
 
 const TurnHeader = styled.div`
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--Size-Gap-S);
+    flex-wrap: wrap;
 `;
 
 const SpeakerName = styled(Body2)`
     font-weight: var(--bold);
+    color: var(--Color-Text-Bold);
 `;
 
 const Timestamp = styled(Body3)`
+    font-family: var(--mono-font);
     color: var(--Color-Text-Subtlest);
 `;
 
 const RenameButton = styled.button`
-    background: none;
-    border: none;
-    padding: 0;
+    width: 24px;
+    height: 24px;
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--Size-CornerRadius-S);
     color: var(--Color-Icon-Subtle);
+
+    &:hover {
+        background: var(--Color-Background-Subtle-2);
+        color: var(--Color-Text-Bold);
+    }
 `;
 
 const RenameInput = styled.input`
-    font-size: var(--body-4-d);
+    min-height: 30px;
+    font-size: var(--body-3-d);
     font-weight: var(--bold);
     border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-S);
-    padding: 2px var(--Size-Padding-S);
+    padding: 0 var(--Size-Padding-M);
+    outline: none;
+
+    &:focus {
+        border-color: var(--Color-Border-Action);
+        box-shadow: var(--Color-Shadow-Focus);
+    }
 `;
 
-// One speaker turn: avatar, name (editable in host view via the pencil icon),
-// timestamp, and the spoken text for that turn.
+const FlatTranscript = styled(Body2)`
+    white-space: pre-wrap;
+    line-height: var(--line-height-160);
+`;
+
+const EmptyState = styled.div`
+    min-height: 260px;
+    display: grid;
+    place-items: center;
+    border: 1px dashed var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-XL);
+    text-align: center;
+`;
+
+const Spinner = styled.span`
+    display: inline-flex;
+    animation: meetai-spin 0.9s linear infinite;
+`;
+
 const SpeakerTurn = ({ segment, displayName, search, editable, onRename }) => {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(displayName);
@@ -158,16 +276,14 @@ const SpeakerTurn = ({ segment, displayName, search, editable, onRename }) => {
                     ) : (
                         <SpeakerName>{displayName}</SpeakerName>
                     )}
-                    {typeof segment.start === "number" && (
-                        <Timestamp>{formatSeconds(segment.start)}</Timestamp>
-                    )}
+                    {typeof segment.start === "number" && <Timestamp>{formatSeconds(segment.start)}</Timestamp>}
                     {editable && !editing && (
-                        <RenameButton type="button" title="Rename speaker" onClick={startEdit}>
+                        <RenameButton type="button" title="Rename speaker" onClick={startEdit} aria-label="Rename speaker">
                             <Pencil size={12} />
                         </RenameButton>
                     )}
                 </TurnHeader>
-                <Body2 style={{ marginTop: 2 }}>{highlight(segment.text, search)}</Body2>
+                <Body2 style={{ marginTop: "var(--Size-Gap-S)" }}>{highlight(segment.text, search)}</Body2>
             </TurnBody>
         </Turn>
     );
@@ -198,11 +314,6 @@ function downloadText(filename, text) {
     URL.revokeObjectURL(url);
 }
 
-// `text` is the (possibly translated) transcript to display; `onTranslate`
-// is called with a language code when the dropdown changes. `segments` (when
-// present and no translation is active) renders speaker-attributed turns
-// instead of a flat paragraph; `editable` shows the rename-speaker affordance
-// (host view only — participants get a read-only transcript).
 const TranscriptPane = ({
     text,
     segments,
@@ -233,36 +344,57 @@ const TranscriptPane = ({
     return (
         <Wrapper>
             <Header>
-                <Title>Transcript</Title>
-                <Select value={language} onChange={handleLanguageChange}>
-                    <option value="">English (original)</option>
-                    {Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => (
-                        <option key={code} value={code}>
-                            {name}
-                        </option>
-                    ))}
-                </Select>
-                <SearchBox>
-                    <SearchIcon>
-                        <Search size={14} />
-                    </SearchIcon>
-                    <SearchInput
-                        placeholder="Search transcript..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </SearchBox>
-                <IconButton
-                    type="button"
-                    title="Download transcript"
-                    onClick={() => downloadText("transcript.txt", flatDownloadText)}
-                >
-                    <Download size={16} />
-                </IconButton>
+                <TitleGroup>
+                    <H3 style={{ fontSize: "var(--subtitle-2-d)" }}>Transcript</H3>
+                    {translating && (
+                        <Badge tone="info">
+                            <Spinner>
+                                <Loader2 size={13} />
+                            </Spinner>
+                            Translating
+                        </Badge>
+                    )}
+                </TitleGroup>
+                <Controls>
+                    <SelectWrap>
+                        <Languages size={15} />
+                        <Select value={language} onChange={handleLanguageChange} disabled={translating}>
+                            <option value="">English</option>
+                            {Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => (
+                                <option key={code} value={code}>
+                                    {name}
+                                </option>
+                            ))}
+                        </Select>
+                    </SelectWrap>
+                    <SearchBox>
+                        <SearchIcon>
+                            <Search size={15} />
+                        </SearchIcon>
+                        <SearchInput
+                            placeholder="Search transcript"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </SearchBox>
+                    <IconButton
+                        type="button"
+                        title="Download transcript"
+                        aria-label="Download transcript"
+                        onClick={() => downloadText("transcript.txt", flatDownloadText)}
+                    >
+                        <Download size={16} />
+                    </IconButton>
+                </Controls>
             </Header>
             <Body>
                 {translating ? (
-                    <Body3>Translating...</Body3>
+                    <SkeletonStack>
+                        <SkeletonBlock height="16px" width="92%" />
+                        <SkeletonBlock height="16px" width="76%" />
+                        <SkeletonBlock height="16px" width="88%" />
+                        <SkeletonBlock height="16px" width="62%" />
+                    </SkeletonStack>
                 ) : showTurns ? (
                     segments.map((segment, i) => (
                         <SpeakerTurn
@@ -274,8 +406,12 @@ const TranscriptPane = ({
                             onRename={onRenameSpeaker}
                         />
                     ))
+                ) : text ? (
+                    <FlatTranscript>{content}</FlatTranscript>
                 ) : (
-                    <Body2 style={{ whiteSpace: "pre-wrap", lineHeight: "var(--line-height-140)" }}>{content}</Body2>
+                    <EmptyState>
+                        <Body3>No transcript available yet.</Body3>
+                    </EmptyState>
                 )}
             </Body>
             {audioSrc && <AudioScrubber src={audioSrc} />}

@@ -1,55 +1,106 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
-import { Cpu, Sliders, Bell } from "lucide-react";
+import { Bell, CheckCircle2, Cpu, Loader2, Sliders } from "lucide-react";
 import PageContainer from "common/components/PageContainer";
+import Badge from "common/components/Badge";
+import { SkeletonBlock, SkeletonCard, SkeletonStack } from "common/components/Skeleton";
 import { H1, Body2, Body3 } from "common/global-styled-components";
 import { fetchSettings, saveSetting } from "common/redux/actions/settingsActions";
 import AiProvidersTab from "./AiProvidersTab";
 import IntegrationsTab from "./IntegrationsTab";
 import NotificationsTab from "./NotificationsTab";
 
+const Header = styled.div`
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--Size-Gap-XXL);
+    margin-bottom: var(--Size-Gap-XXXL);
+
+    @media (max-width: 760px) {
+        grid-template-columns: 1fr;
+    }
+`;
+
 const Layout = styled.div`
-    display: flex;
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
     gap: var(--Size-Gap-XXL);
     align-items: flex-start;
 
-    @media (max-width: 768px) {
-        flex-direction: column;
+    @media (max-width: 860px) {
+        grid-template-columns: 1fr;
     }
 `;
 
 const TabRail = styled.div`
-    width: 220px;
-    flex-shrink: 0;
+    position: sticky;
+    top: var(--Size-Gap-XXL);
     display: flex;
     flex-direction: column;
     gap: var(--Size-Gap-S);
+    padding: var(--Size-Padding-M);
+    background: var(--Color-Background-Default);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-XL);
+    box-shadow: var(--Color-Shadow-Card);
+
+    @media (max-width: 860px) {
+        position: static;
+        flex-direction: row;
+        overflow-x: auto;
+    }
 `;
 
 const TabButton = styled.button`
     display: flex;
     align-items: center;
     gap: var(--Size-Gap-M);
-    padding: var(--Size-Padding-M) var(--Size-Padding-L);
-    border: none;
+    min-height: 42px;
+    padding: 0 var(--Size-Padding-L);
+    border: 1px solid ${({ $active }) => ($active ? "var(--Color-Border-Subtle)" : "transparent")};
     border-radius: var(--Size-CornerRadius-M);
-    background: ${({ active }) => (active ? "var(--Color-Background-Accent-Action)" : "transparent")};
-    color: ${({ active }) => (active ? "var(--Color-Text-Action)" : "var(--Color-Text-Subtle)")};
+    background: ${({ $active }) => ($active ? "var(--Color-Background-Subtle)" : "transparent")};
+    color: ${({ $active }) => ($active ? "var(--Color-Text-Bold)" : "var(--Color-Text-Subtle)")};
     font-size: var(--body-3-d);
     font-weight: var(--semi-bold);
     text-align: left;
+    white-space: nowrap;
+
+    svg {
+        color: ${({ $active }) => ($active ? "var(--Color-Icon-Action)" : "var(--Color-Icon-Subtle)")};
+    }
+
+    &:hover {
+        background: var(--Color-Background-Subtle);
+        color: var(--Color-Text-Bold);
+    }
 `;
 
 const Content = styled.div`
-    flex: 1;
     min-width: 0;
 `;
 
+const StatusBadge = styled(Badge)`
+    width: fit-content;
+`;
+
+const Spinner = styled.span`
+    display: inline-flex;
+    animation: meetai-spin 0.9s linear infinite;
+`;
+
 const SavedNote = styled(Body3)`
+    display: flex;
+    align-items: center;
+    gap: var(--Size-Gap-S);
     color: var(--Color-Text-Subtlest);
-    font-style: italic;
-    margin-top: var(--Size-Gap-XL);
+`;
+
+const LoadingGrid = styled.div`
+    display: grid;
+    gap: var(--Size-Gap-XL);
 `;
 
 const TABS = [
@@ -61,6 +112,7 @@ const TABS = [
 const Settings = () => {
     const dispatch = useDispatch();
     const status = useSelector((state) => state.settingsDetails.status);
+    const saving = useSelector((state) => state.settingsDetails.saving);
     const lastSavedAt = useSelector((state) => state.settingsDetails.lastSavedAt);
     const [activeTab, setActiveTab] = useState("providers");
 
@@ -74,15 +126,35 @@ const Settings = () => {
 
     return (
         <PageContainer size="xl">
-            <H1 style={{ fontSize: "var(--h2-d)" }}>AI Engine Configuration</H1>
-            <Body2 style={{ color: "var(--Color-Text-Subtle)", margin: "var(--Size-Gap-M) 0 var(--Size-Gap-XXL)" }}>
-                Configure the AI models and external services powering transcription, summarization, and chat.
-            </Body2>
+            <Header>
+                <div>
+                    <Badge tone="neutral">System settings</Badge>
+                    <H1 style={{ fontSize: "var(--h2-d)", marginTop: "var(--Size-Gap-L)" }}>
+                        AI Engine Configuration
+                    </H1>
+                    <Body2 style={{ color: "var(--Color-Text-Subtle)", marginTop: "var(--Size-Gap-M)" }}>
+                        Configure the providers and integrations powering transcription, summaries, and chat.
+                    </Body2>
+                </div>
+                {saving ? (
+                    <StatusBadge tone="info">
+                        <Spinner>
+                            <Loader2 size={13} />
+                        </Spinner>
+                        Saving
+                    </StatusBadge>
+                ) : lastSavedAt ? (
+                    <SavedNote>
+                        <CheckCircle2 size={15} color="var(--Color-Icon-Success)" />
+                        Last saved {new Date(lastSavedAt).toLocaleTimeString()}
+                    </SavedNote>
+                ) : null}
+            </Header>
 
             <Layout>
                 <TabRail>
                     {TABS.map(({ id, label, icon: Icon }) => (
-                        <TabButton key={id} type="button" active={activeTab === id} onClick={() => setActiveTab(id)}>
+                        <TabButton key={id} type="button" $active={activeTab === id} onClick={() => setActiveTab(id)}>
                             <Icon size={16} />
                             {label}
                         </TabButton>
@@ -90,11 +162,29 @@ const Settings = () => {
                 </TabRail>
 
                 <Content>
-                    {activeTab === "providers" && <AiProvidersTab status={status} onSave={handleSave} />}
-                    {activeTab === "integrations" && <IntegrationsTab status={status} onSave={handleSave} />}
-                    {activeTab === "notifications" && <NotificationsTab />}
-
-                    {lastSavedAt && <SavedNote>Last saved {new Date(lastSavedAt).toLocaleTimeString()}</SavedNote>}
+                    {!status ? (
+                        <LoadingGrid>
+                            <SkeletonCard>
+                                <SkeletonStack>
+                                    <SkeletonBlock width="160px" height="20px" />
+                                    <SkeletonBlock height="44px" />
+                                    <SkeletonBlock height="44px" />
+                                </SkeletonStack>
+                            </SkeletonCard>
+                            <SkeletonCard>
+                                <SkeletonStack>
+                                    <SkeletonBlock width="140px" height="20px" />
+                                    <SkeletonBlock height="44px" />
+                                </SkeletonStack>
+                            </SkeletonCard>
+                        </LoadingGrid>
+                    ) : (
+                        <>
+                            {activeTab === "providers" && <AiProvidersTab status={status} onSave={handleSave} />}
+                            {activeTab === "integrations" && <IntegrationsTab status={status} onSave={handleSave} />}
+                            {activeTab === "notifications" && <NotificationsTab />}
+                        </>
+                    )}
                 </Content>
             </Layout>
         </PageContainer>

@@ -1,22 +1,26 @@
 import styled from "styled-components";
 
-// Centered, responsive page wrapper. `size` controls the max width.
 const widths = {
-    sm: "480px",
-    md: "768px",
-    lg: "1024px",
-    xl: "1280px",
+    sm: "520px",
+    md: "820px",
+    lg: "1080px",
+    xl: "1320px",
+    full: "none",
 };
 
 const PageContainer = styled.div`
     width: 100%;
     max-width: ${({ size }) => widths[size] || widths.xl};
     margin: 0 auto;
-    padding: var(--Size-Padding-XXXL) var(--Size-Padding-XL);
-    animation: meetai-fade-in 0.3s ease;
+    padding: var(--Size-Padding-XXXL) var(--Size-Padding-XXL);
+    animation: meetai-fade-in 0.28s ease;
 
-    @media (max-width: 640px) {
-        padding: var(--Size-Padding-XXL) var(--Size-Padding-L);
+    @media (max-width: 768px) {
+        padding: var(--Size-Padding-XXL) var(--Size-Padding-XL);
+    }
+
+    @media (max-width: 480px) {
+        padding: var(--Size-Padding-XL) var(--Size-Padding-L);
     }
 `;
 

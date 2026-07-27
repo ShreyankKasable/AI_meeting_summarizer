@@ -1,43 +1,60 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
-import { AudioWaveform, LayoutDashboard, Mic, Settings as SettingsIcon, LogOut, HelpCircle, Menu, X } from "lucide-react";
+import {
+    AudioWaveform,
+    HelpCircle,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    Settings as SettingsIcon,
+    X,
+} from "lucide-react";
+import Avatar from "common/components/Avatar";
+import Badge from "common/components/Badge";
 import { HOST_VIEWS } from "common/constants";
 import { setHostView, logout } from "common/redux/actions/sessionActions";
 
 const Sidebar = styled.aside`
-    width: 240px;
+    width: 264px;
     flex-shrink: 0;
     height: 100vh;
     position: sticky;
     top: 0;
     display: flex;
     flex-direction: column;
-    background: var(--Color-Background-Subtle-2);
+    gap: var(--Size-Gap-XXL);
+    background: rgba(255, 255, 255, 0.86);
     border-right: 1px solid var(--Color-Border-Subtle);
     padding: var(--Size-Padding-XXL) var(--Size-Padding-XL);
+    backdrop-filter: blur(16px);
 
     @media (max-width: 1024px) {
         display: none;
     }
 `;
 
-const Brand = styled.div`
+const Brand = styled.button`
     display: flex;
     align-items: center;
     gap: var(--Size-Gap-M);
-    margin-bottom: var(--Size-Gap-XXXL);
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-align: left;
 `;
 
-const BrandMark = styled.div`
+const BrandMark = styled.span`
     width: 40px;
     height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--Color-Text-Inverse);
-    background: var(--Color-Background-Action);
-    border-radius: var(--Size-CornerRadius-L);
+    background: var(--Color-Background-Bold);
+    border-radius: var(--Size-CornerRadius-M);
+    box-shadow: 0 12px 26px rgba(17, 19, 22, 0.16);
 `;
 
 const BrandText = styled.div`
@@ -52,6 +69,26 @@ const BrandName = styled.div`
 `;
 
 const BrandTag = styled.div`
+    margin-top: 2px;
+    font-size: var(--body-5-d);
+    font-weight: var(--semi-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    color: var(--Color-Text-Subtlest);
+`;
+
+const WorkspaceBadge = styled(Badge)`
+    width: fit-content;
+`;
+
+const NavGroup = styled.div`
+    display: grid;
+    gap: var(--Size-Gap-S);
+`;
+
+const NavLabel = styled.div`
+    padding: 0 var(--Size-Padding-L);
+    margin-bottom: var(--Size-Gap-S);
     font-size: var(--body-5-d);
     font-weight: var(--bold);
     letter-spacing: var(--letter-spacing-wide);
@@ -59,29 +96,31 @@ const BrandTag = styled.div`
     color: var(--Color-Text-Subtlest);
 `;
 
-const NavList = styled.nav`
-    display: flex;
-    flex-direction: column;
-    gap: var(--Size-Gap-S);
-`;
-
 const NavItem = styled.button`
     display: flex;
     align-items: center;
     gap: var(--Size-Gap-M);
-    padding: var(--Size-Padding-M) var(--Size-Padding-L);
-    border: none;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 var(--Size-Padding-L);
+    border: 1px solid ${({ $active }) => ($active ? "var(--Color-Border-Subtle)" : "transparent")};
     border-radius: var(--Size-CornerRadius-M);
-    background: ${({ active }) => (active ? "var(--Color-Background-Accent-Action)" : "transparent")};
-    color: ${({ active }) => (active ? "var(--Color-Text-Action)" : "var(--Color-Text-Subtle)")};
+    background: ${({ $active }) => ($active ? "var(--Color-Background-Default)" : "transparent")};
+    color: ${({ $active }) => ($active ? "var(--Color-Text-Bold)" : "var(--Color-Text-Subtle)")};
+    box-shadow: ${({ $active }) => ($active ? "0 1px 2px rgba(17, 19, 22, 0.06)" : "none")};
     font-size: var(--body-3-d);
     font-weight: var(--semi-bold);
     text-align: left;
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
+
+    svg {
+        color: ${({ $active }) => ($active ? "var(--Color-Icon-Action)" : "var(--Color-Icon-Subtle)")};
+    }
 
     &:hover {
-        background: var(--Color-Background-Accent-Action);
-        color: var(--Color-Text-Action);
+        background: var(--Color-Background-Default);
+        color: var(--Color-Text-Bold);
+        border-color: var(--Color-Border-Subtle);
     }
 `;
 
@@ -89,17 +128,64 @@ const Spacer = styled.div`
     flex: 1;
 `;
 
-const Footer = styled.div`
-    display: flex;
-    flex-direction: column;
+const ProfileArea = styled.div`
+    position: relative;
+    display: grid;
     gap: var(--Size-Gap-S);
     padding-top: var(--Size-Padding-XL);
     border-top: 1px solid var(--Color-Border-Subtle);
 `;
 
-// Only visible under 1024px, where the fixed Sidebar hides itself — without
-// this, navigation (including Sign Out) would be completely unreachable on
-// narrow viewports.
+const ProfileButton = styled.button`
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: var(--Size-Gap-M);
+    width: 100%;
+    padding: var(--Size-Padding-M);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-L);
+    background: var(--Color-Background-Default);
+    text-align: left;
+    transition: all var(--transition-fast);
+
+    &:hover {
+        box-shadow: var(--Color-Shadow-Card);
+        transform: translateY(-1px);
+    }
+`;
+
+const ProfileText = styled.div`
+    min-width: 0;
+`;
+
+const ProfileName = styled.div`
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--Color-Text-Bold);
+    font-size: var(--body-3-d);
+    font-weight: var(--semi-bold);
+`;
+
+const ProfileRole = styled.div`
+    margin-top: 1px;
+    color: var(--Color-Text-Subtlest);
+    font-size: var(--body-5-d);
+`;
+
+const ProfileMenu = styled.div`
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 8px);
+    padding: var(--Size-Padding-S);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-L);
+    background: var(--Color-Background-Default);
+    box-shadow: var(--Color-Shadow-1);
+`;
+
 const MobileBar = styled.div`
     display: none;
 
@@ -108,68 +194,71 @@ const MobileBar = styled.div`
         align-items: center;
         justify-content: space-between;
         padding: var(--Size-Padding-M) var(--Size-Padding-XL);
-        background: var(--Color-Background-Subtle-2);
+        background: rgba(255, 255, 255, 0.9);
         border-bottom: 1px solid var(--Color-Border-Subtle);
         position: sticky;
         top: 0;
         z-index: 40;
+        backdrop-filter: blur(16px);
     }
 `;
 
 const MenuButton = styled.button`
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--Size-Padding-S);
-    border: none;
+    border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-M);
-    background: transparent;
+    background: var(--Color-Background-Default);
     color: var(--Color-Icon-Default);
 `;
 
 const MobileMenu = styled.div`
-    display: flex;
-    flex-direction: column;
-    padding: var(--Size-Padding-L) var(--Size-Padding-XL) var(--Size-Padding-XL);
-    background: var(--Color-Background-Subtle-2);
-    border-bottom: 1px solid var(--Color-Border-Subtle);
+    display: grid;
     gap: var(--Size-Gap-S);
+    padding: var(--Size-Padding-L) var(--Size-Padding-XL) var(--Size-Padding-XL);
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
 `;
 
 const NAV_ITEMS = [
     { view: HOST_VIEWS.Dashboard, label: "Dashboard", icon: LayoutDashboard },
-    { view: HOST_VIEWS.Record, label: "Record", icon: Mic },
     { view: HOST_VIEWS.Settings, label: "Settings", icon: SettingsIcon },
 ];
 
 const NavItems = ({ hostView, onSelect }) => (
-    <NavList>
+    <NavGroup>
         {NAV_ITEMS.map(({ view, label, icon: Icon }) => (
-            <NavItem key={view} type="button" active={hostView === view} onClick={() => onSelect(view)}>
+            <NavItem key={view} type="button" $active={hostView === view} onClick={() => onSelect(view)}>
                 <Icon size={18} />
                 {label}
             </NavItem>
         ))}
-    </NavList>
+    </NavGroup>
 );
 
-// Persistent left sidebar on wide viewports; a top bar + dropdown menu on
-// narrow ones (mobile, or DevTools eating half the window) so navigation and
-// Sign Out are never completely unreachable.
 const Navbar = () => {
     const dispatch = useDispatch();
     const hostView = useSelector((state) => state.sessionDetails.hostView);
+    const user = useSelector((state) => state.sessionDetails.user);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+
+    const displayName = useMemo(() => user?.name || user?.email || "Host", [user]);
 
     const selectView = (view) => {
         dispatch(setHostView(view));
         setMenuOpen(false);
     };
 
+    const handleLogout = () => dispatch(logout());
+
     return (
         <>
             <Sidebar>
-                <Brand>
+                <Brand type="button" onClick={() => selectView(HOST_VIEWS.Dashboard)}>
                     <BrandMark>
                         <AudioWaveform size={20} />
                     </BrandMark>
@@ -179,37 +268,57 @@ const Navbar = () => {
                     </BrandText>
                 </Brand>
 
-                <NavItems hostView={hostView} onSelect={selectView} />
+                <WorkspaceBadge tone="neutral">Production workspace</WorkspaceBadge>
+
+                <NavGroup>
+                    <NavLabel>Navigation</NavLabel>
+                    <NavItems hostView={hostView} onSelect={selectView} />
+                </NavGroup>
 
                 <Spacer />
 
-                <Footer>
-                    <NavItem type="button">
+                <NavGroup>
+                    <NavLabel>Support</NavLabel>
+                    <NavItem type="button" onClick={() => window.location.assign("mailto:support@meetai.studio")}>
                         <HelpCircle size={18} />
                         Help
                     </NavItem>
-                    <NavItem type="button" onClick={() => dispatch(logout())} id="sign-out-btn-desktop">
-                        <LogOut size={18} />
-                        Sign Out
-                    </NavItem>
-                </Footer>
+                </NavGroup>
+
+                <ProfileArea>
+                    {profileOpen && (
+                        <ProfileMenu>
+                            <NavItem type="button" onClick={handleLogout} id="sign-out-btn-desktop">
+                                <LogOut size={18} />
+                                Sign Out
+                            </NavItem>
+                        </ProfileMenu>
+                    )}
+                    <ProfileButton type="button" onClick={() => setProfileOpen((value) => !value)} aria-haspopup="menu">
+                        <Avatar name={displayName} />
+                        <ProfileText>
+                            <ProfileName>{displayName}</ProfileName>
+                            <ProfileRole>Workspace admin</ProfileRole>
+                        </ProfileText>
+                    </ProfileButton>
+                </ProfileArea>
             </Sidebar>
 
             <MobileBar>
-                <Brand style={{ marginBottom: 0 }}>
-                    <BrandMark style={{ width: 32, height: 32 }}>
+                <Brand type="button" onClick={() => selectView(HOST_VIEWS.Dashboard)} style={{ width: "auto" }}>
+                    <BrandMark style={{ width: 34, height: 34 }}>
                         <AudioWaveform size={16} />
                     </BrandMark>
                     <BrandName>MeetAI</BrandName>
                 </Brand>
-                <MenuButton type="button" onClick={() => setMenuOpen((v) => !v)} id="mobile-menu-toggle">
-                    {menuOpen ? <X size={20} /> : <Menu size={20} />}
+                <MenuButton type="button" onClick={() => setMenuOpen((value) => !value)} id="mobile-menu-toggle">
+                    {menuOpen ? <X size={18} /> : <Menu size={18} />}
                 </MenuButton>
             </MobileBar>
             {menuOpen && (
                 <MobileMenu>
                     <NavItems hostView={hostView} onSelect={selectView} />
-                    <NavItem type="button" onClick={() => dispatch(logout())} id="sign-out-btn-mobile">
+                    <NavItem type="button" onClick={handleLogout} id="sign-out-btn-mobile">
                         <LogOut size={18} />
                         Sign Out
                     </NavItem>

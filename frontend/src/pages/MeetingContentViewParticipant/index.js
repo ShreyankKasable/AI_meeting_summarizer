@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { Calendar } from "lucide-react";
+import { AudioWaveform, Calendar, ShieldCheck } from "lucide-react";
 import Tabs from "common/components/Tabs";
+import Badge from "common/components/Badge";
+import { SkeletonBlock, SkeletonCard, SkeletonStack } from "common/components/Skeleton";
 import { H1 } from "common/global-styled-components";
 import { formatDate, getTranscriptText } from "common/utils/utils";
 import ShareService from "services/share.service";
@@ -11,50 +13,108 @@ import SummaryTab from "pages/MeetingContentView/SummaryTab";
 import ActionsTab from "pages/MeetingContentView/ActionsTab";
 import InvalidToken from "pages/InvalidToken";
 
+const Page = styled.div`
+    min-height: 100vh;
+    background: var(--Color-Background-Subtle);
+`;
+
+const TopNav = styled.header`
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-bottom: 1px solid var(--Color-Border-Subtle);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+`;
+
+const TopNavInner = styled.div`
+    width: min(1320px, calc(100% - 32px));
+    min-height: 64px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--Size-Gap-XL);
+`;
+
+const Brand = styled.div`
+    display: flex;
+    align-items: center;
+    gap: var(--Size-Gap-M);
+    color: var(--Color-Text-Bold);
+    font-weight: var(--bold);
+`;
+
+const BrandMark = styled.span`
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Bold);
+    color: var(--Color-Text-Inverse);
+`;
+
 const Wrapper = styled.div`
-    padding: var(--Size-Padding-XXL);
+    width: min(1320px, calc(100% - 32px));
+    height: calc(100vh - 64px);
+    margin: 0 auto;
+    padding: var(--Size-Padding-XXXL) 0;
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    box-sizing: border-box;
-    max-width: 1280px;
-    margin: 0 auto;
+
+    @media (max-width: 1024px) {
+        height: auto;
+    }
+`;
+
+const Header = styled.div`
+    display: grid;
+    gap: var(--Size-Gap-M);
+    margin-bottom: var(--Size-Gap-XXL);
 `;
 
 const MetaRow = styled.div`
     display: flex;
     align-items: center;
-    gap: var(--Size-Gap-S);
-    color: var(--Color-Text-Subtlest);
-    font-size: var(--body-4-d);
-    margin-bottom: var(--Size-Gap-S);
+    gap: var(--Size-Gap-M);
+    flex-wrap: wrap;
 `;
 
 const Split = styled.div`
     flex: 1;
-    display: grid;
-    grid-template-columns: 7fr 3fr;
-    gap: var(--Size-Gap-XXL);
     min-height: 0;
-    margin-top: var(--Size-Gap-XXL);
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(340px, 0.78fr);
+    gap: var(--Size-Gap-XXL);
 
-    @media (max-width: 1024px) {
+    @media (max-width: 1120px) {
         grid-template-columns: 1fr;
     }
 `;
 
 const SidePanel = styled.div`
+    min-height: 0;
     display: flex;
     flex-direction: column;
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XL);
+    border-radius: var(--Size-CornerRadius-XXL);
+    box-shadow: var(--Color-Shadow-Card);
     overflow: hidden;
 `;
 
 const TabContent = styled.div`
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
+`;
+
+const LoadingShell = styled.div`
+    width: min(960px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: var(--Size-Padding-XXXL) 0;
 `;
 
 const TABS = [
@@ -63,9 +123,6 @@ const TABS = [
     { id: "actions", label: "Actions" },
 ];
 
-// Read-only view for anyone holding a valid share token — no login, no
-// host-only actions (edit/export/share). Renders InvalidToken if the token
-// doesn't resolve to a meeting.
 const MeetingContentViewParticipant = ({ token }) => {
     const [meeting, setMeeting] = useState(null);
     const [invalid, setInvalid] = useState(false);
@@ -85,7 +142,34 @@ const MeetingContentViewParticipant = ({ token }) => {
     }, [token]);
 
     if (invalid) return <InvalidToken />;
-    if (!meeting) return null;
+
+    if (!meeting) {
+        return (
+            <Page>
+                <TopNav>
+                    <TopNavInner>
+                        <Brand>
+                            <BrandMark>
+                                <AudioWaveform size={16} />
+                            </BrandMark>
+                            MeetAI
+                        </Brand>
+                        <Badge tone="neutral">Shared meeting</Badge>
+                    </TopNavInner>
+                </TopNav>
+                <LoadingShell>
+                    <SkeletonStack>
+                        <SkeletonBlock width="180px" height="16px" />
+                        <SkeletonBlock width="52%" height="34px" />
+                        <SkeletonCard>
+                            <SkeletonBlock height="16px" width="92%" />
+                            <SkeletonBlock height="16px" width="76%" style={{ marginTop: 12 }} />
+                        </SkeletonCard>
+                    </SkeletonStack>
+                </LoadingShell>
+            </Page>
+        );
+    }
 
     const transcriptText = getTranscriptText(meeting.transcript);
 
@@ -111,34 +195,60 @@ const MeetingContentViewParticipant = ({ token }) => {
     };
 
     return (
-        <Wrapper>
-            <MetaRow>
-                <Calendar size={14} />
-                {formatDate(meeting.start_time)}
-            </MetaRow>
-            <H1 style={{ fontSize: "var(--h2-d)" }}>{meeting.title}</H1>
+        <Page>
+            <TopNav>
+                <TopNavInner>
+                    <Brand>
+                        <BrandMark>
+                            <AudioWaveform size={16} />
+                        </BrandMark>
+                        MeetAI
+                    </Brand>
+                    <Badge tone="success">
+                        <ShieldCheck size={13} />
+                        Shared access
+                    </Badge>
+                </TopNavInner>
+            </TopNav>
+            <Wrapper>
+                <Header>
+                    <MetaRow>
+                        <Badge tone="neutral">
+                            <Calendar size={13} />
+                            {formatDate(meeting.start_time)}
+                        </Badge>
+                    </MetaRow>
+                    <H1 style={{ fontSize: "var(--h2-d)" }}>{meeting.title}</H1>
+                </Header>
 
-            <Split>
-                <TranscriptPane
-                    text={translatedText ?? transcriptText}
-                    segments={translatedText ? null : meeting.transcript?.segments}
-                    speakerNames={meeting.transcript?.speakerNames}
-                    audioSrc={meeting.audio_file_path}
-                    onTranslate={handleTranslate}
-                    translating={translating}
-                />
-                <SidePanel>
-                    <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
-                    <TabContent>
-                        {activeTab === "chat" && (
-                            <ChatTab messages={chatMessages} onSend={handleSendChat} sending={chatSending} />
-                        )}
-                        {activeTab === "summary" && <SummaryTab summary={meeting.summary} />}
-                        {activeTab === "actions" && <ActionsTab items={meeting.action_items} readOnly />}
-                    </TabContent>
-                </SidePanel>
-            </Split>
-        </Wrapper>
+                <Split>
+                    <TranscriptPane
+                        text={translatedText ?? transcriptText}
+                        segments={translatedText ? null : meeting.transcript?.segments}
+                        speakerNames={meeting.transcript?.speakerNames}
+                        audioSrc={meeting.audio_file_path}
+                        onTranslate={handleTranslate}
+                        translating={translating}
+                    />
+                    <SidePanel>
+                        <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
+                        <TabContent>
+                            {activeTab === "chat" && (
+                                <ChatTab
+                                    messages={chatMessages}
+                                    onSend={handleSendChat}
+                                    sending={chatSending}
+                                />
+                            )}
+                            {activeTab === "summary" && <SummaryTab summary={meeting.summary} />}
+                            {activeTab === "actions" && (
+                                <ActionsTab items={meeting.action_items} readOnly />
+                            )}
+                        </TabContent>
+                    </SidePanel>
+                </Split>
+            </Wrapper>
+        </Page>
     );
 };
 

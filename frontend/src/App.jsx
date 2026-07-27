@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
 import Navbar from "common/components/Navbar";
 import { HOST_VIEWS } from "common/constants";
 import { hydrateSession } from "common/redux/actions/sessionActions";
 import useSocket from "common/hooks/useSocket";
+import LandingPage from "pages/LandingPage";
 import Login from "pages/Login";
 import HostDashboard from "pages/HostDashboard";
 import RecordMeeting from "pages/RecordMeeting";
@@ -20,8 +21,6 @@ const Layout = styled.div`
     background: var(--Color-Background-Subtle);
     color: var(--Color-Text-Default);
 
-    /* Below Navbar's breakpoint, its sidebar hides and a top bar + dropdown
-       take over instead — stack them above Main rather than beside it. */
     @media (max-width: 1024px) {
         flex-direction: column;
     }
@@ -32,7 +31,6 @@ const Main = styled.main`
     min-width: 0;
 `;
 
-// Renders the authenticated host shell (sidebar + whichever view is active).
 const HostApp = () => {
     useSocket();
     const hostView = useSelector((state) => state.sessionDetails.hostView);
@@ -61,6 +59,22 @@ const HostApp = () => {
     );
 };
 
+const UnauthenticatedApp = () => {
+    const [mode, setMode] = useState("landing");
+
+    if (mode === "landing") {
+        return (
+            <LandingPage
+                onSignIn={() => setMode("login")}
+                onRegister={() => setMode("signup")}
+                onJoin={() => setMode("join")}
+            />
+        );
+    }
+
+    return <Login initialMode={mode} onBackToLanding={() => setMode("landing")} />;
+};
+
 export default function App() {
     const dispatch = useDispatch();
     const token = useSelector((state) => state.sessionDetails.token);
@@ -70,15 +84,11 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // A participant link looks like /share/<token> — resolved client-side
-    // since there's no router, and checked before the authenticated branch
-    // below since a participant is never logged in. MeetingContentViewParticipant
-    // itself renders InvalidToken if the token doesn't resolve to a meeting.
     const shareMatch = window.location.pathname.match(/^\/share\/([^/]+)$/);
     if (shareMatch) return <MeetingContentViewParticipant token={shareMatch[1]} />;
     if (window.location.pathname.startsWith("/share/")) return <InvalidToken />;
 
-    if (!token) return <Login />;
+    if (!token) return <UnauthenticatedApp />;
 
     return <HostApp />;
 }

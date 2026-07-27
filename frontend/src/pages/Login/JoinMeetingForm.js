@@ -1,61 +1,22 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { AudioWaveform, ArrowRight } from "lucide-react";
+import { ArrowRight, KeyRound } from "lucide-react";
 import Button from "common/components/Button";
 import Input from "common/components/Input";
 import Alert from "common/components/Alert";
-import { H2, Body2 } from "common/global-styled-components";
+import { Body3 } from "common/global-styled-components";
 import ShareService from "services/share.service";
-
-const Screen = styled.div`
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--Size-Padding-XXXL) var(--Size-Padding-XL);
-`;
-
-const Card = styled.div`
-    width: 100%;
-    max-width: 400px;
-    animation: meetai-fade-in 0.3s ease;
-`;
-
-const Brand = styled.div`
-    display: flex;
-    align-items: center;
-    gap: var(--Size-Gap-M);
-    margin-bottom: var(--Size-Gap-XXXL);
-`;
-
-const BrandMark = styled.div`
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--Color-Text-Inverse);
-    background: var(--Color-Background-Action);
-    border-radius: var(--Size-CornerRadius-L);
-`;
-
-const Subtitle = styled(Body2)`
-    margin-top: var(--Size-Gap-M);
-    color: var(--Color-Text-Subtle);
-`;
+import AuthShell from "./AuthShell";
 
 const Form = styled.form`
-    margin-top: var(--Size-Gap-XXL);
     display: flex;
     flex-direction: column;
     gap: var(--Size-Gap-XL);
 `;
 
-const ToggleRow = styled.div`
-    margin-top: var(--Size-Gap-XXL);
+const ToggleRow = styled(Body3)`
+    margin-top: var(--Size-Gap-XL);
     text-align: center;
-    font-size: var(--body-3-d);
-    color: var(--Color-Text-Subtle);
 `;
 
 const ToggleLink = styled.button`
@@ -66,10 +27,16 @@ const ToggleLink = styled.button`
     font-weight: var(--semi-bold);
 `;
 
-// A participant only ever has a token/code, not necessarily a full link —
-// this is the discoverable entry point for that, reached from the Login
-// screen rather than only after landing on a broken /share/:token URL.
-const JoinMeetingForm = ({ onBackToLogin }) => {
+const CodeIcon = styled.span`
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--Color-Icon-Subtle);
+`;
+
+const JoinMeetingForm = ({ onBackToLogin, onBackToLanding }) => {
     const [token, setToken] = useState("");
     const [error, setError] = useState("");
     const [checking, setChecking] = useState(false);
@@ -90,43 +57,44 @@ const JoinMeetingForm = ({ onBackToLogin }) => {
     };
 
     return (
-        <Screen>
-            <Card>
-                <Brand>
-                    <BrandMark>
-                        <AudioWaveform size={24} />
-                    </BrandMark>
-                </Brand>
-                <H2>Join a meeting</H2>
-                <Subtitle>Enter the meeting code your host shared with you.</Subtitle>
+        <AuthShell
+            title="Join a meeting"
+            subtitle="Open the participant view using the access code shared by the host."
+            eyebrow="Participant access"
+            onBackToLanding={onBackToLanding}
+        >
+            <Form onSubmit={handleSubmit}>
+                <Input
+                    label="Meeting Code"
+                    mono
+                    required
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="Paste meeting access code"
+                    id="join-meeting-token"
+                    helpText="Codes are case-sensitive and expire when the host revokes access."
+                    addon={
+                        <CodeIcon>
+                            <KeyRound size={16} />
+                        </CodeIcon>
+                    }
+                />
 
-                <Form onSubmit={handleSubmit}>
-                    <Input
-                        label="Meeting Code"
-                        mono
-                        required
-                        value={token}
-                        onChange={(e) => setToken(e.target.value)}
-                        placeholder="e.g. MdvQd94WP-V5ZKHuq4YGa0UxgBU2hPdx"
-                        id="join-meeting-token"
-                    />
+                <Alert>{error}</Alert>
 
-                    <Alert>{error}</Alert>
+                <Button type="submit" block loader={checking}>
+                    Join Meeting
+                    <ArrowRight size={16} />
+                </Button>
+            </Form>
 
-                    <Button type="submit" block loader={checking}>
-                        Join Meeting
-                        <ArrowRight size={16} />
-                    </Button>
-                </Form>
-
-                <ToggleRow>
-                    Are you the host?{" "}
-                    <ToggleLink type="button" onClick={onBackToLogin}>
-                        Sign in instead
-                    </ToggleLink>
-                </ToggleRow>
-            </Card>
-        </Screen>
+            <ToggleRow>
+                Are you the host?{" "}
+                <ToggleLink type="button" onClick={onBackToLogin}>
+                    Sign in instead
+                </ToggleLink>
+            </ToggleRow>
+        </AuthShell>
     );
 };
 
