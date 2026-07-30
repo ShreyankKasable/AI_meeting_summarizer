@@ -84,6 +84,18 @@ const config = convict({
     default: 'openai',
     env: 'LLM_PROVIDER',
   },
+  embedding: {
+    model: { format: String, default: 'text-embedding-3-small', env: 'EMBEDDING_MODEL' },
+    dimensions: { format: 'int', default: 1536, env: 'EMBEDDING_DIMENSIONS' },
+    batch_size: { format: 'int', default: 32, env: 'EMBEDDING_BATCH_SIZE' },
+  },
+  rag: {
+    enabled: { format: Boolean, default: true, env: 'RAG_ENABLED' },
+    chunk_words: { format: 'int', default: 220, env: 'RAG_CHUNK_WORDS' },
+    chunk_overlap_words: { format: 'int', default: 40, env: 'RAG_CHUNK_OVERLAP_WORDS' },
+    max_chunks: { format: 'int', default: 6, env: 'RAG_MAX_CHUNKS' },
+    chat_history_messages: { format: 'int', default: 10, env: 'RAG_CHAT_HISTORY_MESSAGES' },
+  },
   use_local_model: {
     doc: 'Use a local LLM for summarization',
     format: Boolean,

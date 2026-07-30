@@ -13,6 +13,7 @@ chat with the meeting transcript.
 - Markdown rendering for meeting summaries
 - Meeting transcript editing and speaker renaming
 - Meeting-specific AI chat
+- RAG chat over transcript chunks with pgvector
 - Share links for participant read-only access
 - Notion export
 - Provider/model selection for LLM and speech-to-text
@@ -23,6 +24,7 @@ chat with the meeting transcript.
 - Node.js + Express backend
 - Socket.IO for live meeting events
 - PostgreSQL for persistent data
+- pgvector for transcript similarity search
 - `pg` for database access
 - OpenAI-compatible, Anthropic, Deepgram, AssemblyAI, Hugging Face, and Notion integrations
 
@@ -58,6 +60,10 @@ DEEPGRAM_API_KEY=your_deepgram_key
 
 LLM_PROVIDER=openai
 OPENAI_API_KEY=your_openai_key
+
+EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSIONS=1536
+RAG_ENABLED=true
 ```
 
 Start the app:
@@ -98,9 +104,14 @@ The app uses PostgreSQL. The backend creates the required tables on startup:
 - `action_items`
 - `chat_messages`
 - `meeting_shares`
+- `transcript_chunks`
 
 For local development, `docker-compose.yml` provides a Postgres container with
-the same default `DATABASE_URL` used in `.env.example`.
+pgvector installed and the same default `DATABASE_URL` used in `.env.example`.
+
+Meeting chat uses `transcript_chunks` plus pgvector similarity search. The full
+transcript remains stored on the meeting for display/export, but LLM chat only
+receives the summary and the most relevant transcript excerpts.
 
 ## Project Structure
 

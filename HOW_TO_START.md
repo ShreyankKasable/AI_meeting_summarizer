@@ -1,6 +1,7 @@
 # How to Start the Application
 
 This app is 100% JavaScript and uses PostgreSQL for persistent data.
+The local Docker database includes pgvector for meeting transcript RAG.
 
 ## 1. Install dependencies
 
@@ -26,6 +27,8 @@ Copy `.env.example` to `.env` and adjust values as needed.
 ```env
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/ai_meeting_summarizer
 DATABASE_SSL=false
+EMBEDDING_MODEL=text-embedding-3-small
+RAG_ENABLED=true
 ```
 
 ## 4. Start the app

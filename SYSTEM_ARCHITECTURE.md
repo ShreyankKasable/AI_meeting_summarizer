@@ -18,7 +18,7 @@ Express API + Socket.IO
         v
 Domain services in backend/app/pkg
         |
-        +-- PostgreSQL via pg
+        +-- PostgreSQL + pgvector via pg
         +-- AI provider APIs
         +-- Notion API
 ```
@@ -38,7 +38,7 @@ backend/
   app/
     server.js
     connections/
-      database.js        PostgreSQL pool and schema bootstrap
+      database.js        PostgreSQL pool, pgvector extension, schema bootstrap
       websocket.js       Socket.IO setup and recording events
     api/
       middlewares/
@@ -65,7 +65,7 @@ backend/
 ## Data Layer
 
 `backend/app/connections/database.js` owns the Postgres pool, transaction helper,
-and idempotent schema creation.
+pgvector extension setup, and idempotent schema creation.
 
 Tables:
 
@@ -75,6 +75,7 @@ Tables:
 - `action_items`
 - `chat_messages`
 - `meeting_shares`
+- `transcript_chunks`
 
 Key relationships:
 
@@ -84,6 +85,8 @@ Key relationships:
   `meetings.id` with cascade delete.
 - Share tokens are stored in `meeting_shares`; revoke/regenerate preserves
   token history instead of overwriting meeting columns.
+- Transcript chunks are stored in `transcript_chunks` with pgvector embeddings
+  for meeting-scoped similarity search.
 
 ## Auth
 
@@ -110,9 +113,9 @@ Key relationships:
 - `host:<hostId>`
 - `participant:<participantId>`
 
-Before answering, the model is forced to retrieve the meeting transcript through
-the internal `get_meeting_transcript` tool so answers stay grounded in saved
-meeting content.
+Before answering, the model is forced to call `get_relevant_meeting_context`.
+That tool retrieves the meeting summary plus the most relevant transcript chunks
+from `rag/service.js`, instead of sending the complete transcript to the LLM.
 
 ## Configuration
 
@@ -125,6 +128,8 @@ SECRET_KEY=change-me
 
 TRANSCRIPTION_MODEL=deepgram
 LLM_PROVIDER=openai
+EMBEDDING_MODEL=text-embedding-3-small
+RAG_ENABLED=true
 ```
 
 Provider keys are server-side/global. The settings UI lets users choose the

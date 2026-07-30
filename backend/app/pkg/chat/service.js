@@ -9,14 +9,15 @@ import config from '#app/common/config.js';
 import logger from '#app/common/logger.js';
 import { query } from '#app/connections/database.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
+import { ragService } from '#app/pkg/rag/service.js';
 
-const TOOL_NAME = 'get_meeting_transcript';
+const TOOL_NAME = 'get_relevant_meeting_context';
 const TOOL_DESCRIPTION =
-  "Fetch the full transcript of this meeting. Always call this before answering the user's question so your answer is grounded in what was actually said.";
+  "Fetch the most relevant transcript excerpts and meeting summary for this question. Always call this before answering.";
 const SYSTEM_PROMPT =
   'You are a helpful assistant answering questions about one specific recorded meeting. ' +
-  `Always call the ${TOOL_NAME} tool first to retrieve the transcript, then answer using only ` +
-  'what is in it. If the transcript does not contain the answer, say so.';
+  `Always call the ${TOOL_NAME} tool first, then answer using only that retrieved meeting context. ` +
+  'If the retrieved context does not contain the answer, say so.';
 
 const nowIso = () => new Date().toISOString();
 
@@ -45,17 +46,20 @@ export class ChatbotService {
     const priorHistory = await this.getHistory(meetingId, actorKey);
     await this._saveMessage(meetingId, actorKey, 'user', question);
 
-    const transcriptText = meeting.transcript && typeof meeting.transcript === 'object'
-      ? meeting.transcript.text || ''
-      : meeting.transcript || '';
-    const getTranscript = () => transcriptText || 'No transcript is available for this meeting yet.';
+    const retrievalQuery = [
+      ...priorHistory.filter((message) => message.role === 'user').slice(-2).map((message) => message.content),
+      question,
+    ].join('\n');
+    const meetingContext = await ragService.getContextForQuestion(meeting, retrievalQuery);
+    const getMeetingContext = () => meetingContext;
+    const llmHistory = priorHistory.slice(-config.get('rag.chat_history_messages'));
 
     const resolved = this._resolveProvider(provider);
     let answer;
     if (resolved === 'anthropic') {
-      answer = await this._askClaude(question, priorHistory, getTranscript);
+      answer = await this._askClaude(question, llmHistory, getMeetingContext);
     } else if (resolved === 'openai' || resolved === 'euron' || resolved === 'huggingface') {
-      answer = await this._askOpenAICompatible(resolved, question, priorHistory, getTranscript);
+      answer = await this._askOpenAICompatible(resolved, question, llmHistory, getMeetingContext);
     } else {
       answer = 'No AI provider is configured on the server. Please contact the workspace administrator.';
     }
@@ -99,7 +103,7 @@ export class ChatbotService {
     return { apiKey: config.get('openai.api_key'), baseURL: undefined, model: config.get('openai.model') };
   }
 
-  async _askOpenAICompatible (providerKey, question, priorHistory, getTranscript) {
+  async _askOpenAICompatible (providerKey, question, priorHistory, getMeetingContext) {
     try {
       const { default: OpenAI } = await import('openai');
       const { apiKey, baseURL, model } = this._clientConfigFor(providerKey);
@@ -126,7 +130,7 @@ export class ChatbotService {
       const choice = first.choices[0].message;
       messages.push(choice);
       for (const call of choice.tool_calls || []) {
-        messages.push({ role: 'tool', tool_call_id: call.id, content: getTranscript() });
+        messages.push({ role: 'tool', tool_call_id: call.id, content: getMeetingContext() });
       }
 
       const final = await client.chat.completions.create({ model, messages });
@@ -137,7 +141,7 @@ export class ChatbotService {
     }
   }
 
-  async _askClaude (question, priorHistory, getTranscript) {
+  async _askClaude (question, priorHistory, getMeetingContext) {
     try {
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
       const client = new Anthropic({ apiKey: config.get('anthropic.api_key') });
@@ -162,7 +166,7 @@ export class ChatbotService {
       messages.push({ role: 'assistant', content: first.content });
       const toolResults = first.content
         .filter((b) => b.type === 'tool_use')
-        .map((b) => ({ type: 'tool_result', tool_use_id: b.id, content: getTranscript() }));
+        .map((b) => ({ type: 'tool_result', tool_use_id: b.id, content: getMeetingContext() }));
       messages.push({ role: 'user', content: toolResults });
 
       const final = await client.messages.create({ model, max_tokens: 1024, system: SYSTEM_PROMPT, messages });

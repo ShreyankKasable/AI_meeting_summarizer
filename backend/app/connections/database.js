@@ -45,6 +45,19 @@ export async function withTransaction (callback) {
 
 export async function initDb () {
   const database = getPool();
+  const vectorDimensions = Number(config.get('embedding.dimensions'));
+
+  if (!Number.isInteger(vectorDimensions) || vectorDimensions < 1 || vectorDimensions > 16000) {
+    throw new Error(`Invalid EMBEDDING_DIMENSIONS value: ${vectorDimensions}`);
+  }
+
+  try {
+    await database.query('CREATE EXTENSION IF NOT EXISTS vector;');
+  } catch (error) {
+    throw new Error(
+      `pgvector extension is required. Use the pgvector Docker image or enable the vector extension in Postgres. ${error.message}`
+    );
+  }
 
   await database.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -105,6 +118,19 @@ export async function initDb () {
       created_at TIMESTAMPTZ
     );
 
+    CREATE TABLE IF NOT EXISTS transcript_chunks (
+      id            SERIAL PRIMARY KEY,
+      meeting_id    INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+      chunk_index   INTEGER NOT NULL,
+      speaker       VARCHAR(255),
+      start_seconds DOUBLE PRECISION,
+      end_seconds   DOUBLE PRECISION,
+      text          TEXT NOT NULL,
+      embedding     vector(${vectorDimensions}),
+      created_at    TIMESTAMPTZ DEFAULT now(),
+      UNIQUE (meeting_id, chunk_index)
+    );
+
     ALTER TABLE meetings
       ADD COLUMN IF NOT EXISTS host_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
 
@@ -125,7 +151,19 @@ export async function initDb () {
 
     CREATE INDEX IF NOT EXISTS idx_meeting_shares_active
       ON meeting_shares(meeting_id, revoked_at, expires_at);
+
+    CREATE INDEX IF NOT EXISTS idx_transcript_chunks_meeting
+      ON transcript_chunks(meeting_id, chunk_index);
   `);
+
+  try {
+    await database.query(`
+      CREATE INDEX IF NOT EXISTS idx_transcript_chunks_embedding
+        ON transcript_chunks USING hnsw (embedding vector_cosine_ops);
+    `);
+  } catch (error) {
+    logger.warn('Could not create pgvector HNSW index:', error.message);
+  }
 
   logger.info('PostgreSQL database initialized successfully');
   return database;

@@ -16,6 +16,7 @@ import { meetingsService } from '#app/pkg/meetings/service.js';
 import { transcriptionService } from '#app/pkg/transcription/service.js';
 import { summarizerService } from '#app/pkg/summarizer/service.js';
 import { extractionService } from '#app/pkg/extraction/service.js';
+import { ragService } from '#app/pkg/rag/service.js';
 
 export class ProcessingService {
   async processRecording ({ io, hostId, meetingId, audioFile }) {
@@ -36,6 +37,11 @@ export class ProcessingService {
         summary: summary || 'No summary generated',
         audioFilePath: audioFile ? `/data/audio/${path.basename(audioFile)}` : null,
       });
+      try {
+        await ragService.indexMeetingTranscript(meetingId, transcript);
+      } catch (error) {
+        logger.warn(`Could not index transcript chunks for meeting ${meetingId}:`, error.message);
+      }
       const actionItems = await meetingsService.createActionItems(meetingId, rawItems);
 
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.COMPLETE });
