@@ -7,7 +7,7 @@
  */
 import config from '#app/common/config.js';
 import logger from '#app/common/logger.js';
-import { getDb } from '#app/connections/database.js';
+import { query } from '#app/connections/database.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 
 const TOOL_NAME = 'get_meeting_transcript';
@@ -25,19 +25,25 @@ export class ChatbotService {
   // `participant:<participantId>` — so each distinct person chatting about a
   // meeting gets their own private conversation rather than one shared
   // thread per meeting.
-  getHistory (meetingId, actorKey) {
-    return getDb()
-      .prepare('SELECT * FROM chat_messages WHERE meeting_id = ? AND actor_key = ? ORDER BY id')
-      .all(meetingId, actorKey)
-      .map((r) => ({ id: r.id, role: r.role, content: r.content, created_at: r.created_at }));
+  async getHistory (meetingId, actorKey) {
+    const result = await query(
+      'SELECT * FROM chat_messages WHERE meeting_id = $1 AND actor_key = $2 ORDER BY id',
+      [meetingId, actorKey]
+    );
+    return result.rows.map((r) => ({
+      id: r.id,
+      role: r.role,
+      content: r.content,
+      created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    }));
   }
 
   async ask (meetingId, question, provider, actorKey) {
-    const meeting = meetingsService.getMeetingById(meetingId);
+    const meeting = await meetingsService.getMeetingById(meetingId);
     if (!meeting) throw new Error('Meeting not found');
 
-    const priorHistory = this.getHistory(meetingId, actorKey);
-    this._saveMessage(meetingId, actorKey, 'user', question);
+    const priorHistory = await this.getHistory(meetingId, actorKey);
+    await this._saveMessage(meetingId, actorKey, 'user', question);
 
     const transcriptText = meeting.transcript && typeof meeting.transcript === 'object'
       ? meeting.transcript.text || ''
@@ -54,14 +60,16 @@ export class ChatbotService {
       answer = 'No AI provider is configured on the server. Please contact the workspace administrator.';
     }
 
-    this._saveMessage(meetingId, actorKey, 'assistant', answer);
+    await this._saveMessage(meetingId, actorKey, 'assistant', answer);
     return answer;
   }
 
-  _saveMessage (meetingId, actorKey, role, content) {
-    getDb().prepare(
-      'INSERT INTO chat_messages (meeting_id, actor_key, role, content, created_at) VALUES (?, ?, ?, ?, ?)'
-    ).run(meetingId, actorKey, role, content, nowIso());
+  async _saveMessage (meetingId, actorKey, role, content) {
+    await query(
+      `INSERT INTO chat_messages (meeting_id, actor_key, role, content, created_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [meetingId, actorKey, role, content, nowIso()]
+    );
   }
 
   _resolveProvider (requested) {

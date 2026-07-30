@@ -5,27 +5,34 @@ import { validateSignupPayload, validateLoginPayload } from '#app/pkg/auth/valid
 
 const router = express.Router();
 
-// POST /api/auth/signup
-router.post('/signup', validateSignupPayload, (req, res) => {
-  const user = authService.signup(req.body);
-  const token = authService.issueToken(user);
-  res.json({ success: true, token, user });
+router.post('/signup', validateSignupPayload, async (req, res, next) => {
+  try {
+    const user = await authService.signup(req.body);
+    const token = authService.issueToken(user);
+    res.json({ success: true, token, user });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// POST /api/auth/login
-router.post('/login', validateLoginPayload, (req, res) => {
-  const user = authService.login(req.body);
-  const token = authService.issueToken(user);
-  res.json({ success: true, token, user });
+router.post('/login', validateLoginPayload, async (req, res, next) => {
+  try {
+    const user = await authService.login(req.body);
+    const token = authService.issueToken(user);
+    res.json({ success: true, token, user });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// GET /api/auth/me — lets the frontend validate a persisted token on boot
-router.get('/me', requireAuth, (req, res) => {
-  res.json({ user: authService.getUserById(req.user.id) });
+router.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    res.json({ user: await authService.getUserById(req.user.id) });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// POST /api/auth/logout — stateless JWT, no server-side session to invalidate;
-// kept for API symmetry / a clean client-side call site.
 router.post('/logout', (req, res) => {
   res.json({ success: true });
 });

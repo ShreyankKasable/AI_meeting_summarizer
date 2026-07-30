@@ -31,12 +31,12 @@ export class ProcessingService {
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.EXTRACTING_ACTIONS });
       const rawItems = await extractionService.extract(transcript, summary);
 
-      const meeting = meetingsService.endMeeting(meetingId, {
+      const meeting = await meetingsService.endMeeting(meetingId, {
         transcript,
         summary: summary || 'No summary generated',
         audioFilePath: audioFile ? `/data/audio/${path.basename(audioFile)}` : null,
       });
-      const actionItems = meetingsService.createActionItems(meetingId, rawItems);
+      const actionItems = await meetingsService.createActionItems(meetingId, rawItems);
 
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.COMPLETE });
       emit(SOCKET_EVENTS.MEETING_PROCESSED, { meeting_id: meetingId, summary, action_items: actionItems, meeting });

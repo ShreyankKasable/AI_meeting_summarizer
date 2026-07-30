@@ -42,7 +42,12 @@ export function setupSocket (httpServer) {
     socket.join(hostRoom(socket.data.hostId));
     socket.emit(SOCKET_EVENTS.CONNECTION_STATUS, { status: 'connected' });
 
-    socket.on(SOCKET_EVENTS.START_RECORDING, (data = {}) => handleStartRecording(socket, data));
+    socket.on(SOCKET_EVENTS.START_RECORDING, (data = {}) => {
+      handleStartRecording(socket, data).catch((err) => {
+        logger.error('Start recording error:', err);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: `Could not start recording: ${err.message}` });
+      });
+    });
     socket.on(SOCKET_EVENTS.AUDIO_CHUNK_READY, (data = {}) =>
       processingService.processLiveChunk({
         io, hostId: socket.data.hostId, meetingId: data.meeting_id, chunkFile: data.chunk_file,
@@ -62,14 +67,14 @@ export function getIo () {
   return io;
 }
 
-function handleStartRecording (socket, data) {
+async function handleStartRecording (socket, data) {
   const title = data.title || 'Untitled Meeting';
   const participantsStr = data.participants || '';
   const participants = typeof participantsStr === 'string'
     ? participantsStr.split(',').map((s) => s.trim()).filter(Boolean)
     : (participantsStr || []);
 
-  const meeting = meetingsService.createMeeting({
+  const meeting = await meetingsService.createMeeting({
     title, startTime: new Date().toISOString(), participants, hostId: socket.data.hostId,
   });
   logger.info(`Created meeting ${meeting.id} with title: ${title}`);

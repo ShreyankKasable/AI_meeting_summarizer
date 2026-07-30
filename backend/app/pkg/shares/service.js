@@ -1,14 +1,8 @@
 /**
- * Meeting share-link service — issues, revokes, and redeems the tokens
- * participants use to view a meeting without an account.
- *
- * The active share for a meeting is the most recent `meeting_shares` row with
- * `revoked_at IS NULL` and (`expires_at IS NULL OR expires_at > now`).
- * Regenerate = revoke the current row + insert a new one, so revoked tokens
- * stay around as history rather than being overwritten.
+ * Meeting share-link service.
  */
 import { randomBytes } from 'node:crypto';
-import { getDb } from '#app/connections/database.js';
+import { query } from '#app/connections/database.js';
 
 const EXPIRY_MS = {
   never: null,
@@ -19,53 +13,56 @@ const EXPIRY_MS = {
 const nowIso = () => new Date().toISOString();
 
 export class SharesService {
-  getActiveShare (meetingId) {
-    const row = getDb().prepare(
+  async getActiveShare (meetingId) {
+    const result = await query(
       `SELECT * FROM meeting_shares
-       WHERE meeting_id = ? AND revoked_at IS NULL
-         AND (expires_at IS NULL OR expires_at > ?)
-       ORDER BY id DESC LIMIT 1`
-    ).get(meetingId, nowIso());
-    return row ? formatShare(row) : null;
+       WHERE meeting_id = $1 AND revoked_at IS NULL
+         AND (expires_at IS NULL OR expires_at > $2)
+       ORDER BY id DESC LIMIT 1`,
+      [meetingId, nowIso()]
+    );
+    return result.rows[0] ? formatShare(result.rows[0]) : null;
   }
 
-  createShare (meetingId, expiresIn = 'never') {
-    const db = getDb();
+  async createShare (meetingId, expiresIn = 'never') {
     const token = randomBytes(24).toString('base64url');
     const ms = EXPIRY_MS[expiresIn] ?? null;
     const expiresAt = ms ? new Date(Date.now() + ms).toISOString() : null;
 
-    const info = db.prepare(
-      'INSERT INTO meeting_shares (meeting_id, token, expires_at, created_at) VALUES (?, ?, ?, ?)'
-    ).run(meetingId, token, expiresAt, nowIso());
-    return this.getShareById(Number(info.lastInsertRowid));
+    const result = await query(
+      `INSERT INTO meeting_shares (meeting_id, token, expires_at, created_at)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [meetingId, token, expiresAt, nowIso()]
+    );
+    return formatShare(result.rows[0]);
   }
 
-  revokeShare (meetingId) {
-    const active = this.getActiveShare(meetingId);
+  async revokeShare (meetingId) {
+    const active = await this.getActiveShare(meetingId);
     if (!active) return null;
-    getDb().prepare('UPDATE meeting_shares SET revoked_at = ? WHERE id = ?').run(nowIso(), active.id);
+    await query('UPDATE meeting_shares SET revoked_at = $1 WHERE id = $2', [nowIso(), active.id]);
     return true;
   }
 
-  regenerateShare (meetingId, expiresIn = 'never') {
-    this.revokeShare(meetingId);
+  async regenerateShare (meetingId, expiresIn = 'never') {
+    await this.revokeShare(meetingId);
     return this.createShare(meetingId, expiresIn);
   }
 
-  getShareById (id) {
-    const row = getDb().prepare('SELECT * FROM meeting_shares WHERE id = ?').get(id);
-    return row ? formatShare(row) : null;
+  async getShareById (id) {
+    const result = await query('SELECT * FROM meeting_shares WHERE id = $1', [id]);
+    return result.rows[0] ? formatShare(result.rows[0]) : null;
   }
 
-  // Looks up a token and returns it only if still active (not revoked/expired).
-  resolveToken (token) {
-    const row = getDb().prepare(
+  async resolveToken (token) {
+    const result = await query(
       `SELECT * FROM meeting_shares
-       WHERE token = ? AND revoked_at IS NULL
-         AND (expires_at IS NULL OR expires_at > ?)`
-    ).get(token, nowIso());
-    return row ? formatShare(row) : null;
+       WHERE token = $1 AND revoked_at IS NULL
+         AND (expires_at IS NULL OR expires_at > $2)`,
+      [token, nowIso()]
+    );
+    return result.rows[0] ? formatShare(result.rows[0]) : null;
   }
 }
 
@@ -74,10 +71,15 @@ function formatShare (row) {
     id: row.id,
     meeting_id: row.meeting_id,
     token: row.token,
-    expires_at: row.expires_at || null,
-    revoked_at: row.revoked_at || null,
-    created_at: row.created_at || null,
+    expires_at: toIso(row.expires_at),
+    revoked_at: toIso(row.revoked_at),
+    created_at: toIso(row.created_at),
   };
+}
+
+function toIso (value) {
+  if (!value) return null;
+  return value instanceof Date ? value.toISOString() : value;
 }
 
 export const sharesService = new SharesService();

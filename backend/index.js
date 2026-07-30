@@ -10,7 +10,7 @@ import { setupSocket, disconnect as disconnectSocket } from '#app/connections/we
 
 const startTime = Date.now();
 
-initDb();
+await initDb();
 
 logger.info('='.repeat(60));
 logger.info('AI Meeting Summarizer Backend (neo-style)');
@@ -38,8 +38,7 @@ const closeHttp = () =>
 
 const exitHandler = async (signal) => {
   logger.info(`${signal} received: shutting down`);
-  await Promise.allSettled([closeHttp(), disconnectSocket()]);
-  disconnectDb();
+  await Promise.allSettled([closeHttp(), disconnectSocket(), disconnectDb()]);
   process.exit(0);
 };
 

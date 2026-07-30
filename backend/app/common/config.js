@@ -46,11 +46,19 @@ const config = convict({
     default: 'dev-secret-key-change-in-production',
     env: 'SECRET_KEY',
   },
-  database_path: {
-    doc: 'SQLite database file path (empty = data/meetings.db)',
-    format: String,
-    default: '',
-    env: 'DATABASE_PATH',
+  database: {
+    url: {
+      doc: 'PostgreSQL connection URL',
+      format: String,
+      default: 'postgres://postgres:postgres@127.0.0.1:5432/ai_meeting_summarizer',
+      env: 'DATABASE_URL',
+    },
+    ssl: {
+      doc: 'Enable TLS for PostgreSQL connections',
+      format: Boolean,
+      default: false,
+      env: 'DATABASE_SSL',
+    },
   },
   transcription_model: {
     doc: 'Transcription backend: whisper | deepgram | assemblyai | huggingface',
@@ -132,7 +140,6 @@ const config = convict({
 config.validate({ allowed: 'warn' });
 
 // Computed paths (not env-driven)
-config.set('database_path', config.get('database_path') || path.join(DATA_DIR, 'meetings.db'));
 config.set('local_model_path', config.get('local_model_path') || path.join(MODELS_DIR, 'llama-2-7b-chat.gguf'));
 
 // Ensure required directories exist

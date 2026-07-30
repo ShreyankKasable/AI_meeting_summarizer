@@ -47,7 +47,11 @@ export class SystemService {
       config: {
         transcription_model: config.get('transcription_model'),
         use_local_model: config.get('use_local_model'),
-        database_path: config.get('database_path'),
+        database: {
+          client: 'postgres',
+          url: redactDatabaseUrl(config.get('database.url')),
+          ssl: config.get('database.ssl'),
+        },
       },
       capabilities: this.capabilities(),
       integrations: {
@@ -65,3 +69,13 @@ export class SystemService {
 }
 
 export const systemService = new SystemService();
+
+function redactDatabaseUrl (value) {
+  try {
+    const url = new URL(value);
+    if (url.password) url.password = '***';
+    return url.toString();
+  } catch {
+    return value;
+  }
+}
