@@ -1,14 +1,17 @@
 import URLS from "common/utils/apiUrls";
 import ApiService from "./api.service";
 
-// Host-authenticated calls only. See share.service.js for the participant
-// (token-scoped, unauthenticated) equivalents.
+// Host-owned meeting calls only. See share.service.js for the signed-in
+// participant, token-scoped equivalents.
 const MeetingService = {
     list() {
         return ApiService.get(URLS.meetings);
     },
     get(id) {
         return ApiService.get(URLS.meeting(id));
+    },
+    delete(id) {
+        return ApiService.delete(URLS.meeting(id));
     },
     getActionItems(id) {
         return ApiService.get(URLS.meetingActionItems(id));
@@ -33,6 +36,18 @@ const MeetingService = {
     },
     getShare(id) {
         return ApiService.get(URLS.meetingShare(id));
+    },
+    getShareAccess(id) {
+        return ApiService.get(URLS.meetingShareAccess(id));
+    },
+    approveShareAccess(id, userId) {
+        return ApiService.post(URLS.meetingShareAccessApprove(id, userId));
+    },
+    rejectShareAccess(id, userId) {
+        return ApiService.post(URLS.meetingShareAccessReject(id, userId));
+    },
+    removeShareAccess(id, userId) {
+        return ApiService.delete(URLS.meetingShareAccessUser(id, userId));
     },
     createShare(id, expiresIn) {
         return ApiService.post(URLS.meetingShare(id), { data: { expires_in: expiresIn } });

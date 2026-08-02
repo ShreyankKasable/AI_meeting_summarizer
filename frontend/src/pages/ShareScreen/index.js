@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
-import { Check, Copy, Eye, Link2, Mail, RefreshCw, Share2, ShieldCheck } from "lucide-react";
+import {
+    Check,
+    Copy,
+    Eye,
+    KeyRound,
+    Mail,
+    RefreshCw,
+    Share2,
+    ShieldCheck,
+} from "lucide-react";
 import PageContainer from "common/components/PageContainer";
 import Button from "common/components/Button";
 import Badge from "common/components/Badge";
@@ -9,7 +18,14 @@ import { SkeletonBlock, SkeletonCard, SkeletonStack } from "common/components/Sk
 import { H2, H3, Body2, Body3 } from "common/global-styled-components";
 import { SHARE_EXPIRY_OPTIONS, HOST_VIEWS } from "common/constants";
 import { setHostView } from "common/redux/actions/sessionActions";
+import { toast } from "common/utils/toast";
 import MeetingService from "services/meeting.service";
+import ParticipantAccessInsights from "./ParticipantAccessInsights";
+
+const PageStack = styled(PageContainer)`
+    display: grid;
+    gap: var(--Size-Gap-XXL);
+`;
 
 const Layout = styled.div`
     display: grid;
@@ -147,17 +163,47 @@ const ShareScreen = () => {
     const [expiresIn, setExpiresIn] = useState("never");
     const [copied, setCopied] = useState(false);
     const [regenerating, setRegenerating] = useState(false);
+    const [accessRows, setAccessRows] = useState([]);
+    const [accessLoading, setAccessLoading] = useState(false);
+    const [accessAction, setAccessAction] = useState("");
+
+    const loadAccessRows = async () => {
+        if (!activeId) return [];
+        const { data } = await MeetingService.getShareAccess(activeId);
+        const rows = data.access || [];
+        setAccessRows(rows);
+        return rows;
+    };
 
     useEffect(() => {
         if (!activeId) return;
-        MeetingService.getShare(activeId).then(async ({ data }) => {
-            if (data.share) {
-                setShare(data.share);
-            } else {
-                const created = await MeetingService.createShare(activeId, expiresIn);
-                setShare(created.data.share);
+        let cancelled = false;
+        const loadShare = async () => {
+            setAccessLoading(true);
+            try {
+                const { data } = await MeetingService.getShare(activeId);
+                if (cancelled) return;
+                if (data.share) {
+                    setShare(data.share);
+                } else {
+                    const created = await MeetingService.createShare(activeId, expiresIn);
+                    if (!cancelled) {
+                        setShare(created.data.share);
+                        toast.success("Meeting code created");
+                    }
+                }
+                const access = await MeetingService.getShareAccess(activeId);
+                if (!cancelled) setAccessRows(access.data.access || []);
+            } catch (err) {
+                if (!cancelled) toast.error("Could not load meeting code", { message: err.message });
+            } finally {
+                if (!cancelled) setAccessLoading(false);
             }
-        });
+        };
+        loadShare();
+        return () => {
+            cancelled = true;
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeId]);
 
@@ -190,12 +236,17 @@ const ShareScreen = () => {
         );
     }
 
-    const shareUrl = `${window.location.origin}/share/${share.token}`;
+    const shareCode = share.token;
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(shareUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(shareCode);
+            setCopied(true);
+            toast.success("Meeting code copied");
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            toast.error("Could not copy code", { message: err.message });
+        }
     };
 
     const handleRegenerate = async () => {
@@ -203,13 +254,69 @@ const ShareScreen = () => {
         try {
             const { data } = await MeetingService.regenerateShare(activeId, expiresIn);
             setShare(data.share);
+            const access = await MeetingService.getShareAccess(activeId);
+            setAccessRows(access.data.access || []);
+            toast.success("Meeting code regenerated", { message: "The previous code is no longer valid." });
+        } catch (err) {
+            toast.error("Could not regenerate code", { message: err.message });
         } finally {
             setRegenerating(false);
         }
     };
 
+    const handleRefreshAccess = async () => {
+        setAccessLoading(true);
+        try {
+            await loadAccessRows();
+        } catch (err) {
+            toast.error("Could not refresh participant access", { message: err.message });
+        } finally {
+            setAccessLoading(false);
+        }
+    };
+
+    const handleApproveAccess = async (userId) => {
+        setAccessAction(`approve:${userId}`);
+        try {
+            await MeetingService.approveShareAccess(activeId, userId);
+            await loadAccessRows();
+            toast.success("Participant approved");
+        } catch (err) {
+            toast.error("Could not approve participant", { message: err.message });
+        } finally {
+            setAccessAction("");
+        }
+    };
+
+    const handleRejectAccess = async (userId) => {
+        setAccessAction(`reject:${userId}`);
+        try {
+            await MeetingService.rejectShareAccess(activeId, userId);
+            await loadAccessRows();
+            toast.success("Participant request rejected");
+        } catch (err) {
+            toast.error("Could not reject request", { message: err.message });
+        } finally {
+            setAccessAction("");
+        }
+    };
+
+    const handleRemoveAccess = async (userId) => {
+        if (!window.confirm("Remove this participant's access to the meeting?")) return;
+        setAccessAction(`remove:${userId}`);
+        try {
+            await MeetingService.removeShareAccess(activeId, userId);
+            await loadAccessRows();
+            toast.success("Participant access removed");
+        } catch (err) {
+            toast.error("Could not remove participant", { message: err.message });
+        } finally {
+            setAccessAction("");
+        }
+    };
+
     return (
-        <PageContainer size="lg">
+        <PageStack size="lg">
             <Layout>
                 <Card>
                     <Banner>
@@ -227,12 +334,12 @@ const ShareScreen = () => {
                     <Body>
                         <FieldGroup>
                             <Body3 style={{ fontWeight: "var(--bold)", color: "var(--Color-Text-Bold)" }}>
-                                Meeting Link
+                                Meeting Code
                             </Body3>
                             <LinkRow>
                                 <LinkBox>
-                                    <Link2 size={15} color="var(--Color-Icon-Subtle)" />
-                                    <LinkText>{shareUrl}</LinkText>
+                                    <KeyRound size={15} color="var(--Color-Icon-Subtle)" />
+                                    <LinkText>{shareCode}</LinkText>
                                 </LinkBox>
                                 <Button mode="secondary" onClick={handleCopy}>
                                     {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -256,14 +363,14 @@ const ShareScreen = () => {
                             </FieldGroup>
                             <FieldGroup>
                                 <Body3 style={{ fontWeight: "var(--bold)", color: "var(--Color-Text-Bold)" }}>
-                                    Security Token
+                                    Meeting Code
                                 </Body3>
                                 <Button
                                     mode="danger"
                                     block
                                     onClick={handleRegenerate}
                                     loader={regenerating}
-                                    title="This will break the previously shared link"
+                                    title="This will break the previously shared code"
                                 >
                                     <RefreshCw size={16} />
                                     Revoke and Regenerate
@@ -280,7 +387,11 @@ const ShareScreen = () => {
                                 mode="secondary"
                                 style={{ flex: 1 }}
                                 onClick={() =>
-                                    window.open(`mailto:?subject=Meeting Notes&body=${encodeURIComponent(shareUrl)}`)
+                                    window.open(
+                                        `mailto:?subject=Meeting Code&body=${encodeURIComponent(
+                                            `Use this meeting code after signing in:\n\n${shareCode}`,
+                                        )}`,
+                                    )
                                 }
                             >
                                 <Mail size={16} />
@@ -297,7 +408,7 @@ const ShareScreen = () => {
                     </Badge>
                     <H3 style={{ marginTop: "var(--Size-Gap-XL)" }}>Participant view</H3>
                     <Body3 style={{ marginTop: "var(--Size-Gap-M)" }}>
-                        Shared viewers get the transcript, summary, actions, and AI chat without host controls.
+                        Approved viewers get the transcript, summary, actions, and AI chat without host controls.
                     </Body3>
                     <SideList>
                         <SideItem>
@@ -306,16 +417,25 @@ const ShareScreen = () => {
                         </SideItem>
                         <SideItem>
                             <Check size={16} color="var(--Color-Icon-Success)" />
-                            <Body3>Regenerated tokens invalidate previous links</Body3>
+                            <Body3>Regenerated codes stop new requests from old codes</Body3>
                         </SideItem>
                         <SideItem>
                             <Check size={16} color="var(--Color-Icon-Success)" />
-                            <Body3>Expiration can be configured before regenerating</Body3>
+                            <Body3>Approved participants can be removed any time</Body3>
                         </SideItem>
                     </SideList>
                 </SideCard>
             </Layout>
-        </PageContainer>
+            <ParticipantAccessInsights
+                rows={accessRows}
+                loading={accessLoading}
+                onRefresh={handleRefreshAccess}
+                onApprove={handleApproveAccess}
+                onReject={handleRejectAccess}
+                onRemove={handleRemoveAccess}
+                busyAction={accessAction}
+            />
+        </PageStack>
     );
 };
 

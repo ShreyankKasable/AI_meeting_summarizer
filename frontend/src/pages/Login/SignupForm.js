@@ -6,7 +6,7 @@ import Button from "common/components/Button";
 import Input from "common/components/Input";
 import Alert from "common/components/Alert";
 import { Body3 } from "common/global-styled-components";
-import { signup as signupThunk } from "common/redux/actions/sessionActions";
+import { signup as signupThunk, setHostView } from "common/redux/actions/sessionActions";
 import AuthShell from "./AuthShell";
 
 const Form = styled.form`
@@ -73,7 +73,7 @@ const ToggleLink = styled.button`
     font-weight: var(--semi-bold);
 `;
 
-const SignupForm = ({ onBackToLogin, onBackToLanding }) => {
+const SignupForm = ({ onBackToLogin, onBackToLanding, postAuthView }) => {
     const dispatch = useDispatch();
     const status = useSelector((state) => state.sessionDetails.status);
 
@@ -105,6 +105,7 @@ const SignupForm = ({ onBackToLogin, onBackToLanding }) => {
 
         try {
             await dispatch(signupThunk(email, password));
+            if (postAuthView) dispatch(setHostView(postAuthView));
         } catch (err) {
             setError(err.message);
         }
@@ -112,9 +113,9 @@ const SignupForm = ({ onBackToLogin, onBackToLanding }) => {
 
     return (
         <AuthShell
-            title="Create your workspace"
-            subtitle="Register a host account and start capturing meeting context."
-            eyebrow="Get started"
+            title={postAuthView ? "Create an account to join" : "Create your workspace"}
+            subtitle={postAuthView ? "Sign up first, then enter the meeting code shared by the host." : "Register a host account and start capturing meeting context."}
+            eyebrow={postAuthView ? "Participant access" : "Get started"}
             onBackToLanding={onBackToLanding}
         >
             <SocialGrid>

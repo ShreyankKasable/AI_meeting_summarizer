@@ -4,6 +4,7 @@ import styled from "styled-components";
 import {
     AudioWaveform,
     HelpCircle,
+    LogIn,
     LayoutDashboard,
     LogOut,
     Menu,
@@ -225,6 +226,7 @@ const MobileMenu = styled.div`
 
 const NAV_ITEMS = [
     { view: HOST_VIEWS.Dashboard, label: "Dashboard", icon: LayoutDashboard },
+    { view: HOST_VIEWS.Join, label: "Join Meeting", icon: LogIn },
     { view: HOST_VIEWS.Settings, label: "Settings", icon: SettingsIcon },
 ];
 

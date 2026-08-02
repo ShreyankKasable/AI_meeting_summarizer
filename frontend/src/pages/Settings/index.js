@@ -122,7 +122,7 @@ const Settings = () => {
     }, [dispatch]);
 
     const handleSave = (provider, field, value) => {
-        dispatch(saveSetting(provider, field, value));
+        dispatch(saveSetting(provider, field, value)).catch(() => {});
     };
 
     return (

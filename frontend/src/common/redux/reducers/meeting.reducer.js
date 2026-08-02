@@ -22,6 +22,12 @@ const meetingReducer = (state = initialState, action) => {
             return { ...state, list: payload.meetings };
         case MeetingAction.UpsertMeeting:
             return { ...state, list: upsert(state.list, payload.meeting) };
+        case MeetingAction.RemoveMeeting:
+            return {
+                ...state,
+                list: state.list.filter((meeting) => meeting.id !== payload.id),
+                activeId: state.activeId === payload.id ? null : state.activeId,
+            };
         case MeetingAction.SetActiveMeeting:
             return { ...state, activeId: payload.id, liveTranscript: [], processingStatus: null };
         case MeetingAction.AppendLiveTranscript:

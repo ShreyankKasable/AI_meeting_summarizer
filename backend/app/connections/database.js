@@ -118,6 +118,38 @@ export async function initDb () {
       created_at TIMESTAMPTZ
     );
 
+    CREATE TABLE IF NOT EXISTS meeting_access_grants (
+      id           SERIAL PRIMARY KEY,
+      meeting_id   INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+      share_id     INTEGER REFERENCES meeting_shares(id) ON DELETE SET NULL,
+      user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user_email   VARCHAR(255),
+      status       VARCHAR(20) NOT NULL DEFAULT 'pending',
+      requested_at TIMESTAMPTZ NOT NULL,
+      approved_at  TIMESTAMPTZ,
+      rejected_at  TIMESTAMPTZ,
+      removed_at   TIMESTAMPTZ,
+      updated_at   TIMESTAMPTZ NOT NULL,
+      UNIQUE (meeting_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS share_accesses (
+      id             SERIAL PRIMARY KEY,
+      share_id       INTEGER NOT NULL REFERENCES meeting_shares(id) ON DELETE CASCADE,
+      meeting_id     INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+      participant_id VARCHAR(100) NOT NULL,
+      viewer_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      viewer_email   VARCHAR(255),
+      first_seen_at  TIMESTAMPTZ NOT NULL,
+      last_seen_at   TIMESTAMPTZ NOT NULL,
+      view_count     INTEGER NOT NULL DEFAULT 0,
+      chat_count     INTEGER NOT NULL DEFAULT 0,
+      translate_count INTEGER NOT NULL DEFAULT 0,
+      last_activity  VARCHAR(40),
+      user_agent     TEXT,
+      UNIQUE (share_id, participant_id)
+    );
+
     CREATE TABLE IF NOT EXISTS transcript_chunks (
       id            SERIAL PRIMARY KEY,
       meeting_id    INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
@@ -137,6 +169,10 @@ export async function initDb () {
     ALTER TABLE chat_messages
       ADD COLUMN IF NOT EXISTS actor_key VARCHAR(80) NOT NULL DEFAULT 'legacy';
 
+    ALTER TABLE share_accesses
+      ADD COLUMN IF NOT EXISTS viewer_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS viewer_email VARCHAR(255);
+
     CREATE INDEX IF NOT EXISTS idx_meetings_host_start
       ON meetings(host_id, start_time DESC);
 
@@ -151,6 +187,18 @@ export async function initDb () {
 
     CREATE INDEX IF NOT EXISTS idx_meeting_shares_active
       ON meeting_shares(meeting_id, revoked_at, expires_at);
+
+    CREATE INDEX IF NOT EXISTS idx_meeting_access_grants_meeting
+      ON meeting_access_grants(meeting_id, status, updated_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_meeting_access_grants_user
+      ON meeting_access_grants(user_id, status, updated_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_share_accesses_meeting
+      ON share_accesses(meeting_id, last_seen_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_share_accesses_viewer
+      ON share_accesses(meeting_id, viewer_user_id, last_seen_at DESC);
 
     CREATE INDEX IF NOT EXISTS idx_transcript_chunks_meeting
       ON transcript_chunks(meeting_id, chunk_index);

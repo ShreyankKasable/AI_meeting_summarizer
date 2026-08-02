@@ -50,7 +50,8 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/ai_meeting_summarizer
 4. The backend transcribes audio, summarizes the transcript, extracts action
    items, chunks the transcript, embeds chunks, and persists everything in
    Postgres.
-5. Chat retrieves relevant chunks through pgvector instead of sending the full
+5. Anonymous share access activity is recorded for the host as view/chat counts.
+6. Chat retrieves relevant chunks through pgvector instead of sending the full
    transcript to the LLM.
-6. The frontend receives live Socket.IO updates and refreshes saved meeting
+7. The frontend receives live Socket.IO updates and refreshes saved meeting
    data through REST calls.

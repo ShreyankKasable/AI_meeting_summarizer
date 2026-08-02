@@ -228,11 +228,24 @@ const MeetingContentView = () => {
     const handleExportNotion = async () => {
         try {
             await dispatch(exportToNotion(activeId));
-            // eslint-disable-next-line no-alert
-            alert("Exported to Notion successfully!");
-        } catch (err) {
-            // eslint-disable-next-line no-alert
-            alert(`Export failed: ${err.message}`);
+        } catch {
+            // The thunk shows the failure toast.
+        }
+    };
+
+    const handleRenameSpeaker = async (speaker, name) => {
+        try {
+            await dispatch(renameSpeaker(activeId, speaker, name));
+        } catch {
+            // The thunk shows the failure toast.
+        }
+    };
+
+    const handleToggleActionItem = async (itemId) => {
+        try {
+            await dispatch(toggleActionItem(activeId, itemId));
+        } catch {
+            // The thunk shows the failure toast.
         }
     };
 
@@ -270,9 +283,7 @@ const MeetingContentView = () => {
                             onTranslate={handleTranslate}
                             translating={translating}
                             editable
-                            onRenameSpeaker={(speaker, name) =>
-                                dispatch(renameSpeaker(activeId, speaker, name))
-                            }
+                            onRenameSpeaker={handleRenameSpeaker}
                         />
                     </TranscriptPaneShell>
                 </TranscriptColumn>
@@ -291,7 +302,7 @@ const MeetingContentView = () => {
                         {activeTab === "actions" && (
                             <ActionsTab
                                 items={meeting.action_items}
-                                onToggle={(itemId) => dispatch(toggleActionItem(activeId, itemId))}
+                                onToggle={handleToggleActionItem}
                             />
                         )}
                     </TabContent>

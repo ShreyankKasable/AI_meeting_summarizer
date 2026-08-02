@@ -67,6 +67,15 @@ router.get('/:id', (req, res) => {
   res.json(req.meeting);
 });
 
+router.delete('/:id', async (req, res, next) => {
+  try {
+    await meetingsService.deleteMeeting(Number(req.params.id));
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:id/action-items', async (req, res, next) => {
   try {
     res.json(await meetingsService.getActionItemsByMeeting(Number(req.params.id)));
@@ -184,6 +193,44 @@ router.get('/:id/share', async (req, res, next) => {
   }
 });
 
+router.get('/:id/share/access', async (req, res, next) => {
+  try {
+    res.json({ access: await sharesService.getAccessByMeeting(Number(req.params.id)) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:id/share/access/:userId/approve', async (req, res, next) => {
+  try {
+    const access = await sharesService.approveAccess(Number(req.params.id), parseUserId(req.params.userId));
+    if (!access) throw new NotFound('Access request not found');
+    res.json({ success: true, access });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:id/share/access/:userId/reject', async (req, res, next) => {
+  try {
+    const access = await sharesService.rejectAccess(Number(req.params.id), parseUserId(req.params.userId));
+    if (!access) throw new NotFound('Access request not found');
+    res.json({ success: true, access });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/:id/share/access/:userId', async (req, res, next) => {
+  try {
+    const access = await sharesService.removeAccess(Number(req.params.id), parseUserId(req.params.userId));
+    if (!access) throw new NotFound('Access request not found');
+    res.json({ success: true, access });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/:id/share', async (req, res, next) => {
   try {
     const expiresIn = ['never', '7d', '30d'].includes(req.body?.expires_in) ? req.body.expires_in : 'never';
@@ -213,5 +260,10 @@ router.post('/:id/share/regenerate', async (req, res, next) => {
     next(err);
   }
 });
+
+function parseUserId (value) {
+  if (!/^\d+$/.test(String(value))) throw new BadRequest('Invalid user id');
+  return Number(value);
+}
 
 export default router;

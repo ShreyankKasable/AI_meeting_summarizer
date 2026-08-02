@@ -6,9 +6,8 @@ import Button from "common/components/Button";
 import Input from "common/components/Input";
 import Alert from "common/components/Alert";
 import { Body3 } from "common/global-styled-components";
-import { login as loginThunk } from "common/redux/actions/sessionActions";
+import { login as loginThunk, setHostView } from "common/redux/actions/sessionActions";
 import SignupForm from "./SignupForm";
-import JoinMeetingForm from "./JoinMeetingForm";
 import AuthShell from "./AuthShell";
 
 const Form = styled.form`
@@ -80,7 +79,7 @@ const ToggleLink = styled.button`
     }
 `;
 
-const Login = ({ initialMode = "login", onBackToLanding }) => {
+const Login = ({ initialMode = "login", onBackToLanding, postAuthView }) => {
     const dispatch = useDispatch();
     const status = useSelector((state) => state.sessionDetails.status);
 
@@ -95,24 +94,27 @@ const Login = ({ initialMode = "login", onBackToLanding }) => {
         setError("");
         try {
             await dispatch(loginThunk(email, password));
+            if (postAuthView) dispatch(setHostView(postAuthView));
         } catch (err) {
             setError(err.message);
         }
     };
 
     if (mode === "signup") {
-        return <SignupForm onBackToLogin={() => setMode("login")} onBackToLanding={onBackToLanding} />;
-    }
-
-    if (mode === "join") {
-        return <JoinMeetingForm onBackToLogin={() => setMode("login")} onBackToLanding={onBackToLanding} />;
+        return (
+            <SignupForm
+                onBackToLogin={() => setMode("login")}
+                onBackToLanding={onBackToLanding}
+                postAuthView={postAuthView}
+            />
+        );
     }
 
     return (
         <AuthShell
-            title="Welcome back"
-            subtitle="Sign in to your host workspace."
-            eyebrow="Host access"
+            title={postAuthView ? "Sign in to join" : "Welcome back"}
+            subtitle={postAuthView ? "Use your account before opening a shared meeting." : "Sign in to your host workspace."}
+            eyebrow={postAuthView ? "Participant access" : "Host access"}
             onBackToLanding={onBackToLanding}
         >
             <SocialGrid>
@@ -164,15 +166,9 @@ const Login = ({ initialMode = "login", onBackToLanding }) => {
             </Form>
 
             <ToggleRow>
-                No host account?{" "}
+                {postAuthView ? "No account?" : "No host account?"}{" "}
                 <ToggleLink type="button" onClick={() => setMode("signup")}>
                     Create one
-                </ToggleLink>
-            </ToggleRow>
-            <ToggleRow>
-                Attending a meeting?{" "}
-                <ToggleLink type="button" onClick={() => setMode("join")} id="join-meeting-link">
-                    Join with code
                 </ToggleLink>
             </ToggleRow>
         </AuthShell>

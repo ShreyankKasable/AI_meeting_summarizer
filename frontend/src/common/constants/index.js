@@ -3,6 +3,7 @@
 // switches guest views off redux state instead of a URL.
 export const HOST_VIEWS = {
     Dashboard: "dashboard",
+    Join: "join",
     Record: "record",
     Settings: "settings",
     Meeting: "meeting",

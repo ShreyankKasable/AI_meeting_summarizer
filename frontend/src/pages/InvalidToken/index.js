@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { ArrowRight, AudioWaveform, HelpCircle, History, Home, KeyRound, ShieldCheck } from "lucide-react";
+import { ArrowRight, AudioWaveform, Clock3, HelpCircle, History, Home, KeyRound, ShieldCheck } from "lucide-react";
 import Button from "common/components/Button";
 import Input from "common/components/Input";
 import Alert from "common/components/Alert";
 import Badge from "common/components/Badge";
 import { H1, H3, Body2, Body3 } from "common/global-styled-components";
+import { extractShareToken } from "common/utils/shareToken";
+import { toast } from "common/utils/toast";
 import ShareService from "services/share.service";
 
 const Wrapper = styled.div`
@@ -112,21 +114,40 @@ const IconAddon = styled.span`
     color: var(--Color-Icon-Subtle);
 `;
 
+const StatusCard = styled.div`
+    display: flex;
+    align-items: flex-start;
+    gap: var(--Size-Gap-M);
+    padding: var(--Size-Padding-L);
+    border: 1px solid var(--Color-Border-Accent-Warning);
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Accent-Warning);
+    color: var(--Color-Text-Warning);
+`;
+
 const InvalidToken = () => {
     const [token, setToken] = useState("");
     const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
     const [checking, setChecking] = useState(false);
 
     const handleValidate = async (e) => {
         e.preventDefault();
         setError("");
+        setNotice("");
         setChecking(true);
-        const cleaned = token.trim();
+        const cleaned = extractShareToken(token);
         try {
-            await ShareService.get(cleaned);
-            window.location.href = `/share/${cleaned}`;
-        } catch {
-            setError("That token is invalid or has expired.");
+            const { data } = await ShareService.requestAccess(cleaned);
+            if (data.can_access) {
+                toast.success("Access approved");
+                window.location.href = `/share/${cleaned}`;
+                return;
+            }
+            setNotice("Access request sent. The host needs to approve your account before you can open the meeting.");
+            toast.success("Access request sent");
+        } catch (err) {
+            setError(err.message || "That meeting code is invalid or has expired.");
         } finally {
             setChecking(false);
         }
@@ -147,10 +168,10 @@ const InvalidToken = () => {
                     </IconCircle>
                     <Badge tone="danger">Access unavailable</Badge>
                     <H1 style={{ fontSize: "var(--h2-d)", marginTop: "var(--Size-Gap-L)" }}>
-                        This meeting link is no longer valid.
+                        This meeting code is no longer valid.
                     </H1>
                     <Body2 style={{ color: "var(--Color-Text-Subtle)", marginTop: "var(--Size-Gap-L)" }}>
-                        Ask the host for a new link or enter a fresh access code.
+                        Ask the host for a new code or enter a fresh access code.
                     </Body2>
                     <ButtonRow>
                         <Button onClick={() => window.location.assign("/")}>
@@ -168,12 +189,12 @@ const InvalidToken = () => {
                     <Badge tone="neutral">Manual access</Badge>
                     <H3 style={{ marginTop: "var(--Size-Gap-XL)" }}>Have a code?</H3>
                     <Body3 style={{ marginTop: "var(--Size-Gap-S)" }}>
-                        Enter the token shared by the meeting host.
+                        Enter the meeting code shared by the host.
                     </Body3>
                     <Form onSubmit={handleValidate}>
                         <Input
                             mono
-                            placeholder="Enter token"
+                            placeholder="Enter meeting code"
                             value={token}
                             onChange={(e) => setToken(e.target.value)}
                             addon={
@@ -182,9 +203,15 @@ const InvalidToken = () => {
                                 </IconAddon>
                             }
                         />
+                        {notice && (
+                            <StatusCard>
+                                <Clock3 size={16} />
+                                <Body3>{notice}</Body3>
+                            </StatusCard>
+                        )}
                         <Alert>{error}</Alert>
                         <Button type="submit" block loader={checking}>
-                            Validate Token
+                            Request Access
                             <ArrowRight size={16} />
                         </Button>
                     </Form>

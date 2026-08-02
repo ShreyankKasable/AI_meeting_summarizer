@@ -80,9 +80,10 @@ naturally refreshed by each page's own data-fetching effect on mount.
 
 ```
 window.location.pathname matches /share/:token ?
-  ├─ yes → <MeetingContentViewParticipant token={...} />   (never checks auth)
-  │         (renders <InvalidToken /> itself if the token 404s)
-  ├─ path starts with /share/ but doesn't match → <InvalidToken />
+  ├─ yes and no session token → <Login />
+  ├─ yes and session token set → <MeetingContentViewParticipant token={...} />
+  │                              (renders <InvalidToken /> itself if the token 404s)
+  ├─ path starts with /share/ but doesn't match → <Login /> or <InvalidToken />
   └─ no →
       sessionDetails.token is falsy → <Login />
       sessionDetails.token is set   → <HostApp />
@@ -92,8 +93,9 @@ window.location.pathname matches /share/:token ?
                                            based on sessionDetails.hostView
 ```
 
-The participant branch is checked **before** the auth branch, since a
-participant is never logged in — this ordering matters.
+The share-link branch is checked **before** the normal host branch so a
+signed-in participant opening `/share/:token` gets the participant view instead
+of the host dashboard.
 
 Within `HostApp`, "navigation" is just `dispatch(setHostView(HOST_VIEWS.X))`
 — there's no URL change, no browser history entry. This is a deliberate
@@ -121,10 +123,12 @@ Settings is reachable from the sidebar at any point, independent of this flow.
 
 ### Participant journey
 ```
-Login screen ─(Join with a meeting code)─► enter token ─► /share/:token
-                                                                │
-      OR: host sends a /share/:token link directly ────────────┤
-                                                                ▼
+Landing page ─(Join Meeting)─► Login screen ─► authenticated workspace
+                                                        │
+                                      Join Meeting ─────┤
+                                                        │
+      OR: signed-in user opens a /share/:token link ────┤
+                                                        ▼
                                           Meeting Content View (read-only:
                                           transcript, translate, AI chat,
                                           summary, actions — no edit/export/
@@ -136,7 +140,8 @@ Login screen ─(Join with a meeting code)─► enter token ─► /share/:toke
                                               (error message + manual token
                                                re-entry, links back to landing)
 ```
-A participant never sees the sidebar, never authenticates, and the
+A participant authenticates first, then enters a meeting code from the
+workspace or opens a shared `/share/:token` link. The
 `MeetingContentViewParticipant` page is a thin wrapper around the *same*
 `TranscriptPane` / `ChatTab` / `SummaryTab` / `ActionsTab` components the host
 view uses (imported directly from `pages/MeetingContentView/`), just without
@@ -147,11 +152,12 @@ a `readOnly` prop.
 
 | Page | Purpose | Talks to |
 |---|---|---|
-| `Login` (+`SignupForm`, +`JoinMeetingForm`) | Host sign-in/sign-up, and the discoverable participant entry point (enter a meeting code without needing a full link) | `auth.service`, `share.service` |
+| `Login` (+`SignupForm`) | Sign-in/sign-up before entering the workspace or opening a share link | `auth.service` |
 | `HostDashboard` (+`MeetingCard`, `NewMeetingModal`, `FilterBar`) | List/search/filter the host's meetings, start a new recording | `meeting.service.list`, `socket.service.emitStartRecording` |
 | `RecordMeeting` (+`TranscriptPanel`) | Live recording UI — timer, waveform, live transcript, stop control | `useAudioRecorder`, socket events (no direct REST besides the recorder's own chunk/full uploads) |
 | `MeetingContentView` (host) (+`TranscriptPane`, `AudioScrubber`, `ChatTab`, `SummaryTab`, `ActionsTab`) | Full read/write meeting view | `meeting.service` (get, chat, translate, title, export, action items) |
-| `MeetingContentViewParticipant` | Read-only twin of the above, token-scoped | `share.service` |
+| `JoinMeeting` | Authenticated participant entry point for entering a meeting code | `share.service` |
+| `MeetingContentViewParticipant` | Read-only twin of the above, session-authenticated and token-scoped | `share.service` |
 | `ShareScreen` | Generate/copy/revoke/regenerate a share link | `meeting.service` (share endpoints) |
 | `Settings` (+`AiProvidersTab`, `IntegrationsTab`, `NotificationsTab`) | View/edit provider connection status and keys | `settings.service` |
 | `InvalidToken` | Error state for a bad/expired share link + manual re-entry | `share.service` |
@@ -207,11 +213,10 @@ called both synchronously at store-creation time (from persisted
 `localStorage` state, so the very first request already carries a token) and
 again after a fresh login/hydration confirms it's valid.
 
-`meeting.service.js` (host-authenticated) and `share.service.js`
-(participant, token-scoped, no auth header) are kept **deliberately
-separate** rather than one service branching on auth mode internally — this
-makes it structurally impossible for a host-authenticated call site to
-accidentally hit an unauthenticated endpoint or vice versa.
+`meeting.service.js` (host-owned meeting calls) and `share.service.js`
+(signed-in participant calls scoped by a share token) are kept **deliberately
+separate** rather than one service branching on access mode internally — this
+makes it structurally obvious which meeting surface each call site is using.
 
 ## 10. Design System
 

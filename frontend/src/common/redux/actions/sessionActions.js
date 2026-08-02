@@ -1,6 +1,7 @@
 import { SessionAction } from "./types";
 import AuthService from "services/auth.service";
 import { setAuthToken } from "services/api.service";
+import { toast } from "common/utils/toast";
 
 export const setAuthLoading = () => ({ type: SessionAction.SetAuthLoading });
 
@@ -27,6 +28,7 @@ export const signup = (email, password) => async (dispatch) => {
         const { data } = await AuthService.signup(email, password);
         setAuthToken(data.token);
         dispatch(setAuth({ token: data.token, user: data.user }));
+        toast.success("Account created");
     } catch (err) {
         dispatch(setAuthError(err.message));
         throw err;

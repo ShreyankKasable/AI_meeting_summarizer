@@ -439,7 +439,7 @@ const features = [
 ];
 
 const faqs = [
-    ["Can participants view notes without an account?", "Yes. Hosts can create a secure share link for a processed meeting."],
+    ["Can participants view notes without an account?", "No. Participants sign in first, then use the meeting code shared by the host."],
     ["Does the app support AI chat?", "Yes. Hosts and invited participants can ask questions against the meeting content."],
     ["Can I export to Notion?", "Yes. The settings area includes Notion configuration and processed meetings can be exported."],
     ["Is pricing available?", "Pricing is a placeholder in this build and can be connected when plans are finalized."],
@@ -525,7 +525,7 @@ const LandingPage = ({ onSignIn, onRegister, onJoin }) => {
                                 <ArrowRight size={18} />
                             </Button>
                             <Button size="large" mode="secondary" onClick={onJoin}>
-                                Join a meeting
+                                Join Meeting
                             </Button>
                         </HeroActions>
                     </HeroCopy>

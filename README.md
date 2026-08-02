@@ -14,7 +14,8 @@ chat with the meeting transcript.
 - Meeting transcript editing and speaker renaming
 - Meeting-specific AI chat
 - RAG chat over transcript chunks with pgvector
-- Share links for participant read-only access
+- Share links for signed-in participant read-only access
+- Host-visible anonymous share access activity
 - Notion export
 - Provider/model selection for LLM and speech-to-text
 
@@ -104,6 +105,7 @@ The app uses PostgreSQL. The backend creates the required tables on startup:
 - `action_items`
 - `chat_messages`
 - `meeting_shares`
+- `share_accesses`
 - `transcript_chunks`
 
 For local development, `docker-compose.yml` provides a Postgres container with

@@ -9,6 +9,7 @@ import { H1, H3, Body2, Body3 } from "common/global-styled-components";
 import useAudioRecorder from "common/hooks/useAudioRecorder";
 import { setHostView } from "common/redux/actions/sessionActions";
 import { HOST_VIEWS } from "common/constants";
+import { toast } from "common/utils/toast";
 import { formatElapsed } from "common/utils/utils";
 import TranscriptPanel from "./TranscriptPanel";
 
@@ -168,8 +169,7 @@ const RecordMeeting = () => {
         if (activeId && !startedRef.current) {
             startedRef.current = true;
             start().catch((err) => {
-                // eslint-disable-next-line no-alert
-                alert(`Could not access microphone: ${err.message}`);
+                toast.error("Could not access microphone", { message: err.message });
             });
         }
     }, [activeId, start]);

@@ -1,5 +1,6 @@
 /**
- * Mounts unauthenticated, token-gated participant routes under /api/public.
+ * Mounts signed-in, token-gated participant routes under /api/public.
+ * The path remains /public for share-link compatibility.
  */
 import express from 'express';
 import shareRoutes from './share.route.js';

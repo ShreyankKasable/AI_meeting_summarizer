@@ -9,6 +9,7 @@ export const SessionAction = {
 export const MeetingAction = {
     SetMeetings: "SET_MEETINGS",
     UpsertMeeting: "UPSERT_MEETING",
+    RemoveMeeting: "REMOVE_MEETING",
     SetActiveMeeting: "SET_ACTIVE_MEETING",
     AppendLiveTranscript: "APPEND_LIVE_TRANSCRIPT",
     ClearLiveTranscript: "CLEAR_LIVE_TRANSCRIPT",

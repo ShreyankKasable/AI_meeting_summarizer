@@ -44,6 +44,15 @@ ApiService.put = (url, options = {}) => {
     });
 };
 
+ApiService.delete = (url, options = {}) => {
+    return axios.delete(url, {
+        ...commonOptions,
+        ...options,
+        headers: { ...commonOptions.headers, ...authHeader(), ...options.headers },
+        params: options.params,
+    });
+};
+
 // For multipart/form-data uploads (audio files). Deliberately omits the
 // default JSON Content-Type so axios can set the correct multipart boundary
 // itself from the FormData body.

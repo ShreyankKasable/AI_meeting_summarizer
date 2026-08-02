@@ -10,12 +10,19 @@ import {
     Plus,
     Search,
     Sparkles,
+    Trash2,
     Users,
 } from "lucide-react";
 import PageContainer from "common/components/PageContainer";
+import Button from "common/components/Button";
+import Modal from "common/components/Modal";
 import { SkeletonBlock, SkeletonStack } from "common/components/Skeleton";
 import { H1, H3, Body2, Body3 } from "common/global-styled-components";
-import { fetchMeetings, setActiveMeeting } from "common/redux/actions/meetingActions";
+import {
+    deleteMeeting as deleteMeetingAction,
+    fetchMeetings,
+    setActiveMeeting,
+} from "common/redux/actions/meetingActions";
 import { setHostView } from "common/redux/actions/sessionActions";
 import { HOST_VIEWS } from "common/constants";
 import { formatDate, formatDuration } from "common/utils/utils";
@@ -92,7 +99,7 @@ const CardsGrid = styled.div`
     gap: var(--Size-Gap-XXL);
 `;
 
-const MeetingCard = styled.button`
+const MeetingCard = styled.div`
     width: 100%;
     min-height: 250px;
     display: flex;
@@ -103,6 +110,7 @@ const MeetingCard = styled.button`
     background: var(--Color-Background-Default);
     box-shadow: 0 1px 2px rgba(17, 19, 22, 0.03);
     color: inherit;
+    cursor: pointer;
     text-align: left;
     transition: transform var(--transition-fast), border-color var(--transition-fast),
         box-shadow var(--transition-fast);
@@ -111,6 +119,12 @@ const MeetingCard = styled.button`
         border-color: var(--Color-Border-Bold);
         box-shadow: var(--Color-Shadow-Card);
         transform: translateY(-2px);
+    }
+
+    &:focus-visible {
+        outline: none;
+        border-color: var(--Color-Border-Action);
+        box-shadow: var(--Color-Shadow-Focus);
     }
 
     @media (max-width: 640px) {
@@ -165,7 +179,11 @@ const MetaPill = styled.span`
     font-size: var(--body-2-d);
 `;
 
-const IconButton = styled.span`
+const CardActions = styled.div`
+    position: relative;
+`;
+
+const IconButton = styled.button`
     width: 34px;
     height: 34px;
     display: inline-flex;
@@ -175,9 +193,54 @@ const IconButton = styled.span`
     border-radius: var(--Size-CornerRadius-M);
     background: transparent;
     color: var(--Color-Icon-Default);
+    cursor: pointer;
 
     &:hover {
         background: var(--Color-Background-Subtle);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.56;
+    }
+`;
+
+const CardMenu = styled.div`
+    position: absolute;
+    top: calc(100% + var(--Size-Gap-S));
+    right: 0;
+    z-index: 20;
+    min-width: 190px;
+    padding: var(--Size-Padding-S);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-L);
+    background: var(--Color-Background-Default);
+    box-shadow: var(--Color-Shadow-1);
+`;
+
+const MenuItem = styled.button`
+    width: 100%;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: var(--Size-Gap-M);
+    padding: 0 var(--Size-Padding-L);
+    border: none;
+    border-radius: var(--Size-CornerRadius-M);
+    background: transparent;
+    color: var(--Color-Text-Danger);
+    font-size: var(--body-3-d);
+    font-weight: var(--semi-bold);
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--Color-Background-Accent-Danger);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.58;
     }
 `;
 
@@ -297,6 +360,32 @@ const EmptyAction = styled.button`
     font-weight: var(--semi-bold);
 `;
 
+const DeleteDialogBody = styled.div`
+    display: grid;
+    gap: var(--Size-Gap-XL);
+`;
+
+const WarningPanel = styled.div`
+    display: flex;
+    align-items: flex-start;
+    gap: var(--Size-Gap-M);
+    padding: var(--Size-Padding-L);
+    border: 1px solid var(--Color-Border-Accent-Danger);
+    border-radius: var(--Size-CornerRadius-L);
+    background: var(--Color-Background-Accent-Danger);
+    color: var(--Color-Text-Danger);
+`;
+
+const DialogActions = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--Size-Gap-M);
+
+    @media (max-width: 480px) {
+        flex-direction: column-reverse;
+    }
+`;
+
 const getLatestMeeting = (meetings) =>
     meetings.reduce((latest, meeting) => {
         if (!latest) return meeting;
@@ -327,6 +416,9 @@ const HostDashboard = () => {
     const [search, setSearch] = useState("");
     const [showNewMeeting, setShowNewMeeting] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
+    const [pendingDeleteMeeting, setPendingDeleteMeeting] = useState(null);
 
     useEffect(() => {
         let mounted = true;
@@ -338,6 +430,13 @@ const HostDashboard = () => {
             mounted = false;
         };
     }, [dispatch]);
+
+    useEffect(() => {
+        if (!openMenuId) return undefined;
+        const closeMenu = () => setOpenMenuId(null);
+        document.addEventListener("click", closeMenu);
+        return () => document.removeEventListener("click", closeMenu);
+    }, [openMenuId]);
 
     const filtered = useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -357,6 +456,41 @@ const HostDashboard = () => {
     const openMeeting = (meeting) => {
         dispatch(setActiveMeeting(meeting.id));
         dispatch(setHostView(HOST_VIEWS.Meeting));
+    };
+
+    const handleCardKeyDown = (event, meeting) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        openMeeting(meeting);
+    };
+
+    const toggleMenu = (event, meetingId) => {
+        event.stopPropagation();
+        setOpenMenuId((currentId) => (currentId === meetingId ? null : meetingId));
+    };
+
+    const requestDeleteMeeting = (event, meeting) => {
+        event.stopPropagation();
+        setOpenMenuId(null);
+        setPendingDeleteMeeting(meeting);
+    };
+
+    const closeDeleteDialog = () => {
+        if (!deletingId) setPendingDeleteMeeting(null);
+    };
+
+    const confirmDeleteMeeting = async () => {
+        if (!pendingDeleteMeeting) return;
+        setDeletingId(pendingDeleteMeeting.id);
+        try {
+            await dispatch(deleteMeetingAction(pendingDeleteMeeting.id));
+            setPendingDeleteMeeting(null);
+        } catch {
+            // The thunk shows the failure toast.
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     const openNewMeeting = () => setShowNewMeeting(true);
@@ -417,7 +551,7 @@ const HostDashboard = () => {
                                             <SkeletonBlock width="150px" height="42px" />
                                         </MetaPills>
                                     </CardIdentity>
-                                    <IconButton aria-hidden="true">
+                                    <IconButton as="span" aria-hidden="true">
                                         <MoreVertical size={22} />
                                     </IconButton>
                                 </CardTop>
@@ -462,8 +596,10 @@ const HostDashboard = () => {
                         {filtered.map((meeting) => (
                             <MeetingCard
                                 key={meeting.id}
-                                type="button"
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => openMeeting(meeting)}
+                                onKeyDown={(event) => handleCardKeyDown(event, meeting)}
                             >
                                 <CardTop>
                                     <CardIdentity>
@@ -481,9 +617,31 @@ const HostDashboard = () => {
                                             </MetaPill>
                                         </MetaPills>
                                     </CardIdentity>
-                                    <IconButton aria-hidden="true">
-                                        <MoreVertical size={22} />
-                                    </IconButton>
+                                    <CardActions onClick={(event) => event.stopPropagation()}>
+                                        <IconButton
+                                            type="button"
+                                            aria-label={`Open actions for ${meeting.title || "Untitled meeting"}`}
+                                            aria-haspopup="menu"
+                                            aria-expanded={openMenuId === meeting.id}
+                                            onClick={(event) => toggleMenu(event, meeting.id)}
+                                            disabled={deletingId === meeting.id}
+                                        >
+                                            <MoreVertical size={22} />
+                                        </IconButton>
+                                        {openMenuId === meeting.id && (
+                                            <CardMenu role="menu">
+                                                <MenuItem
+                                                    type="button"
+                                                    role="menuitem"
+                                                    onClick={(event) => requestDeleteMeeting(event, meeting)}
+                                                    disabled={deletingId === meeting.id}
+                                                >
+                                                    <Trash2 size={15} />
+                                                    {deletingId === meeting.id ? "Deleting..." : "Delete meeting"}
+                                                </MenuItem>
+                                            </CardMenu>
+                                        )}
+                                    </CardActions>
                                 </CardTop>
                                 <MeetingTitle>{meeting.title || "Untitled meeting"}</MeetingTitle>
                                 <MeetingSummary>
@@ -508,6 +666,37 @@ const HostDashboard = () => {
             </LibrarySection>
 
             {showNewMeeting && <NewMeetingModal onClose={() => setShowNewMeeting(false)} />}
+            {pendingDeleteMeeting && (
+                <Modal title="Delete meeting" onClose={closeDeleteDialog} width="480px">
+                    <DeleteDialogBody>
+                        <Body2>
+                            Are you sure you want to delete{" "}
+                            <strong>{pendingDeleteMeeting.title || "Untitled meeting"}</strong>?
+                        </Body2>
+                        <WarningPanel>
+                            <Trash2 size={18} />
+                            <Body3>
+                                This will permanently remove its transcript, summary, action items, chats,
+                                shares, access activity, and local audio file.
+                            </Body3>
+                        </WarningPanel>
+                        <DialogActions>
+                            <Button type="button" mode="secondary" onClick={closeDeleteDialog}>
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                mode="danger"
+                                onClick={confirmDeleteMeeting}
+                                loader={deletingId === pendingDeleteMeeting.id}
+                            >
+                                <Trash2 size={16} />
+                                Delete Meeting
+                            </Button>
+                        </DialogActions>
+                    </DeleteDialogBody>
+                </Modal>
+            )}
         </DashboardPage>
     );
 };

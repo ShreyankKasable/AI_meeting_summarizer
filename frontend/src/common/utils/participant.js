@@ -1,10 +1,7 @@
 const STORAGE_KEY = "meetai_participant_id";
 
-// Participants never log in, so there's no user id to key a chat thread on.
-// Instead, each browser gets a random id on first use, persisted so the same
-// browser keeps its own thread across reloads — a different browser (a
-// different participant) gets a different id, and therefore a separate
-// thread, without requiring an account.
+// Participant access is authenticated, but chat history still needs a
+// per-browser thread id so two browsers under the same account do not collide.
 export function getParticipantId() {
     let id = localStorage.getItem(STORAGE_KEY);
     if (!id) {

@@ -23,5 +23,8 @@ export function getSocket() {
 }
 
 export function emitStartRecording(title, participants) {
-    getSocket()?.emit("start_recording", { title, participants });
+    const activeSocket = getSocket();
+    if (!activeSocket) return false;
+    activeSocket.emit("start_recording", { title, participants });
+    return true;
 }

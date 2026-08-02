@@ -8,6 +8,7 @@ import useSocket from "common/hooks/useSocket";
 import LandingPage from "pages/LandingPage";
 import Login from "pages/Login";
 import HostDashboard from "pages/HostDashboard";
+import JoinMeeting from "pages/JoinMeeting";
 import RecordMeeting from "pages/RecordMeeting";
 import ShareScreen from "pages/ShareScreen";
 import MeetingContentView from "pages/MeetingContentView";
@@ -39,6 +40,8 @@ const HostApp = () => {
         switch (hostView) {
             case HOST_VIEWS.Record:
                 return <RecordMeeting />;
+            case HOST_VIEWS.Join:
+                return <JoinMeeting />;
             case HOST_VIEWS.Settings:
                 return <Settings />;
             case HOST_VIEWS.Meeting:
@@ -72,7 +75,13 @@ const UnauthenticatedApp = () => {
         );
     }
 
-    return <Login initialMode={mode} onBackToLanding={() => setMode("landing")} />;
+    return (
+        <Login
+            initialMode={mode === "signup" ? "signup" : "login"}
+            postAuthView={mode === "join" ? HOST_VIEWS.Join : undefined}
+            onBackToLanding={() => setMode("landing")}
+        />
+    );
 };
 
 export default function App() {
@@ -85,8 +94,18 @@ export default function App() {
     }, []);
 
     const shareMatch = window.location.pathname.match(/^\/share\/([^/]+)$/);
-    if (shareMatch) return <MeetingContentViewParticipant token={shareMatch[1]} />;
-    if (window.location.pathname.startsWith("/share/")) return <InvalidToken />;
+    if (shareMatch) {
+        if (!token) {
+            return <Login initialMode="login" onBackToLanding={() => window.location.assign("/")} />;
+        }
+        return <MeetingContentViewParticipant token={shareMatch[1]} />;
+    }
+    if (window.location.pathname.startsWith("/share/")) {
+        if (!token) {
+            return <Login initialMode="login" onBackToLanding={() => window.location.assign("/")} />;
+        }
+        return <InvalidToken />;
+    }
 
     if (!token) return <UnauthenticatedApp />;
 

@@ -9,6 +9,7 @@ import Badge from "common/components/Badge";
 import { Body3 } from "common/global-styled-components";
 import { setHostView } from "common/redux/actions/sessionActions";
 import { HOST_VIEWS } from "common/constants";
+import { toast } from "common/utils/toast";
 import { emitStartRecording } from "services/socket.service";
 
 const Form = styled.form`
@@ -49,7 +50,11 @@ const NewMeetingModal = ({ onClose }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        emitStartRecording(title.trim() || "Untitled Meeting", participants);
+        const started = emitStartRecording(title.trim() || "Untitled Meeting", participants);
+        if (!started) {
+            toast.error("Could not start meeting", { message: "The realtime connection is not ready." });
+            return;
+        }
         dispatch(setHostView(HOST_VIEWS.Record));
         onClose();
     };

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { connectSocket, disconnectSocket } from "services/socket.service";
 import { SOCKET_EVENTS } from "common/constants";
+import { toast } from "common/utils/toast";
 import {
     appendLiveTranscript,
     setProcessingStatus,
@@ -27,6 +28,7 @@ const useSocket = () => {
             // full record once processing finishes.
             dispatch(upsertMeeting({ id: data.meeting_id, title: data.title }));
             dispatch(setActiveMeeting(data.meeting_id));
+            toast.success("Meeting created", { message: "Recording has started." });
         };
         const handleLiveTranscript = (data) => {
             dispatch(appendLiveTranscript(data.text));
@@ -36,18 +38,24 @@ const useSocket = () => {
         };
         const handleMeetingProcessed = (data) => {
             if (data.meeting) dispatch(upsertMeeting(data.meeting));
+            toast.success("Meeting processed", { message: "Summary and action items are ready." });
+        };
+        const handleSocketError = (data = {}) => {
+            toast.error("Meeting error", { message: data.message || "Something went wrong." });
         };
 
         socket.on(SOCKET_EVENTS.RECORDING_STARTED, handleRecordingStarted);
         socket.on(SOCKET_EVENTS.LIVE_TRANSCRIPT_UPDATE, handleLiveTranscript);
         socket.on(SOCKET_EVENTS.PROCESSING_STATUS, handleProcessingStatus);
         socket.on(SOCKET_EVENTS.MEETING_PROCESSED, handleMeetingProcessed);
+        socket.on(SOCKET_EVENTS.ERROR, handleSocketError);
 
         return () => {
             socket.off(SOCKET_EVENTS.RECORDING_STARTED, handleRecordingStarted);
             socket.off(SOCKET_EVENTS.LIVE_TRANSCRIPT_UPDATE, handleLiveTranscript);
             socket.off(SOCKET_EVENTS.PROCESSING_STATUS, handleProcessingStatus);
             socket.off(SOCKET_EVENTS.MEETING_PROCESSED, handleMeetingProcessed);
+            socket.off(SOCKET_EVENTS.ERROR, handleSocketError);
             disconnectSocket();
         };
     }, [token, dispatch]);

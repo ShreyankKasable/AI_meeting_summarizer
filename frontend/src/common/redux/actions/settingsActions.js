@@ -1,5 +1,6 @@
 import { SettingsAction } from "./types";
 import SettingsService from "services/settings.service";
+import { toast } from "common/utils/toast";
 
 export const setSettingsStatus = (status) => ({
     type: SettingsAction.SetStatus,
@@ -20,6 +21,11 @@ export const saveSetting = (provider, field, value) => async (dispatch) => {
     try {
         const { data } = await SettingsService.update(provider, field, value);
         dispatch(setSettingsStatus(data));
+        toast.success("Settings updated");
+        return data;
+    } catch (err) {
+        toast.error("Could not update settings", { message: err.message });
+        throw err;
     } finally {
         dispatch(setSettingsSaving(false));
     }

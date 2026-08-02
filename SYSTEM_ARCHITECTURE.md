@@ -75,6 +75,7 @@ Tables:
 - `action_items`
 - `chat_messages`
 - `meeting_shares`
+- `share_accesses`
 - `transcript_chunks`
 
 Key relationships:
@@ -85,6 +86,9 @@ Key relationships:
   `meetings.id` with cascade delete.
 - Share tokens are stored in `meeting_shares`; revoke/regenerate preserves
   token history instead of overwriting meeting columns.
+- Share access activity is aggregated in `share_accesses` by participant
+  browser id, so hosts can see views/chats/translations for signed-in
+  participants without collecting IP addresses.
 - Transcript chunks are stored in `transcript_chunks` with pgvector embeddings
   for meeting-scoped similarity search.
 
@@ -93,7 +97,8 @@ Key relationships:
 - Passwords use Node's built-in `crypto.scrypt`.
 - Sessions use signed JWTs.
 - Host routes use `requireAuth`.
-- Public participant routes are token-gated through `/api/public/share/:token`.
+- Participant share routes also use `requireAuth` and are token-gated through
+  `/api/public/share/:token`.
 - Socket.IO validates the same host JWT during the connection handshake.
 
 ## Recording Flow

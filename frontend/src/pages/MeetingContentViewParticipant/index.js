@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { AudioWaveform, Calendar, ShieldCheck } from "lucide-react";
+import { AudioWaveform, Calendar, Clock3, Home, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
 import Tabs from "common/components/Tabs";
 import Badge from "common/components/Badge";
+import Button from "common/components/Button";
 import { SkeletonBlock, SkeletonCard, SkeletonStack } from "common/components/Skeleton";
-import { H1 } from "common/global-styled-components";
+import { H1, H3, Body2 } from "common/global-styled-components";
 import { formatDate, getTranscriptText } from "common/utils/utils";
+import { toast } from "common/utils/toast";
 import ShareService from "services/share.service";
 import TranscriptPane from "pages/MeetingContentView/TranscriptPane";
 import ChatTab from "pages/MeetingContentView/ChatTab";
@@ -54,6 +56,14 @@ const BrandMark = styled.span`
     border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Bold);
     color: var(--Color-Text-Inverse);
+`;
+
+const RightActions = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--Size-Gap-M);
+    flex-wrap: wrap;
 `;
 
 const Wrapper = styled.div`
@@ -130,6 +140,42 @@ const LoadingShell = styled.div`
     padding: var(--Size-Padding-XXXL) 0;
 `;
 
+const StateShell = styled.div`
+    width: min(680px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: var(--Size-Padding-4XL) 0;
+`;
+
+const StateCard = styled.div`
+    display: grid;
+    gap: var(--Size-Gap-XL);
+    padding: var(--Size-Padding-XXXL);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-XXL);
+    background: var(--Color-Background-Default);
+    box-shadow: var(--Color-Shadow-Card);
+    text-align: center;
+`;
+
+const StateIcon = styled.div`
+    width: 58px;
+    height: 58px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Accent-Warning);
+    color: var(--Color-Text-Warning);
+`;
+
+const StateActions = styled.div`
+    display: flex;
+    justify-content: center;
+    gap: var(--Size-Gap-M);
+    flex-wrap: wrap;
+`;
+
 const TABS = [
     { id: "chat", label: "AI Chat" },
     { id: "summary", label: "Summary" },
@@ -150,19 +196,70 @@ const MeetingContentViewParticipant = ({ token }) => {
     const [chatSending, setChatSending] = useState(false);
     const [translatedText, setTranslatedText] = useState(null);
     const [translating, setTranslating] = useState(false);
+    const [accessState, setAccessState] = useState({ status: "checking" });
+    const [accessChecking, setAccessChecking] = useState(false);
+    const [leaving, setLeaving] = useState(false);
+
+    const checkAccess = async ({ createRequest = false, cancelled = () => false } = {}) => {
+        setAccessChecking(true);
+        try {
+            const { data: access } = createRequest
+                ? await ShareService.requestAccess(token)
+                : await ShareService.getAccessStatus(token);
+
+            if (cancelled()) return;
+
+            setAccessState(access);
+            if (!access.can_access) {
+                setMeeting(null);
+                return;
+            }
+
+            const [meetingResponse, chatResponse] = await Promise.all([
+                ShareService.get(token),
+                ShareService.getChatHistory(token).catch(() => ({ data: [] })),
+            ]);
+
+            if (cancelled()) return;
+
+            setMeeting(meetingResponse.data);
+            setChatMessages(chatResponse.data || []);
+        } catch (err) {
+            if (cancelled()) return;
+            if (err.status === 404) {
+                setInvalid(true);
+            } else {
+                setAccessState({ status: "error", message: err.message });
+                setMeeting(null);
+            }
+        } finally {
+            if (!cancelled()) setAccessChecking(false);
+        }
+    };
 
     useEffect(() => {
-        ShareService.get(token)
-            .then(({ data }) => setMeeting(data))
-            .catch(() => setInvalid(true));
-        ShareService.getChatHistory(token)
-            .then(({ data }) => setChatMessages(data))
-            .catch(() => {});
+        let cancelled = false;
+        checkAccess({ createRequest: true, cancelled: () => cancelled });
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
     if (invalid) return <InvalidToken />;
 
     if (!meeting) {
+        if (accessState.status && accessState.status !== "checking" && accessState.status !== "approved") {
+            return (
+                <AccessStatePage
+                    status={accessState.status}
+                    message={accessState.message}
+                    checking={accessChecking}
+                    onRefresh={() => checkAccess()}
+                />
+            );
+        }
+
         return (
             <Page>
                 <TopNav>
@@ -171,11 +268,11 @@ const MeetingContentViewParticipant = ({ token }) => {
                             <BrandMark>
                                 <AudioWaveform size={16} />
                             </BrandMark>
-                            MeetAI
-                        </Brand>
-                        <Badge tone="neutral">Shared meeting</Badge>
-                    </TopNavInner>
-                </TopNav>
+                        MeetAI
+                    </Brand>
+                    <Badge tone="neutral">Shared meeting</Badge>
+                </TopNavInner>
+            </TopNav>
                 <LoadingShell>
                     <SkeletonStack>
                         <SkeletonBlock width="180px" height="16px" />
@@ -213,6 +310,20 @@ const MeetingContentViewParticipant = ({ token }) => {
         }
     };
 
+    const handleLeaveAccess = async () => {
+        if (!window.confirm("Remove your access to this meeting? You will need to request access again.")) return;
+        setLeaving(true);
+        try {
+            await ShareService.removeAccess(token);
+            toast.success("Meeting access removed");
+            window.location.assign("/");
+        } catch (err) {
+            toast.error("Could not remove access", { message: err.message });
+        } finally {
+            setLeaving(false);
+        }
+    };
+
     return (
         <Page>
             <TopNav>
@@ -223,10 +334,16 @@ const MeetingContentViewParticipant = ({ token }) => {
                         </BrandMark>
                         MeetAI
                     </Brand>
-                    <Badge tone="success">
-                        <ShieldCheck size={13} />
-                        Shared access
-                    </Badge>
+                    <RightActions>
+                        <Badge tone="success">
+                            <ShieldCheck size={13} />
+                            Shared access
+                        </Badge>
+                        <Button mode="secondary" size="small" onClick={handleLeaveAccess} loader={leaving}>
+                            <LogOut size={14} />
+                            Leave
+                        </Button>
+                    </RightActions>
                 </TopNavInner>
             </TopNav>
             <Wrapper>
@@ -271,5 +388,85 @@ const MeetingContentViewParticipant = ({ token }) => {
         </Page>
     );
 };
+
+const AccessStatePage = ({ status, message, checking, onRefresh }) => {
+    const copy = accessStateCopy(status, message);
+    const Icon = copy.icon;
+    return (
+        <Page>
+            <TopNav>
+                <TopNavInner>
+                    <Brand>
+                        <BrandMark>
+                            <AudioWaveform size={16} />
+                        </BrandMark>
+                        MeetAI
+                    </Brand>
+                    <Badge tone={copy.badgeTone}>{copy.badge}</Badge>
+                </TopNavInner>
+            </TopNav>
+            <StateShell>
+                <StateCard>
+                    <StateIcon>
+                        <Icon size={26} />
+                    </StateIcon>
+                    <div>
+                        <H3>{copy.title}</H3>
+                        <Body2 style={{ color: "var(--Color-Text-Subtle)", marginTop: "var(--Size-Gap-M)" }}>
+                            {copy.description}
+                        </Body2>
+                    </div>
+                    <StateActions>
+                        <Button onClick={onRefresh} loader={checking}>
+                            <RefreshCw size={16} />
+                            Check Status
+                        </Button>
+                        <Button mode="secondary" onClick={() => window.location.assign("/")}>
+                            <Home size={16} />
+                            Home
+                        </Button>
+                    </StateActions>
+                </StateCard>
+            </StateShell>
+        </Page>
+    );
+};
+
+function accessStateCopy(status, message) {
+    if (status === "rejected") {
+        return {
+            badge: "Request declined",
+            badgeTone: "danger",
+            icon: ShieldCheck,
+            title: "The host declined this access request",
+            description: "Ask the host for approval before opening this meeting.",
+        };
+    }
+    if (status === "removed") {
+        return {
+            badge: "Access removed",
+            badgeTone: "neutral",
+            icon: LogOut,
+            title: "Your access was removed",
+            description: "You can request access again if the host shared an active meeting code.",
+        };
+    }
+    if (status === "error") {
+        return {
+            badge: "Access check failed",
+            badgeTone: "danger",
+            icon: ShieldCheck,
+            title: "Could not check access",
+            description: message || "Please try again in a moment.",
+        };
+    }
+    return {
+        badge: "Pending approval",
+        badgeTone: "warning",
+        icon: Clock3,
+        title: "Waiting for host approval",
+        description: "Your request was sent. This meeting will open after the host approves your account.",
+    };
+}
 
 export default MeetingContentViewParticipant;
