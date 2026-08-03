@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import styled from "styled-components";
-import { AudioWaveform, Calendar, Clock3, Home, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowLeft, AudioWaveform, Calendar, Clock3, Home, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
 import Tabs from "common/components/Tabs";
 import Badge from "common/components/Badge";
 import Button from "common/components/Button";
 import { SkeletonBlock, SkeletonCard, SkeletonStack } from "common/components/Skeleton";
 import { H1, H3, Body2 } from "common/global-styled-components";
+import { HOST_VIEWS } from "common/constants";
+import { setHostView } from "common/redux/actions/sessionActions";
 import { formatDate, getTranscriptText } from "common/utils/utils";
 import { toast } from "common/utils/toast";
 import ShareService from "services/share.service";
@@ -104,8 +107,20 @@ const Split = styled.div`
     }
 `;
 
+const TranscriptColumn = styled.div`
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+`;
+
+const TranscriptPaneShell = styled.div`
+    flex: 1;
+    min-height: 0;
+`;
+
 const SidePanel = styled.div`
     min-height: 0;
+    height: 100%;
     display: flex;
     flex-direction: column;
     background: var(--Color-Background-Default);
@@ -113,6 +128,10 @@ const SidePanel = styled.div`
     border-radius: var(--Size-CornerRadius-XXL);
     box-shadow: 0 18px 42px rgba(15, 118, 110, 0.22), var(--Color-Shadow-Card);
     overflow: hidden;
+
+    @media (max-width: 1120px) {
+        min-height: 620px;
+    }
 `;
 
 const PanelTitle = styled.div`
@@ -189,6 +208,7 @@ const PANEL_TITLES = {
 };
 
 const MeetingContentViewParticipant = ({ token }) => {
+    const dispatch = useDispatch();
     const [meeting, setMeeting] = useState(null);
     const [invalid, setInvalid] = useState(false);
     const [activeTab, setActiveTab] = useState("chat");
@@ -310,13 +330,18 @@ const MeetingContentViewParticipant = ({ token }) => {
         }
     };
 
+    const handleBackToJoin = () => {
+        dispatch(setHostView(HOST_VIEWS.Join));
+        window.location.assign("/?view=join");
+    };
+
     const handleLeaveAccess = async () => {
         if (!window.confirm("Remove your access to this meeting? You will need to request access again.")) return;
         setLeaving(true);
         try {
             await ShareService.removeAccess(token);
             toast.success("Meeting access removed");
-            window.location.assign("/");
+            handleBackToJoin();
         } catch (err) {
             toast.error("Could not remove access", { message: err.message });
         } finally {
@@ -335,6 +360,10 @@ const MeetingContentViewParticipant = ({ token }) => {
                         MeetAI
                     </Brand>
                     <RightActions>
+                        <Button mode="secondary" size="small" onClick={handleBackToJoin}>
+                            <ArrowLeft size={14} />
+                            Back
+                        </Button>
                         <Badge tone="success">
                             <ShieldCheck size={13} />
                             Shared access
@@ -347,25 +376,28 @@ const MeetingContentViewParticipant = ({ token }) => {
                 </TopNavInner>
             </TopNav>
             <Wrapper>
-                <Header>
-                    <MetaRow>
-                        <Badge tone="neutral">
-                            <Calendar size={13} />
-                            {formatDate(meeting.start_time)}
-                        </Badge>
-                    </MetaRow>
-                    <H1 style={{ fontSize: "var(--h2-d)" }}>{meeting.title}</H1>
-                </Header>
-
                 <Split>
-                    <TranscriptPane
-                        text={translatedText ?? transcriptText}
-                        segments={translatedText ? null : meeting.transcript?.segments}
-                        speakerNames={meeting.transcript?.speakerNames}
-                        audioSrc={meeting.audio_file_path}
-                        onTranslate={handleTranslate}
-                        translating={translating}
-                    />
+                    <TranscriptColumn>
+                        <Header>
+                            <MetaRow>
+                                <Badge tone="neutral">
+                                    <Calendar size={13} />
+                                    {formatDate(meeting.start_time)}
+                                </Badge>
+                            </MetaRow>
+                            <H1 style={{ fontSize: "var(--h2-d)" }}>{meeting.title}</H1>
+                        </Header>
+                        <TranscriptPaneShell>
+                            <TranscriptPane
+                                text={translatedText ?? transcriptText}
+                                segments={translatedText ? null : meeting.transcript?.segments}
+                                speakerNames={meeting.transcript?.speakerNames}
+                                audioSrc={meeting.audio_file_path}
+                                onTranslate={handleTranslate}
+                                translating={translating}
+                            />
+                        </TranscriptPaneShell>
+                    </TranscriptColumn>
                     <SidePanel>
                         <PanelTitle>{PANEL_TITLES[activeTab]}</PanelTitle>
                         <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
@@ -421,7 +453,7 @@ const AccessStatePage = ({ status, message, checking, onRefresh }) => {
                             <RefreshCw size={16} />
                             Check Status
                         </Button>
-                        <Button mode="secondary" onClick={() => window.location.assign("/")}>
+                        <Button mode="secondary" onClick={() => window.location.assign("/?view=join")}>
                             <Home size={16} />
                             Home
                         </Button>

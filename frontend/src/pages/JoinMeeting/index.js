@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { ArrowRight, Calendar, Clock3, Eye, KeyRound, LogIn, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowRight, Calendar, Clock3, FileText, KeyRound, LogIn, RefreshCw, ShieldCheck } from "lucide-react";
 import PageContainer from "common/components/PageContainer";
 import Button from "common/components/Button";
 import Input from "common/components/Input";
@@ -110,28 +110,74 @@ const SectionHeader = styled.div`
     }
 `;
 
-const ApprovedList = styled.div`
+const ApprovedGrid = styled.div`
     display: grid;
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-L);
-    overflow: hidden;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--Size-Gap-XL);
 `;
 
-const MeetingRow = styled.article`
+const ApprovedCard = styled.button`
+    width: 100%;
+    min-height: 178px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--Size-Gap-L);
-    align-items: center;
-    padding: var(--Size-Padding-XL);
+    gap: var(--Size-Gap-XXL);
+    padding: var(--Size-Padding-XXXL);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-XXL);
     background: var(--Color-Background-Default);
+    box-shadow: 0 1px 2px rgba(17, 19, 22, 0.03);
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: transform var(--transition-fast), border-color var(--transition-fast),
+        box-shadow var(--transition-fast);
 
-    & + & {
-        border-top: 1px solid var(--Color-Border-Subtle);
+    &:hover {
+        border-color: var(--Color-Border-Bold);
+        box-shadow: var(--Color-Shadow-Card);
+        transform: translateY(-2px);
+    }
+
+    &:focus-visible {
+        outline: none;
+        border-color: var(--Color-Border-Action);
+        box-shadow: var(--Color-Shadow-Focus);
     }
 
     @media (max-width: 680px) {
+        padding: var(--Size-Padding-XXL);
+    }
+`;
+
+const CardTop = styled.div`
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--Size-Gap-XL);
+    align-items: start;
+
+    @media (max-width: 640px) {
         grid-template-columns: 1fr;
     }
+`;
+
+const CardIdentity = styled.div`
+    display: flex;
+    align-items: center;
+    gap: var(--Size-Gap-L);
+    min-width: 0;
+    flex-wrap: wrap;
+`;
+
+const IconOrb = styled.div`
+    width: 58px;
+    height: 58px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: var(--Size-CornerRadius-Full);
+    background: var(--Color-Background-Accent-Action);
+    color: var(--Color-Text-Action);
 `;
 
 const MeetingCopy = styled.div`
@@ -156,6 +202,25 @@ const MeetingMeta = styled.div`
     gap: var(--Size-Gap-M);
     flex-wrap: wrap;
     color: var(--Color-Text-Subtle);
+    font-size: var(--body-3-d);
+`;
+
+const CardFooter = styled.div`
+    display: flex;
+    align-items: center;
+    gap: var(--Size-Gap-L);
+    flex-wrap: wrap;
+`;
+
+const MetaPill = styled.span`
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--Size-Gap-S);
+    padding: 0 var(--Size-Padding-L);
+    border-radius: var(--Size-CornerRadius-L);
+    background: var(--Color-Background-Subtle);
+    color: var(--Color-Text-Default);
     font-size: var(--body-3-d);
 `;
 
@@ -333,11 +398,11 @@ const ApprovedMeetings = ({ meetings, loading, onRefresh }) => (
         </SectionHeader>
 
         {meetings.length ? (
-            <ApprovedList>
+            <ApprovedGrid>
                 {meetings.map((meeting) => (
                     <ApprovedMeetingRow key={`${meeting.id}:${meeting.token}`} meeting={meeting} />
                 ))}
-            </ApprovedList>
+            </ApprovedGrid>
         ) : (
             <EmptyApproved>
                 <Body3>{loading ? "Loading approved meetings..." : "No approved shared meetings yet."}</Body3>
@@ -347,23 +412,33 @@ const ApprovedMeetings = ({ meetings, loading, onRefresh }) => (
 );
 
 const ApprovedMeetingRow = ({ meeting }) => (
-    <MeetingRow>
-        <MeetingCopy>
-            <MeetingTitle title={meeting.title}>{meeting.title || "Untitled meeting"}</MeetingTitle>
-            <MeetingMeta>
-                <span>
-                    <Calendar size={14} style={{ verticalAlign: "-2px" }} /> {formatMeetingDate(meeting.start_time)}
-                </span>
-                <span>
-                    <Clock3 size={14} style={{ verticalAlign: "-2px" }} /> Approved {formatMeetingDate(meeting.approved_at)}
-                </span>
-            </MeetingMeta>
-        </MeetingCopy>
-        <Button onClick={() => window.location.assign(`/share/${meeting.token}`)}>
-            <Eye size={16} />
-            Join Meeting
-        </Button>
-    </MeetingRow>
+    <ApprovedCard type="button" onClick={() => window.location.assign(`/share/${meeting.token}`)}>
+        <CardTop>
+            <CardIdentity>
+                <IconOrb>
+                    <FileText size={24} />
+                </IconOrb>
+                <MeetingCopy>
+                    <MeetingTitle title={meeting.title}>{meeting.title || "Untitled meeting"}</MeetingTitle>
+                    <MeetingMeta>Approved shared meeting</MeetingMeta>
+                </MeetingCopy>
+            </CardIdentity>
+            <Badge tone="success">
+                <ShieldCheck size={13} />
+                Access granted
+            </Badge>
+        </CardTop>
+        <CardFooter>
+            <MetaPill>
+                <Calendar size={14} />
+                {formatMeetingDate(meeting.start_time)}
+            </MetaPill>
+            <MetaPill>
+                <Clock3 size={14} />
+                Approved {formatMeetingDate(meeting.approved_at)}
+            </MetaPill>
+        </CardFooter>
+    </ApprovedCard>
 );
 
 function formatMeetingDate(value) {

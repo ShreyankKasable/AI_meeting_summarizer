@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
 import Navbar from "common/components/Navbar";
 import { HOST_VIEWS } from "common/constants";
-import { hydrateSession } from "common/redux/actions/sessionActions";
+import { hydrateSession, setHostView } from "common/redux/actions/sessionActions";
 import useSocket from "common/hooks/useSocket";
 import LandingPage from "pages/LandingPage";
 import Login from "pages/Login";
@@ -90,6 +90,9 @@ export default function App() {
 
     useEffect(() => {
         dispatch(hydrateSession());
+        if (new URLSearchParams(window.location.search).get("view") === "join") {
+            dispatch(setHostView(HOST_VIEWS.Join));
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
