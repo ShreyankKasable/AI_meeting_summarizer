@@ -2,9 +2,8 @@ import { SessionAction } from "../actions/types";
 import { HOST_VIEWS } from "common/constants";
 
 export const initialState = {
-    token: null,
     user: null,
-    status: "idle", // idle | loading | error
+    status: "loading", // idle | loading | error
     error: null,
     hostView: HOST_VIEWS.Dashboard,
 };
@@ -17,17 +16,16 @@ const sessionReducer = (state = initialState, action) => {
         case SessionAction.SetAuth:
             return {
                 ...state,
-                token: payload.token,
                 user: payload.user,
                 status: "idle",
                 error: null,
             };
         case SessionAction.SetAuthError:
-            return { ...state, status: "error", error: payload.error, token: null, user: null };
+            return { ...state, status: "error", error: payload.error, user: null };
         case SessionAction.SetHostView:
             return { ...state, hostView: payload.view };
         case SessionAction.Logout:
-            return { ...initialState };
+            return { ...initialState, status: "idle" };
         default:
             return state;
     }

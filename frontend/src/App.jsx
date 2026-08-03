@@ -86,7 +86,8 @@ const UnauthenticatedApp = () => {
 
 export default function App() {
     const dispatch = useDispatch();
-    const token = useSelector((state) => state.sessionDetails.token);
+    const user = useSelector((state) => state.sessionDetails.user);
+    const authStatus = useSelector((state) => state.sessionDetails.status);
 
     useEffect(() => {
         dispatch(hydrateSession());
@@ -98,19 +99,22 @@ export default function App() {
 
     const shareMatch = window.location.pathname.match(/^\/share\/([^/]+)$/);
     if (shareMatch) {
-        if (!token) {
+        if (authStatus === "loading") return null;
+        if (!user) {
             return <Login initialMode="login" onBackToLanding={() => window.location.assign("/")} />;
         }
         return <MeetingContentViewParticipant token={shareMatch[1]} />;
     }
     if (window.location.pathname.startsWith("/share/")) {
-        if (!token) {
+        if (authStatus === "loading") return null;
+        if (!user) {
             return <Login initialMode="login" onBackToLanding={() => window.location.assign("/")} />;
         }
         return <InvalidToken />;
     }
 
-    if (!token) return <UnauthenticatedApp />;
+    if (authStatus === "loading") return null;
+    if (!user) return <UnauthenticatedApp />;
 
     return <HostApp />;
 }

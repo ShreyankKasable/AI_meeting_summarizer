@@ -48,7 +48,18 @@ export const getTranscriptText = (transcript) => {
 export const loadState = () => {
     try {
         const raw = localStorage.getItem(STORAGE_KEYS.Root);
-        return raw ? JSON.parse(raw) : undefined;
+        if (!raw) return undefined;
+        const parsed = JSON.parse(raw);
+        if (parsed?.sessionDetails) {
+            parsed.sessionDetails = {
+                ...parsed.sessionDetails,
+                token: undefined,
+                user: null,
+                status: "loading",
+                error: null,
+            };
+        }
+        return parsed;
     } catch (err) {
         console.warn("Failed to read persisted state:", err);
         return undefined;
@@ -57,7 +68,13 @@ export const loadState = () => {
 
 export const saveState = (state) => {
     try {
-        localStorage.setItem(STORAGE_KEYS.Root, JSON.stringify(state));
+        const sanitized = {
+            ...state,
+            sessionDetails: state?.sessionDetails
+                ? { ...state.sessionDetails, token: undefined, user: null, error: null }
+                : state?.sessionDetails,
+        };
+        localStorage.setItem(STORAGE_KEYS.Root, JSON.stringify(sanitized));
     } catch (err) {
         console.warn("Failed to persist state:", err);
     }

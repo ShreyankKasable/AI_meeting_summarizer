@@ -1,7 +1,7 @@
 import cors from 'cors';
 
 /**
- * CORS handler. The frontend calls the local backend at 127.0.0.1:5000, so all
- * origins are allowed.
+ * CORS handler. Reflect the request origin so credentialed cookie requests work
+ * in development when the frontend is served from Vite.
  */
-export const corsHandler = cors({ origin: '*' });
+export const corsHandler = cors({ origin: true, credentials: true });

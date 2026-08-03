@@ -17,19 +17,24 @@ import { SOCKET_EVENTS } from '#app/common/constants.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 import { processingService } from '#app/pkg/processing/service.js';
 import { authService } from '#app/pkg/auth/service.js';
+import { AUTH_COOKIE_NAME, getCookieValue } from '#app/api/middlewares/auth.js';
 
 let io = null;
 
 const hostRoom = (hostId) => `host:${hostId}`;
 
 export function setupSocket (httpServer) {
-  io = new Server(httpServer, { cors: { origin: '*' } });
+  io = new Server(httpServer, { cors: { origin: true, credentials: true } });
 
-  // Reject connections without a valid host JWT — the handshake token is the
-  // same one issued by /api/auth/login, sent as `auth: { token }`.
+  // Reject connections without the same valid host JWT used by the REST API.
+  // The production path reads it from the HTTP-only cookie; the handshake auth
+  // fallback keeps older clients working during transition.
   io.use((socket, next) => {
     try {
-      const payload = authService.verifyToken(socket.handshake.auth?.token || '');
+      const token = socket.handshake.auth?.token ||
+        getCookieValue(socket.handshake.headers.cookie, AUTH_COOKIE_NAME) ||
+        '';
+      const payload = authService.verifyToken(token);
       socket.data.hostId = payload.sub;
       return next();
     } catch {

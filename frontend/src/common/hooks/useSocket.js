@@ -15,12 +15,12 @@ import {
 // while a host is authenticated.
 const useSocket = () => {
     const dispatch = useDispatch();
-    const token = useSelector((state) => state.sessionDetails.token);
+    const user = useSelector((state) => state.sessionDetails.user);
 
     useEffect(() => {
-        if (!token) return undefined;
+        if (!user) return undefined;
 
-        const socket = connectSocket(token);
+        const socket = connectSocket();
 
         const handleRecordingStarted = (data) => {
             // Optimistic partial entry so RecordMeeting can show the real
@@ -58,7 +58,7 @@ const useSocket = () => {
             socket.off(SOCKET_EVENTS.ERROR, handleSocketError);
             disconnectSocket();
         };
-    }, [token, dispatch]);
+    }, [user, dispatch]);
 };
 
 export default useSocket;

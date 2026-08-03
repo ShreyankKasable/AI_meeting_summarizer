@@ -1,13 +1,12 @@
 import { io } from "socket.io-client";
 
-// Singleton connection, mirroring api.service.js's setAuthToken pattern — the
-// connection is opened once (by useSocket, called near the top of App.jsx)
-// and any component can emit through it afterwards without re-connecting.
+// Singleton connection opened once by useSocket. Auth is sent through the
+// HTTP-only cookie that the backend set during login.
 let socket = null;
 
-export function connectSocket(token) {
+export function connectSocket() {
     if (socket) return socket;
-    socket = io({ auth: { token } });
+    socket = io({ withCredentials: true });
     return socket;
 }
 
