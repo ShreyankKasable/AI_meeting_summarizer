@@ -49,16 +49,22 @@ export const logout = () => (dispatch) => {
     dispatch(logoutAction());
 };
 
-// Confirms the HTTP-only auth cookie is still valid on app boot; falls back to
-// a logged-out state if not.
+// Confirms the HTTP-only access cookie is still valid on app boot; if it has
+// expired, tries the refresh cookie once before falling back to logged-out.
 export const hydrateSession = () => async (dispatch, getState) => {
     const { user, status } = getState().sessionDetails;
     if (!user && status !== "loading") dispatch(setAuthLoading());
 
     try {
-        const { data } = await AuthService.me();
+        const { data } = await AuthService.me({ skipAuthRefresh: true });
         dispatch(setAuth({ user: data.user }));
     } catch {
-        dispatch(logoutAction());
+        try {
+            const { data } = await AuthService.refresh();
+            dispatch(setAuth({ user: data.user }));
+        } catch {
+            AuthService.logout().catch(() => {});
+            dispatch(logoutAction());
+        }
     }
 };

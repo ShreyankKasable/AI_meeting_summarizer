@@ -1,5 +1,5 @@
 /**
- * Auth service: host signup/login, password hashing, and JWT issuance.
+ * Auth service: host signup/login, password hashing, and typed JWT issuance.
  */
 import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import jwt from 'jsonwebtoken';
@@ -8,7 +8,12 @@ import config from '#app/common/config.js';
 import { BadRequest, UnauthorizedRequest } from '#app/common/error/index.js';
 
 const SCRYPT_KEYLEN = 64;
-const TOKEN_EXPIRY = '30d';
+const ACCESS_TOKEN_EXPIRY = '15m';
+const REFRESH_TOKEN_EXPIRY = '30d';
+const TOKEN_TYPE = {
+  ACCESS: 'access',
+  REFRESH: 'refresh',
+};
 
 const nowIso = () => new Date().toISOString();
 
@@ -50,14 +55,32 @@ export class AuthService {
     return { id: row.id, email: row.email, created_at: row.created_at };
   }
 
-  issueToken (user) {
-    return jwt.sign({ sub: user.id, email: user.email }, config.get('secret_key'), {
-      expiresIn: TOKEN_EXPIRY,
-    });
+  issueAccessToken (user) {
+    return this.issueTypedToken(user, TOKEN_TYPE.ACCESS, ACCESS_TOKEN_EXPIRY);
   }
 
-  verifyToken (token) {
-    return jwt.verify(token, config.get('secret_key'));
+  issueRefreshToken (user) {
+    return this.issueTypedToken(user, TOKEN_TYPE.REFRESH, REFRESH_TOKEN_EXPIRY);
+  }
+
+  issueTypedToken (user, type, expiresIn) {
+    return jwt.sign({ sub: user.id, email: user.email, type }, config.get('secret_key'), { expiresIn });
+  }
+
+  verifyAccessToken (token) {
+    return this.verifyTypedToken(token, TOKEN_TYPE.ACCESS);
+  }
+
+  verifyRefreshToken (token) {
+    return this.verifyTypedToken(token, TOKEN_TYPE.REFRESH);
+  }
+
+  verifyTypedToken (token, expectedType) {
+    const payload = jwt.verify(token, config.get('secret_key'));
+    if (payload.type !== expectedType) {
+      throw new UnauthorizedRequest('Invalid token type');
+    }
+    return payload;
   }
 
   async getUserById (id) {

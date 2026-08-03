@@ -8,8 +8,11 @@ const AuthService = {
     login(email, password) {
         return ApiService.post(URLS.login, { data: { email, password } });
     },
-    me() {
-        return ApiService.get(URLS.me);
+    me(options = {}) {
+        return ApiService.get(URLS.me, options);
+    },
+    refresh() {
+        return ApiService.post(URLS.refresh, { skipAuthRefresh: true });
     },
     logout() {
         return ApiService.post(URLS.logout);

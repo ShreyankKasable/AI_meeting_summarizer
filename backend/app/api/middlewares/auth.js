@@ -1,11 +1,12 @@
 /**
- * Auth middleware. Verifies the JWT from the HTTP-only auth cookie, with a
- * Bearer-token fallback for older clients, and attaches `req.user`.
+ * Auth middleware. Verifies the access JWT from the HTTP-only auth cookie,
+ * with a Bearer access-token fallback for older clients, and attaches `req.user`.
  */
 import { UnauthorizedRequest } from '#app/common/error/index.js';
 import { authService } from '#app/pkg/auth/service.js';
 
-export const AUTH_COOKIE_NAME = 'ams_auth';
+export const AUTH_ACCESS_COOKIE_NAME = 'ams_access';
+export const AUTH_REFRESH_COOKIE_NAME = 'ams_refresh';
 
 export function getCookieValue (cookieHeader, name) {
   if (!cookieHeader) return null;
@@ -17,12 +18,12 @@ export function getCookieValue (cookieHeader, name) {
 export function requireAuth (req, res, next) {
   const header = req.headers.authorization || '';
   const bearerToken = header.startsWith('Bearer ') ? header.slice(7) : null;
-  const cookieToken = getCookieValue(req.headers.cookie, AUTH_COOKIE_NAME);
-  const token = bearerToken || cookieToken;
+  const cookieToken = getCookieValue(req.headers.cookie, AUTH_ACCESS_COOKIE_NAME);
+  const token = cookieToken || bearerToken;
   if (!token) return next(new UnauthorizedRequest('Missing token'));
 
   try {
-    const payload = authService.verifyToken(token);
+    const payload = authService.verifyAccessToken(token);
     req.user = { id: payload.sub, email: payload.email };
     return next();
   } catch {

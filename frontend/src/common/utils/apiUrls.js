@@ -5,6 +5,7 @@ const URLS = {
     signup: `${BASE_URL}/api/auth/signup`,
     login: `${BASE_URL}/api/auth/login`,
     me: `${BASE_URL}/api/auth/me`,
+    refresh: `${BASE_URL}/api/auth/refresh`,
     logout: `${BASE_URL}/api/auth/logout`,
 
     // meetings (host-authenticated)
