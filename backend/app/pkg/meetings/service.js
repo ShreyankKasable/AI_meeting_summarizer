@@ -6,6 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import config from '#app/common/config.js';
 import logger from '#app/common/logger.js';
+import { EMBEDDING_STATUS } from '#app/common/constants.js';
 import { query, withTransaction } from '#app/connections/database.js';
 
 const nowIso = () => new Date().toISOString();
@@ -53,6 +54,33 @@ export class MeetingsService {
 
   async updateMeetingTitle (id, title) {
     await query('UPDATE meetings SET title = $1 WHERE id = $2', [title, id]);
+    return this.getMeetingById(id);
+  }
+
+  async updateEmbeddingStatus (id, status = EMBEDDING_STATUS.NOT_STARTED, { error = null, jobId } = {}) {
+    const fields = ['embedding_status = $1', 'embedding_error = $2'];
+    const values = [status, error || null];
+    let nextParam = 3;
+    const timestamp = nowIso();
+
+    if (jobId !== undefined) {
+      fields.push(`embedding_job_id = $${nextParam++}`);
+      values.push(jobId);
+    }
+
+    if (status === EMBEDDING_STATUS.QUEUED) {
+      fields.push(`embedding_queued_at = $${nextParam++}`, 'embedding_started_at = NULL', 'embedding_completed_at = NULL');
+      values.push(timestamp);
+    } else if (status === EMBEDDING_STATUS.PROCESSING) {
+      fields.push(`embedding_started_at = $${nextParam++}`, 'embedding_completed_at = NULL');
+      values.push(timestamp);
+    } else if ([EMBEDDING_STATUS.COMPLETED, EMBEDDING_STATUS.SKIPPED].includes(status)) {
+      fields.push(`embedding_completed_at = $${nextParam++}`);
+      values.push(timestamp);
+    }
+
+    values.push(id);
+    await query(`UPDATE meetings SET ${fields.join(', ')} WHERE id = $${nextParam}`, values);
     return this.getMeetingById(id);
   }
 
@@ -173,6 +201,12 @@ function formatMeeting (m, actionItems = [], participants = []) {
     transcript: safeJson(m.transcript),
     summary: m.summary,
     audio_file_path: m.audio_file_path,
+    embedding_status: m.embedding_status || EMBEDDING_STATUS.NOT_STARTED,
+    embedding_error: m.embedding_error || null,
+    embedding_job_id: m.embedding_job_id || null,
+    embedding_queued_at: toIso(m.embedding_queued_at),
+    embedding_started_at: toIso(m.embedding_started_at),
+    embedding_completed_at: toIso(m.embedding_completed_at),
     action_items: actionItems.map(formatActionItem),
     participants: participants.map(formatParticipant),
     created_at: toIso(m.created_at),

@@ -60,6 +60,14 @@ const config = convict({
       env: 'DATABASE_SSL',
     },
   },
+  redis: {
+    url: {
+      doc: 'Redis connection URL used by BullMQ workers',
+      format: String,
+      default: 'redis://127.0.0.1:6379',
+      env: 'REDIS_URL',
+    },
+  },
   transcription_model: {
     doc: 'Transcription backend: whisper | deepgram | assemblyai | huggingface',
     format: ['whisper', 'deepgram', 'assemblyai', 'huggingface'],
@@ -89,8 +97,14 @@ const config = convict({
     dimensions: { format: 'int', default: 1536, env: 'EMBEDDING_DIMENSIONS' },
     batch_size: { format: 'int', default: 32, env: 'EMBEDDING_BATCH_SIZE' },
   },
+  queues: {
+    embeddings: {
+      concurrency: { format: 'int', default: 2, env: 'EMBEDDING_WORKER_CONCURRENCY' },
+      attempts: { format: 'int', default: 3, env: 'EMBEDDING_JOB_ATTEMPTS' },
+      backoff_ms: { format: 'int', default: 5000, env: 'EMBEDDING_JOB_BACKOFF_MS' },
+    },
+  },
   rag: {
-    enabled: { format: Boolean, default: true, env: 'RAG_ENABLED' },
     chunk_words: { format: 'int', default: 220, env: 'RAG_CHUNK_WORDS' },
     chunk_overlap_words: { format: 'int', default: 40, env: 'RAG_CHUNK_OVERLAP_WORDS' },
     max_chunks: { format: 'int', default: 6, env: 'RAG_MAX_CHUNKS' },

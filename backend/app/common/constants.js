@@ -28,6 +28,15 @@ export const PROCESSING_STATUS = {
   COMPLETE: { status: 'complete', progress: 100 },
 };
 
+export const EMBEDDING_STATUS = {
+  NOT_STARTED: 'not_started',
+  QUEUED: 'queued',
+  PROCESSING: 'processing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  SKIPPED: 'skipped',
+};
+
 // Socket.IO event names
 export const SOCKET_EVENTS = {
   CONNECTION_STATUS: 'connection_status',

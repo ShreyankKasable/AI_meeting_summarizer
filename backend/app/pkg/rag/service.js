@@ -18,8 +18,6 @@ const STOP_WORDS = new Set([
 
 export class RagService {
   async indexMeetingTranscript (meetingId, transcript) {
-    if (!config.get('rag.enabled')) return [];
-
     const chunks = buildTranscriptChunks(transcript);
     if (!chunks.length) {
       await query('DELETE FROM transcript_chunks WHERE meeting_id = $1', [meetingId]);
@@ -59,9 +57,7 @@ export class RagService {
   async getContextForQuestion (meeting, question) {
     if (!meeting?.id) return 'No meeting context is available.';
 
-    const chunks = config.get('rag.enabled')
-      ? await this.retrieveRelevantChunks(meeting.id, question, meeting.transcript)
-      : selectRelevantLocalChunks(meeting.transcript, question);
+    const chunks = await this.retrieveRelevantChunks(meeting.id, question, meeting.transcript);
 
     const parts = [];
     if (meeting.summary) {

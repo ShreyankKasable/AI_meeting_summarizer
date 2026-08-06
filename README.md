@@ -26,6 +26,7 @@ chat with the meeting transcript.
 - Socket.IO for live meeting events
 - PostgreSQL for persistent data
 - pgvector for transcript similarity search
+- Redis + BullMQ for background embedding jobs
 - `pg` for database access
 - OpenAI-compatible, Anthropic, Deepgram, AssemblyAI, Hugging Face, and Notion integrations
 
@@ -33,7 +34,7 @@ chat with the meeting transcript.
 
 - Node.js 20+
 - npm
-- PostgreSQL 16+ or Docker
+- PostgreSQL 16+ and Redis, or Docker
 
 ## Setup
 
@@ -44,10 +45,10 @@ npm install
 npm install --prefix frontend
 ```
 
-Start PostgreSQL with Docker:
+Start PostgreSQL and Redis with Docker:
 
 ```bash
-docker compose up -d postgres
+docker compose up -d postgres redis
 ```
 
 Copy `.env.example` to `.env` and configure provider keys:
@@ -55,6 +56,7 @@ Copy `.env.example` to `.env` and configure provider keys:
 ```env
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/ai_meeting_summarizer
 DATABASE_SSL=false
+REDIS_URL=redis://127.0.0.1:6379
 
 TRANSCRIPTION_MODEL=deepgram
 DEEPGRAM_API_KEY=your_deepgram_key
@@ -64,7 +66,7 @@ OPENAI_API_KEY=your_openai_key
 
 EMBEDDING_MODEL=text-embedding-3-small
 EMBEDDING_DIMENSIONS=1536
-RAG_ENABLED=true
+EMBEDDING_WORKER_CONCURRENCY=2
 ```
 
 Start the app:
@@ -89,6 +91,12 @@ Run only the backend:
 node backend/index.js
 ```
 
+Run only the embedding worker:
+
+```bash
+npm run worker:embeddings
+```
+
 Build the frontend:
 
 ```bash
@@ -105,15 +113,18 @@ The app uses PostgreSQL. The backend creates the required tables on startup:
 - `action_items`
 - `chat_messages`
 - `meeting_shares`
+- `meeting_access_grants`
 - `share_accesses`
 - `transcript_chunks`
 
-For local development, `docker-compose.yml` provides a Postgres container with
-pgvector installed and the same default `DATABASE_URL` used in `.env.example`.
+For local development, `docker-compose.yml` provides Postgres with pgvector and
+Redis with the same default URLs used in `.env.example`.
 
 Meeting chat uses `transcript_chunks` plus pgvector similarity search. The full
 transcript remains stored on the meeting for display/export, but LLM chat only
-receives the summary and the most relevant transcript excerpts.
+receives the summary and the most relevant transcript excerpts. Embedding
+generation runs in the BullMQ worker after the meeting transcript is saved, so
+recording processing does not block on vector indexing.
 
 ## Project Structure
 
@@ -124,18 +135,21 @@ backend/
     api/                 Express routes and middleware
     common/              config, logger, errors, constants
     connections/         PostgreSQL and Socket.IO connections
+    queues/              BullMQ queue producers and Redis connection config
+    workers/             background workers
     pkg/                 domain services
 frontend/
   src/                   React application
 data/
   audio/                 recorded audio files
-docker-compose.yml       local PostgreSQL
+docker-compose.yml       local PostgreSQL and Redis
 .env.example             sample environment
 ```
 
 ## Troubleshooting
 
 - `ECONNREFUSED 127.0.0.1:5432`: start Postgres or fix `DATABASE_URL`.
+- `ECONNREFUSED 127.0.0.1:6379`: start Redis or fix `REDIS_URL`.
 - `password authentication failed`: update the username/password in `DATABASE_URL`.
 - No meetings show up: confirm the backend started and connected to Postgres.
 - Transcription unavailable: configure an STT provider key in `.env`.

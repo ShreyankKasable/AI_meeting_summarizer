@@ -5,8 +5,9 @@
   "main": "backend/index.js",
   "scripts": {
     "start": "npm run build --prefix frontend && node backend/index.js",
-    "dev": "concurrently \"npm run dev --prefix frontend\" \"node backend/index.js\"",
-    "build": "npm run build --prefix frontend"
+    "dev": "concurrently \"npm run dev --prefix frontend\" \"node backend/index.js\" \"node backend/worker.embeddings.js\"",
+    "build": "npm run build --prefix frontend",
+    "worker:embeddings": "node backend/worker.embeddings.js"
   },
   "keywords": [
     "meeting",
@@ -21,6 +22,7 @@
     "@anthropic-ai/sdk": "^0.27.0",
     "@notionhq/client": "^2.2.15",
     "axios": "^1.6.7",
+    "bullmq": "^5.81.2",
     "compression": "^1.8.1",
     "convict": "^6.2.5",
     "cors": "^2.8.5",

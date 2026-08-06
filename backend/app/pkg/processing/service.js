@@ -11,12 +11,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import logger from '#app/common/logger.js';
-import { SOCKET_EVENTS, PROCESSING_STATUS } from '#app/common/constants.js';
+import { SOCKET_EVENTS, PROCESSING_STATUS, EMBEDDING_STATUS } from '#app/common/constants.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 import { transcriptionService } from '#app/pkg/transcription/service.js';
 import { summarizerService } from '#app/pkg/summarizer/service.js';
 import { extractionService } from '#app/pkg/extraction/service.js';
-import { ragService } from '#app/pkg/rag/service.js';
+import { enqueueEmbeddingJob } from '#app/queues/embedding.queue.js';
 
 export class ProcessingService {
   async processRecording ({ io, hostId, meetingId, audioFile }) {
@@ -37,11 +37,16 @@ export class ProcessingService {
         summary: summary || 'No summary generated',
         audioFilePath: audioFile ? `/data/audio/${path.basename(audioFile)}` : null,
       });
+
       try {
-        await ragService.indexMeetingTranscript(meetingId, transcript);
+        await enqueueEmbeddingJob({ meetingId, hostId });
       } catch (error) {
-        logger.warn(`Could not index transcript chunks for meeting ${meetingId}:`, error.message);
+        await meetingsService.updateEmbeddingStatus(meetingId, EMBEDDING_STATUS.FAILED, {
+          error: `Queue unavailable: ${error.message}`,
+        });
+        logger.warn(`Could not enqueue embedding job for meeting ${meetingId}:`, error.message);
       }
+
       const actionItems = await meetingsService.createActionItems(meetingId, rawItems);
 
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.COMPLETE });

@@ -76,6 +76,12 @@ export async function initDb () {
       transcript      TEXT,
       summary         TEXT,
       audio_file_path VARCHAR(500),
+      embedding_status VARCHAR(30) NOT NULL DEFAULT 'not_started',
+      embedding_error TEXT,
+      embedding_job_id VARCHAR(255),
+      embedding_queued_at TIMESTAMPTZ,
+      embedding_started_at TIMESTAMPTZ,
+      embedding_completed_at TIMESTAMPTZ,
       created_at      TIMESTAMPTZ
     );
 
@@ -164,7 +170,13 @@ export async function initDb () {
     );
 
     ALTER TABLE meetings
-      ADD COLUMN IF NOT EXISTS host_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+      ADD COLUMN IF NOT EXISTS host_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS embedding_status VARCHAR(30) NOT NULL DEFAULT 'not_started',
+      ADD COLUMN IF NOT EXISTS embedding_error TEXT,
+      ADD COLUMN IF NOT EXISTS embedding_job_id VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS embedding_queued_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS embedding_started_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS embedding_completed_at TIMESTAMPTZ;
 
     ALTER TABLE chat_messages
       ADD COLUMN IF NOT EXISTS actor_key VARCHAR(80) NOT NULL DEFAULT 'legacy';
@@ -175,6 +187,9 @@ export async function initDb () {
 
     CREATE INDEX IF NOT EXISTS idx_meetings_host_start
       ON meetings(host_id, start_time DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_meetings_embedding_status
+      ON meetings(embedding_status, embedding_queued_at DESC);
 
     CREATE INDEX IF NOT EXISTS idx_action_items_meeting
       ON action_items(meeting_id, created_at);

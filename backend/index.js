@@ -7,6 +7,7 @@ import logger from '#app/common/logger.js';
 import { getAppServer } from '#app/server.js';
 import { initDb, disconnect as disconnectDb } from '#app/connections/database.js';
 import { setupSocket, disconnect as disconnectSocket } from '#app/connections/websocket.js';
+import { closeEmbeddingQueue } from '#app/queues/embedding.queue.js';
 
 const startTime = Date.now();
 
@@ -38,7 +39,7 @@ const closeHttp = () =>
 
 const exitHandler = async (signal) => {
   logger.info(`${signal} received: shutting down`);
-  await Promise.allSettled([closeHttp(), disconnectSocket(), disconnectDb()]);
+  await Promise.allSettled([closeHttp(), disconnectSocket(), closeEmbeddingQueue(), disconnectDb()]);
   process.exit(0);
 };
 

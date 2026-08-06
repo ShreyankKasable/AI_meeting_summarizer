@@ -53,7 +53,6 @@ export class SystemService {
           ssl: config.get('database.ssl'),
         },
         rag: {
-          enabled: config.get('rag.enabled'),
           embedding_model: config.get('embedding.model'),
           embedding_dimensions: config.get('embedding.dimensions'),
           max_chunks: config.get('rag.max_chunks'),
