@@ -1,207 +1,371 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
-import {
-    Calendar,
-    Clock3,
-    FileText,
-    Mic,
-    MoreVertical,
-    Plus,
-    Search,
-    Sparkles,
-    Trash2,
-    Users,
-} from "lucide-react";
-import PageContainer from "common/components/PageContainer";
+import { AlertTriangle, ListFilter, Mic, MoreVertical, Plus, Search, Trash2 } from "lucide-react";
+import Avatar from "common/components/Avatar";
 import Button from "common/components/Button";
 import Modal from "common/components/Modal";
-import { SkeletonBlock, SkeletonStack } from "common/components/Skeleton";
-import { H1, H3, Body2, Body3 } from "common/global-styled-components";
+import { SkeletonBlock } from "common/components/Skeleton";
+import { H3, Body2, Body3 } from "common/global-styled-components";
 import {
     deleteMeeting as deleteMeetingAction,
     fetchMeetings,
     setActiveMeeting,
 } from "common/redux/actions/meetingActions";
 import { setHostView } from "common/redux/actions/sessionActions";
-import { HOST_VIEWS } from "common/constants";
-import { formatDate, formatDuration } from "common/utils/utils";
+import { HOST_VIEWS, UI_EVENTS } from "common/constants";
 import NewMeetingModal from "./NewMeetingModal";
 
-const DashboardPage = styled(PageContainer)`
-    padding-top: var(--Size-Padding-XXL);
+const DashboardPage = styled.div`
+    width: 100%;
+    min-height: 100vh;
+    background: var(--Color-Background-Root);
+    color: var(--Color-Text-Default);
 `;
 
-const Header = styled.header`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: var(--Size-Gap-XXL);
-    margin-bottom: var(--Size-Gap-XXL);
+const DashboardContent = styled.div`
+    width: 100%;
+    max-width: var(--Dashboard-Content-Max-Width);
+    margin: 0 auto;
+    padding: var(--Dashboard-Content-Padding-Y) var(--Dashboard-Content-Padding-X);
+`;
 
-    @media (max-width: 640px) {
-        grid-template-columns: 1fr;
-    }
+const PageHeader = styled.header`
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--Size-Gap-XXXL);
+    margin-bottom: var(--Dashboard-Header-Bottom-Gap);
+    padding-bottom: var(--Dashboard-Header-Padding-Bottom);
+    border-bottom: var(--Auth-Border-Width) solid var(--Color-Border-Default);
 `;
 
 const HeaderCopy = styled.div`
-    display: grid;
-    gap: var(--Size-Gap-S);
+    max-width: var(--Dashboard-Header-Copy-Max-Width);
 `;
 
-const RoundAction = styled.button`
-    width: 50px;
-    height: 50px;
+const PageTitle = styled.h2`
+    margin: 0 0 var(--Size-Gap-XL);
+    color: var(--Color-Text-Bold);
+    font-family: var(--heading-font);
+    font-size: var(--h1-d);
+    line-height: var(--line-height-110);
+    font-weight: var(--bold);
+    letter-spacing: 0;
+`;
+
+const PageSubtitle = styled.p`
+    margin: 0;
+    color: var(--Auth-Color-Text-Secondary);
+    font-family: var(--body-font);
+    font-size: var(--body-1-d);
+    line-height: var(--line-height-160);
+    font-weight: var(--regular);
+`;
+
+const PrimaryAction = styled.button`
+    height: var(--Auth-Control-Height);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    border-radius: var(--Size-CornerRadius-Full);
-    background: #10131a;
+    gap: var(--Auth-Icon-Gap);
+    padding: 0 var(--Size-Padding-XXL);
+    border: 0;
+    border-radius: var(--Auth-Control-Radius);
+    background: var(--Color-Background-Action);
     color: var(--Color-Text-Inverse);
-    box-shadow: 0 14px 28px rgba(16, 19, 26, 0.18);
-    transition: transform var(--transition-fast), background var(--transition-fast);
+    font-family: var(--body-font);
+    font-size: var(--body-3-d);
+    line-height: var(--Auth-Footer-Line-Height);
+    font-weight: var(--regular);
+    letter-spacing: var(--letter-spacing-wide);
+    transition: background var(--Auth-Transition);
 
     &:hover {
-        background: #1e2430;
-        transform: translateY(-1px);
+        background: var(--Color-Background-Action-Hover);
     }
 
-    @media (max-width: 640px) {
-        justify-self: start;
-    }
-`;
-
-const LibrarySection = styled.section`
-    display: grid;
-    gap: var(--Size-Gap-XXL);
-`;
-
-const LibraryHeader = styled.div`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
-    align-items: end;
-    gap: var(--Size-Gap-XXL);
-
-    @media (max-width: 640px) {
-        grid-template-columns: 1fr;
+    svg {
+        width: var(--Auth-Control-Icon-Size);
+        height: var(--Auth-Control-Icon-Size);
+        fill: currentColor;
     }
 `;
 
-const LibraryTitle = styled.div`
-    display: grid;
-    gap: var(--Size-Gap-S);
-`;
-
-const CardsGrid = styled.div`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--Size-Gap-XXL);
-`;
-
-const MeetingCard = styled.div`
-    width: 100%;
-    min-height: 250px;
+const Toolbar = styled.div`
     display: flex;
-    flex-direction: column;
-    padding: var(--Size-Padding-XXXL);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XXL);
-    background: var(--Color-Background-Default);
-    box-shadow: 0 1px 2px rgba(17, 19, 22, 0.03);
-    color: inherit;
-    cursor: pointer;
-    text-align: left;
-    transition: transform var(--transition-fast), border-color var(--transition-fast),
-        box-shadow var(--transition-fast);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--Size-Gap-XXL);
+    margin-bottom: var(--Dashboard-Toolbar-Bottom-Gap);
+`;
 
-    &:hover {
-        border-color: var(--Color-Border-Bold);
-        box-shadow: var(--Color-Shadow-Card);
-        transform: translateY(-2px);
+const SearchWrap = styled.div`
+    position: relative;
+    width: 100%;
+    max-width: var(--Dashboard-Search-Max-Width);
+`;
+
+const HiddenLabel = styled.label`
+    position: absolute;
+    width: var(--Auth-Border-Width);
+    height: var(--Auth-Border-Width);
+    padding: 0;
+    margin: calc(var(--Auth-Border-Width) * -1);
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+`;
+
+const SearchIcon = styled.div`
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--Dashboard-Search-Icon-Offset);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    color: var(--Auth-Color-Text-Secondary);
+
+    svg {
+        width: var(--Auth-Control-Icon-Size);
+        height: var(--Auth-Control-Icon-Size);
+    }
+`;
+
+const SearchInput = styled.input`
+    width: 100%;
+    height: var(--Auth-Control-Height);
+    display: block;
+    padding: 0 var(--Size-Padding-L) 0 var(--Dashboard-Search-Padding-Left);
+    border: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+    border-radius: var(--Auth-Control-Radius);
+    background: var(--Color-Background-Subtle);
+    color: var(--Color-Text-Bold);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+    outline: none;
+    transition:
+        border-color var(--Auth-Transition),
+        box-shadow var(--Auth-Transition);
+
+    &::placeholder {
+        color: var(--Auth-Color-Text-Secondary);
     }
 
-    &:focus-visible {
-        outline: none;
-        border-color: var(--Color-Border-Action);
+    &:focus {
+        border-color: var(--Color-Background-Action);
         box-shadow: var(--Color-Shadow-Focus);
     }
-
-    @media (max-width: 640px) {
-        padding: var(--Size-Padding-XXL);
-    }
 `;
 
-const CardTop = styled.div`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--Size-Gap-XL);
-    align-items: start;
-    margin-bottom: var(--Size-Gap-XXL);
-`;
-
-const CardIdentity = styled.div`
-    display: flex;
-    align-items: center;
-    gap: var(--Size-Gap-L);
-    min-width: 0;
-    flex-wrap: wrap;
-`;
-
-const IconOrb = styled.div`
-    width: 72px;
-    height: 72px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border-radius: var(--Size-CornerRadius-Full);
-    background: #f2e8ff;
-    color: #7a16ff;
-`;
-
-const MetaPills = styled.div`
-    display: flex;
-    align-items: center;
-    gap: var(--Size-Gap-L);
-    flex-wrap: wrap;
-`;
-
-const MetaPill = styled.span`
-    min-height: 42px;
+const FilterButton = styled.button`
     display: inline-flex;
     align-items: center;
     gap: var(--Size-Gap-S);
-    padding: 0 var(--Size-Padding-L);
-    border-radius: var(--Size-CornerRadius-L);
-    background: var(--Color-Background-Subtle);
-    color: var(--Color-Text-Default);
-    font-size: var(--body-2-d);
-`;
-
-const CardActions = styled.div`
-    position: relative;
-`;
-
-const IconButton = styled.button`
-    width: 34px;
-    height: 34px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: var(--Size-CornerRadius-M);
+    padding: 0;
+    border: 0;
     background: transparent;
-    color: var(--Color-Icon-Default);
+    color: var(--Auth-Color-Text-Secondary);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+    transition: color var(--Auth-Transition);
+
+    &:hover {
+        color: var(--Color-Text-Action);
+    }
+
+    svg {
+        width: var(--Auth-Link-Icon-Size);
+        height: var(--Auth-Link-Icon-Size);
+    }
+`;
+
+const MeetingList = styled.div`
+    display: flex;
+    flex-direction: column;
+    border-top: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+`;
+
+const MeetingRow = styled.article`
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--Dashboard-Row-Gap);
+    padding: var(--Dashboard-Row-Padding-Y) var(--Dashboard-Row-Padding-X);
+    margin: 0 var(--Dashboard-Row-Margin-X);
+    border-bottom: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+    border-radius: var(--Auth-Control-Radius);
     cursor: pointer;
+    transition:
+        background var(--Auth-Transition),
+        color var(--Auth-Transition);
 
     &:hover {
         background: var(--Color-Background-Subtle);
     }
 
-    &:disabled {
-        cursor: not-allowed;
-        opacity: 0.56;
+    &:focus-visible {
+        outline: var(--Auth-Accent-Border-Width) solid var(--Color-Border-Action);
+        outline-offset: var(--Size-Gap-S);
+    }
+`;
+
+const DateColumn = styled.div`
+    width: var(--Dashboard-Date-Column-Width);
+    flex-shrink: 0;
+    padding-top: var(--Size-Padding-S);
+`;
+
+const DateText = styled.p`
+    margin: 0 0 var(--Size-Gap-S);
+    color: var(--Auth-Color-Text-Secondary);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+`;
+
+const TimeText = styled.p`
+    margin: 0;
+    color: var(--Auth-Color-Text-Tertiary);
+    font-family: var(--mono-font);
+    font-size: var(--Auth-Forgot-Font-Size);
+    line-height: var(--Auth-Forgot-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+`;
+
+const MeetingBody = styled.div`
+    flex: 1;
+    min-width: 0;
+`;
+
+const MeetingTitleRow = styled.div`
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--Dashboard-Title-Action-Gap);
+    margin-bottom: var(--Size-Gap-M);
+`;
+
+const MeetingTitle = styled.h3`
+    margin: 0;
+    color: var(--Color-Text-Bold);
+    font-family: var(--heading-font);
+    font-size: var(--h3-d);
+    line-height: var(--Auth-Title-Line-Height);
+    font-weight: var(--semi-bold);
+    letter-spacing: 0;
+    transition: color var(--Auth-Transition);
+
+    ${MeetingRow}:hover & {
+        color: var(--Color-Text-Action);
+    }
+`;
+
+const StatusBadge = styled.span`
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: var(--Size-Padding-XS) var(--Size-Padding-M);
+    border-radius: var(--Size-CornerRadius-S);
+    background: ${({ $tone }) =>
+        $tone === "action"
+            ? "var(--Color-Background-Action-Soft)"
+            : $tone === "recording"
+              ? "var(--Color-Background-Accent-Danger)"
+              : "var(--Color-Background-Disabled)"};
+    color: ${({ $tone }) =>
+        $tone === "action"
+            ? "var(--Color-Text-Action)"
+            : $tone === "recording"
+              ? "var(--Color-Text-Danger)"
+              : "var(--Color-Text-Subtle)"};
+    font-family: var(--mono-font);
+    font-size: var(--Dashboard-Badge-Font-Size);
+    line-height: var(--Dashboard-Badge-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--letter-spacing-widest);
+    text-transform: uppercase;
+    white-space: nowrap;
+`;
+
+const SummaryText = styled.p`
+    max-width: var(--Dashboard-Summary-Max-Width);
+    display: -webkit-box;
+    margin: 0 0 var(--Size-Gap-XL);
+    overflow: hidden;
+    color: var(--Auth-Color-Text-Secondary);
+    font-family: var(--body-font);
+    font-size: var(--body-2-d);
+    line-height: var(--Auth-Control-Line-Height);
+    font-weight: var(--regular);
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+`;
+
+const AvatarStack = styled.div`
+    display: flex;
+    align-items: center;
+`;
+
+const ParticipantAvatar = styled(Avatar)`
+    width: var(--Dashboard-Avatar-Size);
+    height: var(--Dashboard-Avatar-Size);
+    border: var(--Auth-Border-Width) solid var(--Color-Background-Root);
+
+    & + & {
+        margin-left: var(--Dashboard-Avatar-Overlap);
+    }
+`;
+
+const ExtraCount = styled.div`
+    width: var(--Dashboard-Avatar-Size);
+    height: var(--Dashboard-Avatar-Size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: var(--Dashboard-Avatar-Overlap);
+    border: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-Full);
+    background: var(--Color-Background-Subtle-2);
+    color: var(--Auth-Color-Text-Secondary);
+    font-family: var(--mono-font);
+    font-size: var(--Dashboard-Badge-Font-Size);
+    line-height: var(--Dashboard-Badge-Line-Height);
+    font-weight: var(--medium);
+`;
+
+const RowActions = styled.div`
+    position: relative;
+    padding-top: var(--Size-Padding-S);
+`;
+
+const RowMenuButton = styled.button`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--Size-Padding-S);
+    border: 0;
+    background: transparent;
+    color: var(--Auth-Color-Text-Secondary);
+    transition: color var(--Auth-Transition);
+
+    &:hover {
+        color: var(--Color-Text-Bold);
     }
 `;
 
@@ -210,154 +374,64 @@ const CardMenu = styled.div`
     top: calc(100% + var(--Size-Gap-S));
     right: 0;
     z-index: 20;
-    min-width: 190px;
+    min-width: var(--Dashboard-Menu-Width);
     padding: var(--Size-Padding-S);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-L);
+    border: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+    border-radius: var(--Auth-Control-Radius);
     background: var(--Color-Background-Default);
     box-shadow: var(--Color-Shadow-1);
 `;
 
 const MenuItem = styled.button`
     width: 100%;
-    min-height: 40px;
+    min-height: var(--Sidebar-Item-Height);
     display: flex;
     align-items: center;
     gap: var(--Size-Gap-M);
     padding: 0 var(--Size-Padding-L);
-    border: none;
-    border-radius: var(--Size-CornerRadius-M);
+    border: 0;
+    border-radius: var(--Auth-Control-Radius);
     background: transparent;
     color: var(--Color-Text-Danger);
+    font-family: var(--body-font);
     font-size: var(--body-3-d);
     font-weight: var(--semi-bold);
     text-align: left;
-    cursor: pointer;
 
     &:hover {
         background: var(--Color-Background-Accent-Danger);
     }
-
-    &:disabled {
-        cursor: not-allowed;
-        opacity: 0.58;
-    }
-`;
-
-const FeaturePill = styled.span`
-    width: fit-content;
-    min-height: 42px;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--Size-Gap-S);
-    padding: 0 var(--Size-Padding-L);
-    border-radius: var(--Size-CornerRadius-L);
-    background: var(--Color-Background-Subtle);
-    color: var(--Color-Text-Default);
-    font-size: var(--body-2-d);
-`;
-
-const SearchWrapper = styled.div`
-    position: relative;
-    width: min(540px, 100%);
-    justify-self: end;
-
-    @media (max-width: 640px) {
-        width: 100%;
-        justify-self: stretch;
-    }
-`;
-
-const SearchInput = styled.input`
-    width: 100%;
-    min-height: 44px;
-    padding: 0 var(--Size-Padding-L) 0 42px;
-    border: 1px solid var(--Color-Border-Default);
-    border-radius: var(--Size-CornerRadius-L);
-    background: var(--Color-Background-Default);
-    color: var(--Color-Text-Bold);
-    outline: none;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-
-    &:focus {
-        border-color: #7a16ff;
-        box-shadow: 0 0 0 4px rgba(122, 22, 255, 0.12);
-    }
-`;
-
-const SearchIcon = styled.div`
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    display: flex;
-    color: var(--Color-Icon-Subtle);
-    transform: translateY(-50%);
-`;
-
-const MeetingTitle = styled(Body2)`
-    overflow: hidden;
-    color: var(--Color-Text-Bold);
-    font-size: var(--h3-d);
-    font-weight: var(--bold);
-    line-height: var(--line-height-120);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-`;
-
-const MeetingSummary = styled(Body3)`
-    display: -webkit-box;
-    max-width: 780px;
-    margin-top: var(--Size-Gap-S);
-    overflow: hidden;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-`;
-
-const CardFooter = styled.div`
-    display: flex;
-    align-items: center;
-    gap: var(--Size-Gap-L);
-    flex-wrap: wrap;
-    margin-top: auto;
-    padding-top: var(--Size-Padding-XXL);
 `;
 
 const EmptyState = styled.div`
-    min-height: 260px;
+    min-height: var(--Dashboard-Empty-State-Min-Height);
     display: grid;
     place-items: center;
     padding: var(--Size-Padding-XXXL);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XXL);
-    background: var(--Color-Background-Default);
+    border-bottom: var(--Auth-Border-Width) solid var(--Color-Border-Default);
     text-align: center;
 `;
 
 const EmptyIcon = styled.div`
-    width: 54px;
-    height: 54px;
+    width: var(--Size-Gap-5XL);
+    height: var(--Size-Gap-5XL);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     margin-bottom: var(--Size-Gap-XL);
-    border-radius: var(--Size-CornerRadius-Full);
-    background: #f2e8ff;
-    color: #7a16ff;
+    border: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+    border-radius: var(--Auth-Control-Radius);
+    background: var(--Color-Background-Subtle);
+    color: var(--Color-Icon-Action);
 `;
 
-const EmptyAction = styled.button`
-    min-height: 42px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--Size-Gap-M);
+const EmptyCopy = styled(Body2)`
+    color: var(--Color-Text-Subtle);
+    margin-top: var(--Size-Gap-M);
+`;
+
+const EmptyAction = styled(PrimaryAction)`
     margin-top: var(--Size-Gap-XL);
-    padding: 0 var(--Size-Padding-XL);
-    border: none;
-    border-radius: var(--Size-CornerRadius-Full);
-    background: #10131a;
-    color: var(--Color-Text-Inverse);
-    font-weight: var(--semi-bold);
 `;
 
 const DeleteDialogBody = styled.div`
@@ -370,8 +444,8 @@ const WarningPanel = styled.div`
     align-items: flex-start;
     gap: var(--Size-Gap-M);
     padding: var(--Size-Padding-L);
-    border: 1px solid var(--Color-Border-Accent-Danger);
-    border-radius: var(--Size-CornerRadius-L);
+    border: var(--Auth-Border-Width) solid var(--Color-Border-Accent-Danger);
+    border-radius: var(--Auth-Control-Radius);
     background: var(--Color-Background-Accent-Danger);
     color: var(--Color-Text-Danger);
 `;
@@ -380,35 +454,88 @@ const DialogActions = styled.div`
     display: flex;
     justify-content: flex-end;
     gap: var(--Size-Gap-M);
-
-    @media (max-width: 480px) {
-        flex-direction: column-reverse;
-    }
 `;
 
-const getLatestMeeting = (meetings) =>
-    meetings.reduce((latest, meeting) => {
-        if (!latest) return meeting;
-        const latestTime = new Date(latest.start_time || 0).getTime();
-        const meetingTime = new Date(meeting.start_time || 0).getTime();
-        return meetingTime > latestTime ? meeting : latest;
-    }, null);
-
-const formatCreatedDate = (isoString) => {
-    if (!isoString) return "No date";
+const parseDate = (isoString) => {
+    if (!isoString) return null;
     const date = new Date(isoString);
-    if (Number.isNaN(date.getTime())) return "No date";
-    return date.toLocaleDateString(undefined, {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
+    return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const getMeetingInfo = (meeting) => {
-    if (meeting.end_time) return formatDuration(meeting.start_time, meeting.end_time);
-    return "Recording active";
+const formatListDate = (isoString) => {
+    const date = parseDate(isoString);
+    if (!date) return "No date";
+    return date
+        .toLocaleDateString(undefined, {
+            month: "short",
+            day: "2-digit",
+            year: "numeric",
+        })
+        .toUpperCase();
 };
+
+const formatStartTime = (isoString) => {
+    const date = parseDate(isoString);
+    if (!date) return "No time";
+    return date
+        .toLocaleTimeString(undefined, {
+            hour: "numeric",
+            minute: "2-digit",
+        })
+        .toUpperCase();
+};
+
+const formatCompactDuration = (startIso, endIso) => {
+    const start = parseDate(startIso);
+    const end = parseDate(endIso);
+    if (!start || !end) return "Active";
+    const totalMinutes = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours && minutes) return `${hours}H ${minutes}M`;
+    if (hours) return `${hours}H`;
+    return `${minutes}M`;
+};
+
+const formatListTime = (meeting) =>
+    `${formatStartTime(meeting.start_time)} - ${formatCompactDuration(meeting.start_time, meeting.end_time)}`;
+
+const getParticipantName = (participant, index) => {
+    if (typeof participant === "string") return participant;
+    return participant?.name || participant?.email || `Participant ${index + 1}`;
+};
+
+const getStatus = (meeting) => {
+    if (!meeting.end_time) return { label: "Recording", tone: "recording" };
+    const openActions = (meeting.action_items || []).some((item) => !item.completed);
+    if (openActions) return { label: "Action Needed", tone: "action" };
+    if (meeting.summary) return { label: "Completed", tone: "neutral" };
+    return { label: "Processing", tone: "neutral" };
+};
+
+const LoadingRows = () => (
+    <MeetingList aria-label="Loading meetings">
+        {[0, 1, 2].map((item) => (
+            <MeetingRow as="div" key={item}>
+                <DateColumn>
+                    <SkeletonBlock width="72%" height="var(--Auth-Label-Line-Height)" />
+                    <SkeletonBlock width="88%" height="var(--Auth-Forgot-Line-Height)" />
+                </DateColumn>
+                <MeetingBody>
+                    <MeetingTitleRow>
+                        <SkeletonBlock width="46%" height="var(--Auth-Title-Line-Height)" />
+                        <SkeletonBlock
+                            width="var(--Dashboard-Skeleton-Badge-Width)"
+                            height="var(--Auth-Footer-Line-Height)"
+                        />
+                    </MeetingTitleRow>
+                    <SkeletonBlock width="82%" height="var(--Auth-Control-Line-Height)" />
+                    <SkeletonBlock width="34%" height="var(--Dashboard-Avatar-Size)" />
+                </MeetingBody>
+            </MeetingRow>
+        ))}
+    </MeetingList>
+);
 
 const HostDashboard = () => {
     const dispatch = useDispatch();
@@ -432,6 +559,12 @@ const HostDashboard = () => {
     }, [dispatch]);
 
     useEffect(() => {
+        const openFromSidebar = () => setShowNewMeeting(true);
+        window.addEventListener(UI_EVENTS.OpenNewMeeting, openFromSidebar);
+        return () => window.removeEventListener(UI_EVENTS.OpenNewMeeting, openFromSidebar);
+    }, []);
+
+    useEffect(() => {
         if (!openMenuId) return undefined;
         const closeMenu = () => setOpenMenuId(null);
         document.addEventListener("click", closeMenu);
@@ -442,23 +575,18 @@ const HostDashboard = () => {
         const term = search.trim().toLowerCase();
         if (!term) return meetings;
         return meetings.filter(
-            (m) =>
-                (m.title || "").toLowerCase().includes(term) ||
-                (m.summary || "").toLowerCase().includes(term),
+            (meeting) =>
+                (meeting.title || "").toLowerCase().includes(term) ||
+                (meeting.summary || "").toLowerCase().includes(term),
         );
     }, [meetings, search]);
-
-    const latestMeeting = useMemo(() => getLatestMeeting(meetings), [meetings]);
-    const latestLabel = latestMeeting?.start_time
-        ? `Updated ${formatDate(latestMeeting.start_time)}`
-        : "No recordings yet";
 
     const openMeeting = (meeting) => {
         dispatch(setActiveMeeting(meeting.id));
         dispatch(setHostView(HOST_VIEWS.Meeting));
     };
 
-    const handleCardKeyDown = (event, meeting) => {
+    const handleRowKeyDown = (event, meeting) => {
         if (event.target !== event.currentTarget) return;
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
@@ -496,129 +624,112 @@ const HostDashboard = () => {
     const openNewMeeting = () => setShowNewMeeting(true);
 
     return (
-        <DashboardPage size="full">
-            <Header>
-                <HeaderCopy>
-                    <H1 style={{ fontSize: "var(--h2-d)" }}>Your Meetings</H1>
-                    <Body2 style={{ color: "var(--Color-Text-Default)" }}>
-                        Organize your recordings so MeetAI can retrieve accurate summaries,
-                        transcripts, and action items.
-                    </Body2>
-                </HeaderCopy>
-                <RoundAction
-                    type="button"
-                    onClick={openNewMeeting}
-                    aria-label="New Meeting"
-                    title="New Meeting"
-                >
-                    <Plus size={30} />
-                </RoundAction>
-            </Header>
+        <DashboardPage>
+            <DashboardContent>
+                <PageHeader>
+                    <HeaderCopy>
+                        <PageTitle>Your Meetings</PageTitle>
+                        <PageSubtitle>
+                            Review transcripts, insights, and editorial notes from your recent sessions. The archive
+                            is automatically curated.
+                        </PageSubtitle>
+                    </HeaderCopy>
+                    <PrimaryAction type="button" onClick={openNewMeeting}>
+                        <Plus aria-hidden="true" />
+                        New Meeting
+                    </PrimaryAction>
+                </PageHeader>
 
-            <LibrarySection>
-                <LibraryHeader>
-                    <LibraryTitle>
-                        <H3>Meeting Library</H3>
-                        <Body3>
-                            {meetings.length
-                                ? `${filtered.length} of ${meetings.length} recordings | ${latestLabel}`
-                                : "No recordings yet"}
-                        </Body3>
-                    </LibraryTitle>
-                    <SearchWrapper>
+                <Toolbar>
+                    <SearchWrap>
+                        <HiddenLabel htmlFor="dashboard-search">Search Meetings</HiddenLabel>
                         <SearchIcon>
-                            <Search size={16} />
+                            <Search aria-hidden="true" />
                         </SearchIcon>
                         <SearchInput
-                            placeholder="Search meetings"
+                            id="dashboard-search"
+                            type="text"
+                            placeholder="Search transcripts and titles..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(event) => setSearch(event.target.value)}
                         />
-                    </SearchWrapper>
-                </LibraryHeader>
+                    </SearchWrap>
+                    <FilterButton type="button">
+                        <ListFilter aria-hidden="true" />
+                        Filter
+                    </FilterButton>
+                </Toolbar>
 
                 {loading ? (
-                    <CardsGrid>
-                        {[0, 1, 2].map((item) => (
-                            <MeetingCard as="div" key={item}>
-                                <CardTop>
-                                    <CardIdentity>
-                                        <IconOrb>
-                                            <FileText size={30} />
-                                        </IconOrb>
-                                        <MetaPills>
-                                            <SkeletonBlock width="120px" height="42px" />
-                                            <SkeletonBlock width="150px" height="42px" />
-                                        </MetaPills>
-                                    </CardIdentity>
-                                    <IconButton as="span" aria-hidden="true">
-                                        <MoreVertical size={22} />
-                                    </IconButton>
-                                </CardTop>
-                                <SkeletonStack>
-                                    <SkeletonBlock width="68%" height="24px" />
-                                    <SkeletonBlock width="94%" height="13px" />
-                                    <SkeletonBlock width="80%" height="13px" />
-                                </SkeletonStack>
-                                <CardFooter>
-                                    <SkeletonBlock width="190px" height="42px" />
-                                </CardFooter>
-                            </MeetingCard>
-                        ))}
-                    </CardsGrid>
+                    <LoadingRows />
                 ) : filtered.length === 0 ? (
-                    <EmptyState>
-                        <div>
-                            <EmptyIcon>
-                                <Mic size={24} />
-                            </EmptyIcon>
-                            <H3>{search ? "No matching meetings" : "No meetings yet"}</H3>
-                            <Body2
-                                style={{
-                                    color: "var(--Color-Text-Subtle)",
-                                    marginTop: "var(--Size-Gap-M)",
-                                }}
-                            >
-                                {search
-                                    ? "Try another search term."
-                                    : "Create your first recording when you are ready."}
-                            </Body2>
-                            {!search && (
-                                <EmptyAction type="button" onClick={openNewMeeting}>
-                                    <Plus size={16} />
-                                    New Meeting
-                                </EmptyAction>
-                            )}
-                        </div>
-                    </EmptyState>
+                    <MeetingList>
+                        <EmptyState>
+                            <div>
+                                <EmptyIcon>
+                                    <Mic size={24} />
+                                </EmptyIcon>
+                                <H3>{search ? "No matching meetings" : "No meetings yet"}</H3>
+                                <EmptyCopy>
+                                    {search
+                                        ? "Try another search term."
+                                        : "Create your first recording when you are ready."}
+                                </EmptyCopy>
+                                {!search && (
+                                    <EmptyAction type="button" onClick={openNewMeeting}>
+                                        <Plus aria-hidden="true" />
+                                        New Meeting
+                                    </EmptyAction>
+                                )}
+                            </div>
+                        </EmptyState>
+                    </MeetingList>
                 ) : (
-                    <CardsGrid>
-                        {filtered.map((meeting) => (
-                            <MeetingCard
-                                key={meeting.id}
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => openMeeting(meeting)}
-                                onKeyDown={(event) => handleCardKeyDown(event, meeting)}
-                            >
-                                <CardTop>
-                                    <CardIdentity>
-                                        <IconOrb>
-                                            <FileText size={30} />
-                                        </IconOrb>
-                                        <MetaPills>
-                                            <MetaPill>
-                                                <Users size={17} />
-                                                {(meeting.participants || []).length} participants
-                                            </MetaPill>
-                                            <MetaPill>
-                                                <Calendar size={17} />
-                                                Created at {formatCreatedDate(meeting.start_time)}
-                                            </MetaPill>
-                                        </MetaPills>
-                                    </CardIdentity>
-                                    <CardActions onClick={(event) => event.stopPropagation()}>
-                                        <IconButton
+                    <MeetingList>
+                        {filtered.map((meeting) => {
+                            const participants = meeting.participants || [];
+                            const visibleParticipants = participants.slice(0, 3);
+                            const extraCount = Math.max(0, participants.length - visibleParticipants.length);
+                            const status = getStatus(meeting);
+
+                            return (
+                                <MeetingRow
+                                    key={meeting.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => openMeeting(meeting)}
+                                    onKeyDown={(event) => handleRowKeyDown(event, meeting)}
+                                >
+                                    <DateColumn>
+                                        <DateText>{formatListDate(meeting.start_time)}</DateText>
+                                        <TimeText>{formatListTime(meeting)}</TimeText>
+                                    </DateColumn>
+
+                                    <MeetingBody>
+                                        <MeetingTitleRow>
+                                            <MeetingTitle>{meeting.title || "Untitled meeting"}</MeetingTitle>
+                                            <StatusBadge $tone={status.tone}>{status.label}</StatusBadge>
+                                        </MeetingTitleRow>
+                                        <SummaryText>
+                                            {meeting.summary ||
+                                                "Summary will appear here after the recording has finished processing."}
+                                        </SummaryText>
+                                        <AvatarStack aria-label={`${participants.length} participants`}>
+                                            {(visibleParticipants.length ? visibleParticipants : ["Host"]).map(
+                                                (participant, index) => (
+                                                    <ParticipantAvatar
+                                                        key={`${meeting.id}-${getParticipantName(participant, index)}`}
+                                                        name={getParticipantName(participant, index)}
+                                                        size="default"
+                                                    />
+                                                ),
+                                            )}
+                                            {extraCount > 0 && <ExtraCount>+{extraCount}</ExtraCount>}
+                                        </AvatarStack>
+                                    </MeetingBody>
+
+                                    <RowActions onClick={(event) => event.stopPropagation()}>
+                                        <RowMenuButton
                                             type="button"
                                             aria-label={`Open actions for ${meeting.title || "Untitled meeting"}`}
                                             aria-haspopup="menu"
@@ -626,8 +737,8 @@ const HostDashboard = () => {
                                             onClick={(event) => toggleMenu(event, meeting.id)}
                                             disabled={deletingId === meeting.id}
                                         >
-                                            <MoreVertical size={22} />
-                                        </IconButton>
+                                            <MoreVertical size={20} />
+                                        </RowMenuButton>
                                         {openMenuId === meeting.id && (
                                             <CardMenu role="menu">
                                                 <MenuItem
@@ -641,43 +752,27 @@ const HostDashboard = () => {
                                                 </MenuItem>
                                             </CardMenu>
                                         )}
-                                    </CardActions>
-                                </CardTop>
-                                <MeetingTitle>{meeting.title || "Untitled meeting"}</MeetingTitle>
-                                <MeetingSummary>
-                                    {meeting.summary || "Summary will appear after processing."}
-                                </MeetingSummary>
-                                <CardFooter>
-                                    <FeaturePill>
-                                        <Sparkles size={17} />
-                                        {meeting.summary
-                                            ? "AI summary available"
-                                            : "AI notes after processing"}
-                                    </FeaturePill>
-                                    <FeaturePill>
-                                        <Clock3 size={17} />
-                                        {getMeetingInfo(meeting)}
-                                    </FeaturePill>
-                                </CardFooter>
-                            </MeetingCard>
-                        ))}
-                    </CardsGrid>
+                                    </RowActions>
+                                </MeetingRow>
+                            );
+                        })}
+                    </MeetingList>
                 )}
-            </LibrarySection>
+            </DashboardContent>
 
             {showNewMeeting && <NewMeetingModal onClose={() => setShowNewMeeting(false)} />}
             {pendingDeleteMeeting && (
-                <Modal title="Delete meeting" onClose={closeDeleteDialog} width="480px">
+                <Modal title="Delete meeting" onClose={closeDeleteDialog} width="var(--Dashboard-Delete-Modal-Width)">
                     <DeleteDialogBody>
                         <Body2>
                             Are you sure you want to delete{" "}
                             <strong>{pendingDeleteMeeting.title || "Untitled meeting"}</strong>?
                         </Body2>
                         <WarningPanel>
-                            <Trash2 size={18} />
+                            <AlertTriangle size={18} />
                             <Body3>
-                                This will permanently remove its transcript, summary, action items, chats,
-                                shares, access activity, and local audio file.
+                                This will permanently remove its transcript, summary, action items, chats, shares,
+                                access activity, and local audio file.
                             </Body3>
                         </WarningPanel>
                         <DialogActions>

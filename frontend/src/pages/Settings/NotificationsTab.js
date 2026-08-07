@@ -8,7 +8,7 @@ const Card = styled.div`
     padding: var(--Size-Padding-XXL);
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XL);
+    border-radius: var(--Size-CornerRadius-M);
     box-shadow: var(--Color-Shadow-Card);
 `;
 
@@ -32,7 +32,7 @@ const Option = styled.div`
     gap: var(--Size-Gap-L);
     padding: var(--Size-Padding-L);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-L);
+    border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Subtle);
     opacity: 0.74;
 `;
@@ -43,6 +43,7 @@ const IconBox = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid var(--Color-Border-Subtle);
     border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Default);
     color: var(--Color-Icon-Subtle);

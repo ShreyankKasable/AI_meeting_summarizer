@@ -3,29 +3,38 @@ import styled from "styled-components";
 
 const Strip = styled.div`
     display: flex;
-    gap: var(--Size-Gap-S);
-    padding: var(--Size-Padding-S);
-    background: var(--Color-Background-Subtle);
+    gap: var(--Size-Gap-XXL);
+    padding: 0 var(--Size-Padding-XXL);
+    background: var(--Color-Background-Default);
     border-bottom: 1px solid var(--Color-Border-Subtle);
+    overflow-x: auto;
 `;
 
 const TabButton = styled.button`
-    flex: 1;
-    min-height: 36px;
-    padding: 0 var(--Size-Padding-L);
-    background: ${({ active }) => (active ? "var(--Color-Background-Default)" : "transparent")};
-    border: 1px solid ${({ active }) => (active ? "var(--Color-Border-Subtle)" : "transparent")};
-    border-radius: var(--Size-CornerRadius-M);
+    position: relative;
+    min-height: 48px;
+    padding: 0 0 var(--Size-Padding-S);
+    background: transparent;
+    border: none;
     color: ${({ active }) => (active ? "var(--Color-Text-Bold)" : "var(--Color-Text-Subtle)")};
-    box-shadow: ${({ active }) => (active ? "0 1px 2px rgba(17, 19, 22, 0.06)" : "none")};
     font-size: var(--body-3-d);
     font-weight: var(--semi-bold);
     letter-spacing: 0;
-    transition: all var(--transition-fast);
+    white-space: nowrap;
+    transition: color var(--transition-fast);
+
+    &::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 2px;
+        background: ${({ active }) => (active ? "var(--Color-Border-Action)" : "transparent")};
+    }
 
     &:hover {
         color: var(--Color-Text-Bold);
-        background: ${({ active }) => (active ? "var(--Color-Background-Default)" : "rgba(255, 255, 255, 0.72)")};
     }
 `;
 

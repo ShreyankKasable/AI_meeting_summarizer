@@ -11,9 +11,10 @@ const FieldLabel = styled.span`
     justify-content: space-between;
     gap: var(--Size-Gap-M);
     margin-bottom: var(--Size-Gap-S);
+    font-family: var(--mono-font);
     font-size: var(--body-4-d);
-    font-weight: var(--bold);
-    letter-spacing: var(--letter-spacing-wide);
+    font-weight: var(--medium);
+    letter-spacing: var(--letter-spacing-widest);
     text-transform: uppercase;
     color: var(--Color-Text-Subtle);
 `;
@@ -36,10 +37,9 @@ const fieldStyles = css`
         var(--Size-Padding-L) var(--Size-Padding-XL);
     font-size: var(--body-2-d);
     color: var(--Color-Text-Default);
-    background: var(--Color-Background-Default);
+    background: var(--Color-Background-Subtle);
     border: 1px solid ${({ $hasError }) => ($hasError ? "var(--Color-Border-Accent-Danger)" : "var(--Color-Border-Default)")};
     border-radius: var(--Size-CornerRadius-M);
-    box-shadow: inset 0 1px 0 rgba(17, 19, 22, 0.02);
     transition:
         border-color var(--transition-fast),
         box-shadow var(--transition-fast),
@@ -55,12 +55,13 @@ const fieldStyles = css`
 
     &:hover:not(:disabled) {
         border-color: var(--Color-Border-Bold);
+        background: var(--Color-Background-Default);
     }
 
     &:focus {
         border-color: var(--Color-Border-Action);
         box-shadow: var(--Color-Shadow-Focus);
-        background: #ffffff;
+        background: var(--Color-Background-Default);
     }
 
     &:disabled {

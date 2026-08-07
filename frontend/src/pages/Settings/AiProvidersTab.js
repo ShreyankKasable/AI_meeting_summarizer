@@ -12,8 +12,8 @@ const Wrapper = styled.div`
 const ConfigCard = styled.section`
     padding: var(--Size-Padding-XXL);
     background: var(--Color-Background-Default);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XL);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-M);
     box-shadow: var(--Color-Shadow-Card);
 `;
 
@@ -40,6 +40,7 @@ const IconBox = styled.div`
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid var(--Color-Border-Subtle);
     border-radius: var(--Size-CornerRadius-M);
     background: ${({ $tone }) => $tone || "var(--Color-Background-Accent-Action)"};
     color: ${({ $color }) => $color || "var(--Color-Icon-Action)"};
@@ -66,9 +67,10 @@ const FieldLabel = styled.span`
     justify-content: space-between;
     gap: var(--Size-Gap-M);
     margin-bottom: var(--Size-Gap-S);
+    font-family: var(--mono-font);
     font-size: var(--body-4-d);
-    font-weight: var(--bold);
-    letter-spacing: var(--letter-spacing-wide);
+    font-weight: var(--medium);
+    letter-spacing: var(--letter-spacing-widest);
     text-transform: uppercase;
     color: var(--Color-Text-Subtle);
 `;
@@ -92,11 +94,10 @@ const Select = styled.select`
     padding: var(--Size-Padding-L) 44px var(--Size-Padding-L) var(--Size-Padding-XL);
     border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Default);
+    background: var(--Color-Background-Subtle);
     color: var(--Color-Text-Default);
     font-size: var(--body-2-d);
     font-family: var(--body-font);
-    box-shadow: inset 0 1px 0 rgba(17, 19, 22, 0.02);
     appearance: none;
     outline: none;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
@@ -109,7 +110,7 @@ const Select = styled.select`
     &:focus {
         border-color: var(--Color-Border-Action);
         box-shadow: var(--Color-Shadow-Focus);
-        background: #ffffff;
+        background: var(--Color-Background-Default);
     }
 
     &:disabled {

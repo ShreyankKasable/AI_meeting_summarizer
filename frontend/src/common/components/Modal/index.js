@@ -13,7 +13,7 @@ const Overlay = styled(motion.div)`
     justify-content: center;
     padding: var(--Size-Padding-XL);
     background: var(--Color-Background-Scrim);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(4px);
 `;
 
 const Content = styled(motion.div)`
@@ -25,8 +25,8 @@ const Content = styled(motion.div)`
     display: flex;
     flex-direction: column;
     background: var(--Color-Background-Default);
-    border: 1px solid rgba(255, 255, 255, 0.72);
-    border-radius: var(--Size-CornerRadius-XXL);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-XL);
     box-shadow: var(--Color-Shadow-2);
 `;
 

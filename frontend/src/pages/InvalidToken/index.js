@@ -15,9 +15,7 @@ const Wrapper = styled.div`
     display: grid;
     place-items: center;
     padding: var(--Size-Padding-XXXL) var(--Size-Padding-XL);
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(246, 247, 249, 0.96)),
-        var(--Color-Background-Subtle);
+    background: transparent;
 `;
 
 const Grid = styled.div`
@@ -35,7 +33,7 @@ const MainCard = styled.div`
     padding: var(--Size-Padding-4XL);
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XXL);
+    border-radius: var(--Size-CornerRadius-M);
     box-shadow: var(--Color-Shadow-1);
 
     @media (max-width: 560px) {
@@ -59,8 +57,9 @@ const BrandMark = styled.span`
     align-items: center;
     justify-content: center;
     border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Bold);
-    color: var(--Color-Text-Inverse);
+    background: var(--Color-Background-Accent-Action);
+    border: 1px solid var(--Color-Border-Accent-Action);
+    color: var(--Color-Icon-Action);
 `;
 
 const IconCircle = styled.div`
@@ -86,7 +85,7 @@ const SideCard = styled.div`
     padding: var(--Size-Padding-XXL);
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XXL);
+    border-radius: var(--Size-CornerRadius-M);
     box-shadow: var(--Color-Shadow-Card);
 `;
 

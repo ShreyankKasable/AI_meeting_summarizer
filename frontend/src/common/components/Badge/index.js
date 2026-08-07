@@ -57,11 +57,13 @@ const BadgeBase = styled.span`
     min-height: 24px;
     padding: 3px 9px;
     border: 1px solid transparent;
-    border-radius: var(--Size-CornerRadius-Full);
+    border-radius: var(--Size-CornerRadius-M);
+    font-family: var(--mono-font);
     font-size: var(--body-4-d);
-    font-weight: var(--semi-bold);
-    letter-spacing: 0;
+    font-weight: var(--medium);
+    letter-spacing: var(--letter-spacing-wide);
     line-height: 1;
+    text-transform: uppercase;
     white-space: nowrap;
     ${({ $tone }) => tones[$tone] || tones.action};
     ${({ $uppercase }) => $uppercase && "text-transform: uppercase;"};

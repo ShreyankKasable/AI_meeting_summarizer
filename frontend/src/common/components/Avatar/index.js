@@ -19,7 +19,7 @@ const sizes = {
     `,
 };
 
-const PALETTE = ["#0f766e", "#8a5a13", "#315f99", "#8b3d74", "#57606f"];
+const PALETTE = ["#785600", "#5f5e5e", "#757472", "#986d00", "#2f3130"];
 
 const paletteIndex = (seed) => {
     const s = String(seed || "");
@@ -38,7 +38,7 @@ const Circle = styled.div`
     color: var(--Color-Text-Inverse);
     background: ${({ bg }) => bg};
     border: 2px solid var(--Color-Background-Default);
-    box-shadow: 0 1px 3px rgba(17, 19, 22, 0.12);
+    box-shadow: 0 8px 18px rgba(68, 50, 26, 0.08);
     overflow: hidden;
     ${({ size }) => sizes[size] || sizes.default};
 

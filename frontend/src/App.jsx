@@ -19,7 +19,7 @@ import InvalidToken from "pages/InvalidToken";
 const Layout = styled.div`
     min-height: 100vh;
     display: flex;
-    background: var(--Color-Background-Subtle);
+    background: var(--Color-Background-Root);
     color: var(--Color-Text-Default);
 
     @media (max-width: 1024px) {

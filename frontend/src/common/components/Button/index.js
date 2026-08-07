@@ -4,13 +4,13 @@ import { Loader2 } from "lucide-react";
 
 const sizeStyles = {
     small: css`
-        min-height: 34px;
+        min-height: 36px;
         padding: 0 var(--Size-Padding-L);
         font-size: var(--body-3-d);
         gap: var(--Size-Gap-S);
     `,
     default: css`
-        min-height: 42px;
+        min-height: 44px;
         padding: 0 var(--Size-Padding-XL);
         font-size: var(--body-2-d);
         gap: var(--Size-Gap-M);
@@ -68,18 +68,17 @@ const PrimaryButton = styled(BaseButton)`
 
     &:hover:not(:disabled) {
         background: var(--Color-Background-Action-Hover);
-        box-shadow: 0 18px 34px rgba(15, 118, 110, 0.28);
+        box-shadow: var(--Color-Shadow-1);
     }
 `;
 
 const SecondaryButton = styled(BaseButton)`
     background: var(--Color-Background-Default);
     color: var(--Color-Text-Bold);
-    border-color: var(--Color-Border-Default);
-    box-shadow: 0 1px 1px rgba(17, 19, 22, 0.04);
+    border-color: var(--Color-Border-Subtle);
 
     &:hover:not(:disabled) {
-        background: #fbfcfd;
+        background: var(--Color-Background-Subtle);
         border-color: var(--Color-Border-Bold);
         box-shadow: var(--Color-Shadow-Card);
     }
@@ -88,7 +87,6 @@ const SecondaryButton = styled(BaseButton)`
 const DarkButton = styled(BaseButton)`
     background: var(--Color-Background-Bold);
     color: var(--Color-Text-Inverse);
-    box-shadow: 0 14px 32px rgba(17, 19, 22, 0.22);
 
     &:hover:not(:disabled) {
         background: var(--Color-Background-Bold-2);
@@ -100,7 +98,7 @@ const GhostButton = styled(BaseButton)`
     color: var(--Color-Text-Subtle);
 
     &:hover:not(:disabled) {
-        background: var(--Color-Background-Subtle-2);
+        background: var(--Color-Background-Subtle);
         color: var(--Color-Text-Bold);
     }
 `;
@@ -111,8 +109,8 @@ const DangerButton = styled(BaseButton)`
     color: var(--Color-Text-Danger);
 
     &:hover:not(:disabled) {
-        background: #ffe7e3;
-        border-color: #efaaa2;
+        background: #ffd0ca;
+        border-color: #93000a;
     }
 `;
 

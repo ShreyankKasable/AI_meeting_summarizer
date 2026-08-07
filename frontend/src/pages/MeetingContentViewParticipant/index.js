@@ -20,7 +20,7 @@ import InvalidToken from "pages/InvalidToken";
 
 const Page = styled.div`
     min-height: 100vh;
-    background: var(--Color-Background-Subtle);
+    background: transparent;
 `;
 
 const TopNav = styled.header`
@@ -33,7 +33,7 @@ const TopNav = styled.header`
 `;
 
 const TopNavInner = styled.div`
-    width: min(1320px, calc(100% - 32px));
+    width: min(var(--layout-max), calc(100% - 32px));
     min-height: 64px;
     margin: 0 auto;
     display: flex;
@@ -57,8 +57,9 @@ const BrandMark = styled.span`
     align-items: center;
     justify-content: center;
     border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Bold);
-    color: var(--Color-Text-Inverse);
+    background: var(--Color-Background-Accent-Action);
+    border: 1px solid var(--Color-Border-Accent-Action);
+    color: var(--Color-Icon-Action);
 `;
 
 const RightActions = styled.div`
@@ -70,7 +71,7 @@ const RightActions = styled.div`
 `;
 
 const Wrapper = styled.div`
-    width: min(1320px, calc(100% - 32px));
+    width: min(var(--layout-max), calc(100% - 32px));
     height: calc(100vh - 64px);
     margin: 0 auto;
     padding: var(--Size-Padding-XXXL) 0;
@@ -124,9 +125,9 @@ const SidePanel = styled.div`
     display: flex;
     flex-direction: column;
     background: var(--Color-Background-Default);
-    border: 12px solid var(--Color-Background-Action);
-    border-radius: var(--Size-CornerRadius-XXL);
-    box-shadow: 0 18px 42px rgba(15, 118, 110, 0.22), var(--Color-Shadow-Card);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-M);
+    box-shadow: var(--Color-Shadow-Card);
     overflow: hidden;
 
     @media (max-width: 1120px) {
@@ -140,8 +141,9 @@ const PanelTitle = styled.div`
     align-items: center;
     justify-content: center;
     padding: 0 var(--Size-Padding-XL);
-    background: var(--Color-Background-Action);
-    color: var(--Color-Text-Inverse);
+    background: var(--Color-Background-Subtle);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
+    color: var(--Color-Text-Bold);
     font-size: var(--body-2-d);
     font-weight: var(--bold);
     text-align: center;
@@ -170,7 +172,7 @@ const StateCard = styled.div`
     gap: var(--Size-Gap-XL);
     padding: var(--Size-Padding-XXXL);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XXL);
+    border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Default);
     box-shadow: var(--Color-Shadow-Card);
     text-align: center;
@@ -211,7 +213,7 @@ const MeetingContentViewParticipant = ({ token }) => {
     const dispatch = useDispatch();
     const [meeting, setMeeting] = useState(null);
     const [invalid, setInvalid] = useState(false);
-    const [activeTab, setActiveTab] = useState("chat");
+    const [activeTab, setActiveTab] = useState("summary");
     const [chatMessages, setChatMessages] = useState([]);
     const [chatSending, setChatSending] = useState(false);
     const [translatedText, setTranslatedText] = useState(null);

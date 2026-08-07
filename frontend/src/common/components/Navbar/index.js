@@ -2,187 +2,183 @@ import React, { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
 import {
-    AudioWaveform,
+    CircleUserRound,
     HelpCircle,
-    LogIn,
     LayoutDashboard,
     LogOut,
     Menu,
+    Plus,
     Settings as SettingsIcon,
+    Video,
     X,
 } from "lucide-react";
 import Avatar from "common/components/Avatar";
-import Badge from "common/components/Badge";
-import { HOST_VIEWS } from "common/constants";
+import { HOST_VIEWS, UI_EVENTS } from "common/constants";
 import { setHostView, logout } from "common/redux/actions/sessionActions";
+import { Breakpoints } from "GlobalStyle";
 
 const Sidebar = styled.aside`
-    width: 264px;
+    width: var(--Sidebar-Width);
     flex-shrink: 0;
     height: 100vh;
     position: sticky;
     top: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--Size-Gap-XXL);
-    background: rgba(255, 255, 255, 0.86);
-    border-right: 1px solid var(--Color-Border-Subtle);
-    padding: var(--Size-Padding-XXL) var(--Size-Padding-XL);
-    backdrop-filter: blur(16px);
+    z-index: 40;
+    background: var(--Color-Background-Subtle);
+    border-right: var(--Auth-Border-Width) solid var(--Color-Border-Default);
 
-    @media (max-width: 1024px) {
+    @media (max-width: ${Breakpoints.laptop}px) {
         display: none;
     }
+`;
+
+const SidebarInner = styled.div`
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: var(--Sidebar-Padding-Y) var(--Sidebar-Padding-X);
 `;
 
 const Brand = styled.button`
     display: flex;
     align-items: center;
-    gap: var(--Size-Gap-M);
+    gap: var(--Sidebar-Brand-Gap);
     width: 100%;
-    padding: 0;
-    border: none;
+    padding: 0 var(--Sidebar-Brand-Padding-X);
+    margin-bottom: var(--Sidebar-Section-Gap);
+    border: 0;
     background: transparent;
     text-align: left;
 `;
 
-const BrandMark = styled.span`
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--Color-Text-Inverse);
-    background: var(--Color-Background-Bold);
-    border-radius: var(--Size-CornerRadius-M);
-    box-shadow: 0 12px 26px rgba(17, 19, 22, 0.16);
+const BrandAvatar = styled(Avatar)`
+    width: var(--Sidebar-Brand-Avatar-Size);
+    height: var(--Sidebar-Brand-Avatar-Size);
+    border-color: var(--Color-Border-Default);
 `;
 
 const BrandText = styled.div`
-    line-height: 1.2;
-`;
-
-const BrandName = styled.div`
-    font-family: var(--heading-font);
-    font-weight: var(--bold);
-    font-size: var(--body-2-d);
-    color: var(--Color-Text-Bold);
-`;
-
-const BrandTag = styled.div`
-    margin-top: 2px;
-    font-size: var(--body-5-d);
-    font-weight: var(--semi-bold);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
-    color: var(--Color-Text-Subtlest);
-`;
-
-const WorkspaceBadge = styled(Badge)`
-    width: fit-content;
-`;
-
-const NavGroup = styled.div`
-    display: grid;
-    gap: var(--Size-Gap-S);
-`;
-
-const NavLabel = styled.div`
-    padding: 0 var(--Size-Padding-L);
-    margin-bottom: var(--Size-Gap-S);
-    font-size: var(--body-5-d);
-    font-weight: var(--bold);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
-    color: var(--Color-Text-Subtlest);
-`;
-
-const NavItem = styled.button`
-    display: flex;
-    align-items: center;
-    gap: var(--Size-Gap-M);
-    width: 100%;
-    min-height: 40px;
-    padding: 0 var(--Size-Padding-L);
-    border: 1px solid ${({ $active }) => ($active ? "var(--Color-Border-Subtle)" : "transparent")};
-    border-radius: var(--Size-CornerRadius-M);
-    background: ${({ $active }) => ($active ? "var(--Color-Background-Default)" : "transparent")};
-    color: ${({ $active }) => ($active ? "var(--Color-Text-Bold)" : "var(--Color-Text-Subtle)")};
-    box-shadow: ${({ $active }) => ($active ? "0 1px 2px rgba(17, 19, 22, 0.06)" : "none")};
-    font-size: var(--body-3-d);
-    font-weight: var(--semi-bold);
-    text-align: left;
-    transition: all var(--transition-fast);
-
-    svg {
-        color: ${({ $active }) => ($active ? "var(--Color-Icon-Action)" : "var(--Color-Icon-Subtle)")};
-    }
-
-    &:hover {
-        background: var(--Color-Background-Default);
-        color: var(--Color-Text-Bold);
-        border-color: var(--Color-Border-Subtle);
-    }
-`;
-
-const Spacer = styled.div`
-    flex: 1;
-`;
-
-const ProfileArea = styled.div`
-    position: relative;
-    display: grid;
-    gap: var(--Size-Gap-S);
-    padding-top: var(--Size-Padding-XL);
-    border-top: 1px solid var(--Color-Border-Subtle);
-`;
-
-const ProfileButton = styled.button`
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: var(--Size-Gap-M);
-    width: 100%;
-    padding: var(--Size-Padding-M);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-L);
-    background: var(--Color-Background-Default);
-    text-align: left;
-    transition: all var(--transition-fast);
-
-    &:hover {
-        box-shadow: var(--Color-Shadow-Card);
-        transform: translateY(-1px);
-    }
-`;
-
-const ProfileText = styled.div`
     min-width: 0;
 `;
 
-const ProfileName = styled.div`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--Color-Text-Bold);
-    font-size: var(--body-3-d);
+const BrandName = styled.h1`
+    margin: 0;
+    color: var(--Color-Text-Action);
+    font-family: var(--heading-font);
+    font-size: var(--h2-d);
+    line-height: 1.1;
     font-weight: var(--semi-bold);
+    letter-spacing: 0;
 `;
 
-const ProfileRole = styled.div`
-    margin-top: 1px;
-    color: var(--Color-Text-Subtlest);
-    font-size: var(--body-5-d);
+const BrandTag = styled.p`
+    margin: var(--Size-Gap-S) 0 0;
+    color: var(--Color-Text-Subtle);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+`;
+
+const CtaWrap = styled.div`
+    padding: 0 var(--Sidebar-Brand-Padding-X);
+    margin-bottom: var(--Sidebar-Section-Gap);
+`;
+
+const NewMeetingButton = styled.button`
+    width: 100%;
+    height: var(--Auth-Control-Height);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--Auth-Icon-Gap);
+    padding: 0 var(--Auth-Control-Padding-X);
+    border: 0;
+    border-radius: var(--Auth-Control-Radius);
+    background: var(--Color-Background-Action);
+    color: var(--Color-Text-Inverse);
+    font-family: var(--body-font);
+    font-size: var(--body-3-d);
+    line-height: var(--Auth-Footer-Line-Height);
+    font-weight: var(--regular);
+    transition: opacity var(--Auth-Transition);
+
+    &:hover {
+        opacity: var(--Sidebar-Cta-Hover-Opacity);
+    }
+
+    svg {
+        width: var(--Auth-Control-Icon-Size);
+        height: var(--Auth-Control-Icon-Size);
+        fill: currentColor;
+    }
+`;
+
+const Nav = styled.nav`
+    display: grid;
+    gap: var(--Size-Gap-S);
+`;
+
+const NavItem = styled.button`
+    width: 100%;
+    min-height: var(--Sidebar-Item-Height);
+    display: flex;
+    align-items: center;
+    gap: var(--Sidebar-Brand-Gap);
+    padding: var(--Sidebar-Item-Padding-Y) var(--Sidebar-Item-Padding-X);
+    border: 0;
+    border-right: var(--Sidebar-Active-Border-Width) solid
+        ${({ $active }) => ($active ? "var(--Color-Background-Action)" : "transparent")};
+    border-radius: var(--Auth-Control-Radius);
+    background: ${({ $active }) => ($active ? "var(--Color-Background-Subtle-3)" : "transparent")};
+    color: ${({ $active }) => ($active ? "var(--Color-Text-Action)" : "var(--Color-Text-Secondary)")};
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: ${({ $active }) => ($active ? "var(--bold)" : "var(--medium)")};
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+    text-align: left;
+    opacity: ${({ $active }) => ($active ? "var(--Sidebar-Active-Opacity)" : "1")};
+    transition:
+        background var(--Auth-Transition),
+        color var(--Auth-Transition),
+        border-color var(--Auth-Transition);
+
+    &:hover {
+        background: var(--Color-Background-Subtle-3);
+        color: var(--Color-Text-Action);
+    }
+
+    svg {
+        width: var(--Auth-Brand-Icon-Size);
+        height: var(--Auth-Brand-Icon-Size);
+        flex-shrink: 0;
+        stroke-width: var(--Auth-Icon-Stroke);
+    }
+`;
+
+const FooterNav = styled.div`
+    margin-top: auto;
+    padding-top: var(--Size-Padding-XL);
+    border-top: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+    position: relative;
+`;
+
+const SupportNav = styled(Nav)`
+    margin-top: var(--Sidebar-Support-Top-Gap);
 `;
 
 const ProfileMenu = styled.div`
     position: absolute;
     left: 0;
     right: 0;
-    bottom: calc(100% + 8px);
+    bottom: calc(100% + var(--Size-Gap-M));
     padding: var(--Size-Padding-S);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-L);
+    border: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+    border-radius: var(--Auth-Control-Radius);
     background: var(--Color-Background-Default);
     box-shadow: var(--Color-Shadow-1);
 `;
@@ -190,28 +186,44 @@ const ProfileMenu = styled.div`
 const MobileBar = styled.div`
     display: none;
 
-    @media (max-width: 1024px) {
+    @media (max-width: ${Breakpoints.laptop}px) {
+        min-height: var(--Sidebar-Mobile-Height);
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: var(--Size-Padding-M) var(--Size-Padding-XL);
-        background: rgba(255, 255, 255, 0.9);
-        border-bottom: 1px solid var(--Color-Border-Subtle);
+        background: var(--Color-Background-Subtle);
+        border-bottom: var(--Auth-Border-Width) solid var(--Color-Border-Default);
         position: sticky;
         top: 0;
         z-index: 40;
-        backdrop-filter: blur(16px);
     }
 `;
 
+const MobileBrand = styled.button`
+    display: inline-flex;
+    align-items: center;
+    gap: var(--Size-Gap-M);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--Color-Text-Action);
+`;
+
+const MobileBrandName = styled.span`
+    font-family: var(--heading-font);
+    font-size: var(--h3-d);
+    font-weight: var(--semi-bold);
+`;
+
 const MenuButton = styled.button`
-    width: 38px;
-    height: 38px;
-    display: flex;
+    width: var(--Auth-Control-Height);
+    height: var(--Auth-Control-Height);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--Color-Border-Default);
-    border-radius: var(--Size-CornerRadius-M);
+    border: var(--Auth-Border-Width) solid var(--Color-Border-Default);
+    border-radius: var(--Auth-Control-Radius);
     background: var(--Color-Background-Default);
     color: var(--Color-Icon-Default);
 `;
@@ -220,25 +232,25 @@ const MobileMenu = styled.div`
     display: grid;
     gap: var(--Size-Gap-S);
     padding: var(--Size-Padding-L) var(--Size-Padding-XL) var(--Size-Padding-XL);
-    background: rgba(255, 255, 255, 0.96);
-    border-bottom: 1px solid var(--Color-Border-Subtle);
+    background: var(--Color-Background-Default);
+    border-bottom: var(--Auth-Border-Width) solid var(--Color-Border-Default);
 `;
 
 const NAV_ITEMS = [
     { view: HOST_VIEWS.Dashboard, label: "Dashboard", icon: LayoutDashboard },
-    { view: HOST_VIEWS.Join, label: "Join Meeting", icon: LogIn },
+    { view: HOST_VIEWS.Join, label: "Join Meeting", icon: Video },
     { view: HOST_VIEWS.Settings, label: "Settings", icon: SettingsIcon },
 ];
 
 const NavItems = ({ hostView, onSelect }) => (
-    <NavGroup>
+    <Nav>
         {NAV_ITEMS.map(({ view, label, icon: Icon }) => (
             <NavItem key={view} type="button" $active={hostView === view} onClick={() => onSelect(view)}>
-                <Icon size={18} />
+                <Icon aria-hidden="true" />
                 {label}
             </NavItem>
         ))}
-    </NavGroup>
+    </Nav>
 );
 
 const Navbar = () => {
@@ -255,73 +267,81 @@ const Navbar = () => {
         setMenuOpen(false);
     };
 
+    const requestNewMeeting = () => {
+        selectView(HOST_VIEWS.Dashboard);
+        window.setTimeout(() => {
+            window.dispatchEvent(new CustomEvent(UI_EVENTS.OpenNewMeeting));
+        }, 0);
+    };
+
     const handleLogout = () => dispatch(logout());
 
     return (
         <>
             <Sidebar>
-                <Brand type="button" onClick={() => selectView(HOST_VIEWS.Dashboard)}>
-                    <BrandMark>
-                        <AudioWaveform size={20} />
-                    </BrandMark>
-                    <BrandText>
-                        <BrandName>MeetAI</BrandName>
-                        <BrandTag>Host Workspace</BrandTag>
-                    </BrandText>
-                </Brand>
+                <SidebarInner>
+                    <Brand type="button" onClick={() => selectView(HOST_VIEWS.Dashboard)}>
+                        <BrandAvatar name={displayName} size="large" />
+                        <BrandText>
+                            <BrandName>MeetAI</BrandName>
+                            <BrandTag>Editorial Workspace</BrandTag>
+                        </BrandText>
+                    </Brand>
 
-                <WorkspaceBadge tone="neutral">Production workspace</WorkspaceBadge>
+                    <CtaWrap>
+                        <NewMeetingButton type="button" onClick={requestNewMeeting}>
+                            <Plus aria-hidden="true" />
+                            New Meeting
+                        </NewMeetingButton>
+                    </CtaWrap>
 
-                <NavGroup>
-                    <NavLabel>Navigation</NavLabel>
                     <NavItems hostView={hostView} onSelect={selectView} />
-                </NavGroup>
 
-                <Spacer />
+                    <SupportNav>
+                        <NavItem
+                            type="button"
+                            onClick={() => window.location.assign("mailto:support@meetai.studio")}
+                        >
+                            <HelpCircle aria-hidden="true" />
+                            Help
+                        </NavItem>
+                    </SupportNav>
 
-                <NavGroup>
-                    <NavLabel>Support</NavLabel>
-                    <NavItem type="button" onClick={() => window.location.assign("mailto:support@meetai.studio")}>
-                        <HelpCircle size={18} />
-                        Help
-                    </NavItem>
-                </NavGroup>
-
-                <ProfileArea>
-                    {profileOpen && (
-                        <ProfileMenu>
-                            <NavItem type="button" onClick={handleLogout} id="sign-out-btn-desktop">
-                                <LogOut size={18} />
-                                Sign Out
-                            </NavItem>
-                        </ProfileMenu>
-                    )}
-                    <ProfileButton type="button" onClick={() => setProfileOpen((value) => !value)} aria-haspopup="menu">
-                        <Avatar name={displayName} />
-                        <ProfileText>
-                            <ProfileName>{displayName}</ProfileName>
-                            <ProfileRole>Workspace admin</ProfileRole>
-                        </ProfileText>
-                    </ProfileButton>
-                </ProfileArea>
+                    <FooterNav>
+                        {profileOpen && (
+                            <ProfileMenu>
+                                <NavItem type="button" onClick={handleLogout} id="sign-out-btn-desktop">
+                                    <LogOut aria-hidden="true" />
+                                    Sign Out
+                                </NavItem>
+                            </ProfileMenu>
+                        )}
+                        <NavItem type="button" onClick={() => setProfileOpen((value) => !value)} aria-haspopup="menu">
+                            <CircleUserRound aria-hidden="true" />
+                            Profile
+                        </NavItem>
+                    </FooterNav>
+                </SidebarInner>
             </Sidebar>
 
             <MobileBar>
-                <Brand type="button" onClick={() => selectView(HOST_VIEWS.Dashboard)} style={{ width: "auto" }}>
-                    <BrandMark style={{ width: 34, height: 34 }}>
-                        <AudioWaveform size={16} />
-                    </BrandMark>
-                    <BrandName>MeetAI</BrandName>
-                </Brand>
+                <MobileBrand type="button" onClick={() => selectView(HOST_VIEWS.Dashboard)}>
+                    <BrandAvatar name={displayName} size="default" />
+                    <MobileBrandName>MeetAI</MobileBrandName>
+                </MobileBrand>
                 <MenuButton type="button" onClick={() => setMenuOpen((value) => !value)} id="mobile-menu-toggle">
                     {menuOpen ? <X size={18} /> : <Menu size={18} />}
                 </MenuButton>
             </MobileBar>
             {menuOpen && (
                 <MobileMenu>
+                    <NewMeetingButton type="button" onClick={requestNewMeeting}>
+                        <Plus aria-hidden="true" />
+                        New Meeting
+                    </NewMeetingButton>
                     <NavItems hostView={hostView} onSelect={selectView} />
                     <NavItem type="button" onClick={handleLogout} id="sign-out-btn-mobile">
-                        <LogOut size={18} />
+                        <LogOut aria-hidden="true" />
                         Sign Out
                     </NavItem>
                 </MobileMenu>

@@ -29,18 +29,17 @@ const Layout = styled.div`
 
 const Card = styled.div`
     background: var(--Color-Background-Default);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XXL);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-M);
     box-shadow: var(--Color-Shadow-Card);
     overflow: hidden;
 `;
 
 const Header = styled.div`
     padding: var(--Size-Padding-XXXL);
-    background:
-        linear-gradient(135deg, rgba(21, 22, 24, 0.98), rgba(38, 42, 47, 0.96)),
-        var(--Color-Background-Bold);
-    color: var(--Color-Text-Inverse);
+    background: var(--Color-Background-Subtle);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
+    color: var(--Color-Text-Bold);
 `;
 
 const Body = styled.div`
@@ -93,8 +92,8 @@ const ApprovedSection = styled.section`
     display: grid;
     gap: var(--Size-Gap-XL);
     padding: var(--Size-Padding-XXL);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XXL);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Default);
     box-shadow: var(--Color-Shadow-Card);
 `;
@@ -122,10 +121,10 @@ const ApprovedCard = styled.button`
     display: grid;
     gap: var(--Size-Gap-XXL);
     padding: var(--Size-Padding-XXXL);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XXL);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Default);
-    box-shadow: 0 1px 2px rgba(17, 19, 22, 0.03);
+    box-shadow: var(--Color-Shadow-Card);
     color: inherit;
     cursor: pointer;
     text-align: left;
@@ -133,8 +132,8 @@ const ApprovedCard = styled.button`
         box-shadow var(--transition-fast);
 
     &:hover {
-        border-color: var(--Color-Border-Bold);
-        box-shadow: var(--Color-Shadow-Card);
+        border-color: var(--Color-Border-Accent-Action);
+        box-shadow: var(--Color-Shadow-1);
         transform: translateY(-2px);
     }
 
@@ -175,7 +174,8 @@ const IconOrb = styled.div`
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    border-radius: var(--Size-CornerRadius-Full);
+    border: 1px solid var(--Color-Border-Accent-Action);
+    border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Accent-Action);
     color: var(--Color-Text-Action);
 `;
@@ -218,7 +218,8 @@ const MetaPill = styled.span`
     align-items: center;
     gap: var(--Size-Gap-S);
     padding: 0 var(--Size-Padding-L);
-    border-radius: var(--Size-CornerRadius-L);
+    border-radius: var(--Size-CornerRadius-M);
+    border: 1px solid var(--Color-Border-Subtle);
     background: var(--Color-Background-Subtle);
     color: var(--Color-Text-Default);
     font-size: var(--body-3-d);
@@ -308,7 +309,7 @@ const JoinMeeting = () => {
                         <H2 style={{ color: "inherit", marginTop: "var(--Size-Gap-XL)" }}>
                             Join a shared meeting
                         </H2>
-                        <Body2 style={{ color: "rgba(255, 255, 255, 0.72)", marginTop: "var(--Size-Gap-M)" }}>
+                        <Body2 style={{ color: "var(--Color-Text-Subtle)", marginTop: "var(--Size-Gap-M)" }}>
                             Enter the meeting code shared by the host to open the read-only participant view.
                         </Body2>
                     </Header>

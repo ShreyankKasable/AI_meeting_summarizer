@@ -11,7 +11,7 @@ const Panel = styled.div`
     padding: var(--Size-Padding-XXL);
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XL);
+    border-radius: var(--Size-CornerRadius-M);
     box-shadow: var(--Color-Shadow-Card);
     text-align: left;
 `;
@@ -28,9 +28,10 @@ const Label = styled.div`
     display: inline-flex;
     align-items: center;
     gap: var(--Size-Gap-S);
+    font-family: var(--mono-font);
     font-size: var(--body-4-d);
-    font-weight: var(--bold);
-    letter-spacing: var(--letter-spacing-wide);
+    font-weight: var(--medium);
+    letter-spacing: var(--letter-spacing-widest);
     text-transform: uppercase;
     color: var(--Color-Text-Action);
 `;

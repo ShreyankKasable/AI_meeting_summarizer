@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
-import { Bell, CheckCircle2, Cpu, Loader2, Sliders } from "lucide-react";
+import { Bell, CheckCircle2, Cpu, Loader2, Sliders, UserRound } from "lucide-react";
 import PageContainer from "common/components/PageContainer";
 import Badge from "common/components/Badge";
 import { SkeletonBlock, SkeletonCard, SkeletonStack } from "common/components/Skeleton";
-import { H1, Body2, Body3 } from "common/global-styled-components";
+import { H1, Body2, Body3, Eyebrow } from "common/global-styled-components";
 import { fetchSettings, saveSetting } from "common/redux/actions/settingsActions";
+import AccountWorkspaceTab from "./AccountWorkspaceTab";
 import AiProvidersTab from "./AiProvidersTab";
 import IntegrationsTab from "./IntegrationsTab";
 import NotificationsTab from "./NotificationsTab";
@@ -14,9 +15,11 @@ import NotificationsTab from "./NotificationsTab";
 const Header = styled.div`
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
+    align-items: start;
     gap: var(--Size-Gap-XXL);
     margin-bottom: var(--Size-Gap-XXXL);
+    padding-bottom: var(--Size-Padding-XXXL);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
 
     @media (max-width: 760px) {
         grid-template-columns: 1fr;
@@ -25,7 +28,7 @@ const Header = styled.div`
 
 const Layout = styled.div`
     display: grid;
-    grid-template-columns: 250px minmax(0, 1fr);
+    grid-template-columns: 272px minmax(0, 1fr);
     gap: var(--Size-Gap-XXL);
     align-items: flex-start;
 
@@ -43,7 +46,7 @@ const TabRail = styled.div`
     padding: var(--Size-Padding-M);
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XL);
+    border-radius: var(--Size-CornerRadius-M);
     box-shadow: var(--Color-Shadow-Card);
 
     @media (max-width: 860px) {
@@ -57,11 +60,11 @@ const TabButton = styled.button`
     display: flex;
     align-items: center;
     gap: var(--Size-Gap-M);
-    min-height: 42px;
+    min-height: 44px;
     padding: 0 var(--Size-Padding-L);
-    border: 1px solid ${({ $active }) => ($active ? "var(--Color-Border-Subtle)" : "transparent")};
+    border: 1px solid ${({ $active }) => ($active ? "var(--Color-Border-Action)" : "transparent")};
     border-radius: var(--Size-CornerRadius-M);
-    background: ${({ $active }) => ($active ? "var(--Color-Background-Subtle)" : "transparent")};
+    background: ${({ $active }) => ($active ? "var(--Color-Background-Accent-Action)" : "transparent")};
     color: ${({ $active }) => ($active ? "var(--Color-Text-Bold)" : "var(--Color-Text-Subtle)")};
     font-size: var(--body-3-d);
     font-weight: var(--semi-bold);
@@ -105,6 +108,7 @@ const LoadingGrid = styled.div`
 `;
 
 const TABS = [
+    { id: "account", label: "Account & Workspace", icon: UserRound },
     { id: "providers", label: "AI Providers", icon: Cpu },
     { id: "integrations", label: "Integrations", icon: Sliders },
     { id: "notifications", label: "Notifications", icon: Bell },
@@ -115,7 +119,8 @@ const Settings = () => {
     const status = useSelector((state) => state.settingsDetails.status);
     const saving = useSelector((state) => state.settingsDetails.saving);
     const lastSavedAt = useSelector((state) => state.settingsDetails.lastSavedAt);
-    const [activeTab, setActiveTab] = useState("providers");
+    const user = useSelector((state) => state.sessionDetails.user);
+    const [activeTab, setActiveTab] = useState("account");
 
     useEffect(() => {
         dispatch(fetchSettings());
@@ -129,18 +134,16 @@ const Settings = () => {
         <PageContainer size="xl">
             <Header>
                 <div>
-                    <Badge tone="neutral">System settings</Badge>
-                    <H1 style={{ fontSize: "var(--h2-d)", marginTop: "var(--Size-Gap-L)" }}>
-                        AI Engine Configuration
-                    </H1>
+                    <Eyebrow>System settings</Eyebrow>
+                    <H1 style={{ marginTop: "var(--Size-Gap-L)" }}>Workspace Configuration</H1>
                     <Body2
                         style={{
                             color: "var(--Color-Text-Subtle)",
                             marginTop: "var(--Size-Gap-M)",
                         }}
                     >
-                        Configure the providers and integrations powering transcription, summaries,
-                        and chat.
+                        Configure account context, providers, integrations, notifications, and data
+                        policies for the MeetAI workspace.
                     </Body2>
                 </div>
                 {saving ? (
@@ -192,6 +195,7 @@ const Settings = () => {
                         </LoadingGrid>
                     ) : (
                         <>
+                            {activeTab === "account" && <AccountWorkspaceTab user={user} />}
                             {activeTab === "providers" && (
                                 <AiProvidersTab status={status} onSave={handleSave} />
                             )}

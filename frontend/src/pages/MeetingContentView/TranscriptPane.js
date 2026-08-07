@@ -12,12 +12,17 @@ const Wrapper = styled.div`
     display: flex;
     flex-direction: column;
     min-height: 0;
-    height: 100%;
+    height: min(860px, calc(100vh - 260px));
     background: var(--Color-Background-Default);
-    border-radius: var(--Size-CornerRadius-XXL);
+    border-radius: var(--Size-CornerRadius-M);
     border: 1px solid var(--Color-Border-Subtle);
     box-shadow: var(--Color-Shadow-Card);
     overflow: hidden;
+
+    @media (max-width: 1180px) {
+        height: auto;
+        min-height: 620px;
+    }
 `;
 
 const Header = styled.div`
@@ -27,7 +32,7 @@ const Header = styled.div`
     gap: var(--Size-Gap-XL);
     padding: var(--Size-Padding-XL) var(--Size-Padding-XXL);
     border-bottom: 1px solid var(--Color-Border-Subtle);
-    background: rgba(255, 255, 255, 0.88);
+    background: var(--Color-Background-Default);
 
     @media (max-width: 760px) {
         grid-template-columns: 1fr;
@@ -75,7 +80,7 @@ const Select = styled.select`
     color: var(--Color-Text-Default);
     border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Default);
+    background: var(--Color-Background-Subtle);
     outline: none;
 
     &:focus {
@@ -101,7 +106,8 @@ const SearchInput = styled.input`
     font-size: var(--body-3-d);
     border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Default);
+    background: var(--Color-Background-Subtle);
+    color: var(--Color-Text-Bold);
     outline: none;
 
     &:focus {
@@ -146,7 +152,7 @@ const Body = styled.div`
 `;
 
 const Highlight = styled.mark`
-    background: #fff2b8;
+    background: rgba(247, 189, 72, 0.34);
     color: var(--Color-Text-Bold);
     border-radius: var(--Size-CornerRadius-XS);
     padding: 0 2px;
@@ -203,7 +209,7 @@ const RenameButton = styled.button`
     color: var(--Color-Icon-Subtle);
 
     &:hover {
-        background: var(--Color-Background-Subtle-2);
+        background: var(--Color-Background-Subtle);
         color: var(--Color-Text-Bold);
     }
 `;
@@ -214,6 +220,8 @@ const RenameInput = styled.input`
     font-weight: var(--bold);
     border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-S);
+    background: var(--Color-Background-Default);
+    color: var(--Color-Text-Bold);
     padding: 0 var(--Size-Padding-M);
     outline: none;
 

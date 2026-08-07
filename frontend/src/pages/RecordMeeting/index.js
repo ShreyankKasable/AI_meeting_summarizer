@@ -55,11 +55,9 @@ const Studio = styled(motion.div)`
 
 const RecordingCard = styled.div`
     padding: var(--Size-Padding-4XL);
-    border: 1px solid rgba(255, 255, 255, 0.82);
-    border-radius: var(--Size-CornerRadius-XXL);
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74)),
-        var(--Color-Background-Default);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Default);
     box-shadow: var(--Color-Shadow-1);
 
     @media (max-width: 640px) {
@@ -81,7 +79,7 @@ const VisualFrame = styled.div`
     margin: 0 auto;
     padding: var(--Size-Padding-XL);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XL);
+    border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Subtle);
 `;
 
@@ -131,7 +129,7 @@ const ProcessingBanner = styled.div`
     padding: var(--Size-Padding-XL);
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XL);
+    border-radius: var(--Size-CornerRadius-M);
     box-shadow: var(--Color-Shadow-Card);
     text-align: left;
 `;

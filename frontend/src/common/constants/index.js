@@ -57,3 +57,7 @@ export const STORAGE_KEYS = {
 };
 
 export const LIVE_CHUNK_MS = 10000;
+
+export const UI_EVENTS = {
+    OpenNewMeeting: "meetai:open-new-meeting",
+};

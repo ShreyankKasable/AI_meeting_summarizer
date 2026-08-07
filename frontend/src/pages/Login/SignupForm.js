@@ -2,76 +2,253 @@ import React, { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
-import Button from "common/components/Button";
-import Input from "common/components/Input";
 import Alert from "common/components/Alert";
-import { Body3 } from "common/global-styled-components";
 import { signup as signupThunk, setHostView } from "common/redux/actions/sessionActions";
 import AuthShell from "./AuthShell";
 
 const Form = styled.form`
-    display: flex;
-    flex-direction: column;
-    gap: var(--Size-Gap-XL);
+    display: grid;
+    gap: var(--Auth-Form-Gap);
 `;
 
-const PasswordToggle = styled.button`
-    width: 32px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: var(--Size-CornerRadius-S);
-    background: transparent;
-    color: var(--Color-Icon-Subtle);
+const Field = styled.div`
+    display: grid;
+    gap: var(--Auth-Field-Gap);
+`;
 
-    &:hover {
-        background: var(--Color-Background-Subtle);
-        color: var(--Color-Text-Bold);
+const Label = styled.label`
+    display: block;
+    color: var(--Auth-Color-Label);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+`;
+
+const InputShell = styled.div`
+    position: relative;
+`;
+
+const TextInput = styled.input`
+    width: 100%;
+    height: var(--Auth-Control-Height);
+    display: block;
+    padding: 0
+        ${({ $hasAddon }) =>
+            $hasAddon ? "var(--Auth-Control-Addon-Padding-X)" : "var(--Auth-Control-Padding-X)"}
+        0 var(--Auth-Control-Padding-X);
+    border: var(--Auth-Border-Width) solid
+        ${({ $hasError }) =>
+            $hasError ? "var(--Auth-Color-Danger-Border)" : "var(--Auth-Color-Border)"};
+    border-radius: var(--Auth-Control-Radius);
+    outline: none;
+    background: var(--Auth-Color-Control-Background);
+    color: var(--Auth-Color-Text);
+    font-family: var(--body-font);
+    font-size: var(--body-2-d);
+    line-height: var(--Auth-Control-Line-Height);
+    font-weight: var(--regular);
+    transition:
+        border-color var(--Auth-Transition),
+        background var(--Auth-Transition);
+
+    &::placeholder {
+        color: var(--Auth-Color-Control-Placeholder);
+    }
+
+    &:focus {
+        border-color: ${({ $hasError }) =>
+            $hasError ? "var(--Auth-Color-Danger-Border)" : "var(--Auth-Color-Primary)"};
+        background: var(--Auth-Color-Control-Background);
+        box-shadow: none;
     }
 `;
 
-const SocialGrid = styled.div`
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--Size-Gap-M);
-    margin-bottom: var(--Size-Gap-XL);
+const PasswordToggle = styled.button`
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: var(--Auth-Control-Height);
+    height: var(--Auth-Control-Height);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--Auth-Color-Text-Secondary);
+    transition: color var(--Auth-Transition);
 
-    @media (max-width: 420px) {
-        grid-template-columns: 1fr;
+    svg {
+        width: var(--Auth-Control-Icon-Size);
+        height: var(--Auth-Control-Icon-Size);
+        stroke-width: var(--Auth-Icon-Stroke);
+    }
+
+    &:hover {
+        color: var(--Auth-Color-Primary);
+    }
+`;
+
+const HelpText = styled.p`
+    margin: 0;
+    color: ${({ $error }) => ($error ? "var(--Auth-Color-Danger)" : "var(--Color-Text-Subtlest)")};
+    font-family: var(--body-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Help-Line-Height);
+`;
+
+const ActionArea = styled.div`
+    padding-top: var(--Auth-Action-Top-Gap);
+`;
+
+const PrimaryButton = styled.button`
+    width: 100%;
+    height: var(--Auth-Control-Height);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--Auth-Control-Radius);
+    background: var(--Auth-Color-Primary);
+    color: var(--Color-Text-Inverse);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+    transition: background var(--Auth-Transition);
+
+    &:hover:not(:disabled) {
+        background: var(--Auth-Color-Primary-Hover);
+    }
+
+    &:disabled {
+        opacity: var(--Auth-Disabled-Opacity);
+        cursor: not-allowed;
     }
 `;
 
 const Divider = styled.div`
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    position: relative;
+    margin: var(--Auth-Divider-Top-Gap) 0 var(--Auth-Divider-Bottom-Gap);
+    display: flex;
     align-items: center;
-    gap: var(--Size-Gap-M);
-    margin-bottom: var(--Size-Gap-XL);
-    color: var(--Color-Text-Subtlest);
+    justify-content: center;
+    color: var(--Auth-Color-Text-Tertiary);
+    font-family: var(--mono-font);
     font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
 
-    &::before,
-    &::after {
+    &::before {
         content: "";
-        height: 1px;
-        background: var(--Color-Border-Subtle);
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: var(--Auth-Border-Width);
+        background: var(--Auth-Color-Border);
+    }
+
+    span {
+        position: relative;
+        z-index: 1;
+        padding: 0 var(--Auth-Control-Padding-X);
+        background: var(--Auth-Color-Surface);
     }
 `;
 
-const ToggleRow = styled(Body3)`
-    margin-top: var(--Size-Gap-XL);
-    text-align: center;
+const GoogleButton = styled.button`
+    width: 100%;
+    height: var(--Auth-Control-Height);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--Auth-Button-Gap);
+    border: var(--Auth-Border-Width) solid var(--Auth-Color-Border);
+    border-radius: var(--Auth-Control-Radius);
+    background: var(--Auth-Color-Surface);
+    color: var(--Auth-Color-Text);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+    transition: background var(--Auth-Transition);
+
+    &:hover {
+        background: var(--Auth-Color-Surface-Subtle);
+    }
+
+    svg {
+        width: var(--Auth-Google-Icon-Size);
+        height: var(--Auth-Google-Icon-Size);
+        flex-shrink: 0;
+    }
+`;
+
+const ToggleText = styled.p`
+    margin: 0;
+    color: var(--Auth-Color-Text-Secondary);
+    font-family: var(--body-font);
+    font-size: var(--body-3-d);
+    line-height: var(--Auth-Footer-Line-Height);
 `;
 
 const ToggleLink = styled.button`
-    background: none;
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--Auth-Link-Gap);
+    margin-left: var(--Auth-Icon-Gap);
     padding: 0;
-    color: var(--Color-Text-Action);
-    font-weight: var(--semi-bold);
+    border: 0;
+    background: transparent;
+    color: var(--Auth-Color-Primary);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--Auth-Label-Line-Height);
+    font-weight: var(--medium);
+    letter-spacing: var(--Auth-Label-Tracking);
+    text-transform: uppercase;
+
+    svg {
+        width: var(--Auth-Link-Icon-Size);
+        height: var(--Auth-Link-Icon-Size);
+        flex-shrink: 0;
+        stroke-width: var(--Auth-Icon-Stroke);
+    }
+
+    &:hover {
+        text-decoration: underline;
+    }
 `;
+
+const GoogleLogo = () => (
+    <svg fill="none" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+            d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.26H17.92C17.66 15.63 16.88 16.78 15.7 17.57V20.34H19.26C21.34 18.42 22.56 15.6 22.56 12.25Z"
+            fill="var(--Auth-Color-Google-Blue)"
+        />
+        <path
+            d="M12 23C14.97 23 17.46 22.02 19.26 20.34L15.7 17.57C14.73 18.22 13.47 18.63 12 18.63C9.15 18.63 6.74 16.71 5.88 14.13H2.22V16.97C4.02 20.55 7.7 23 12 23Z"
+            fill="var(--Auth-Color-Google-Green)"
+        />
+        <path
+            d="M5.88 14.13C5.66 13.47 5.54 12.75 5.54 12C5.54 11.25 5.66 10.53 5.88 9.87V7.03H2.22C1.48 8.5 1.05 10.19 1.05 12C1.05 13.81 1.48 15.5 2.22 16.97L5.88 14.13Z"
+            fill="var(--Auth-Color-Google-Yellow)"
+        />
+        <path
+            d="M12 5.38C13.62 5.38 15.06 5.93 16.2 7.02L19.33 3.89C17.45 2.14 14.97 1 12 1C7.7 1 4.02 3.45 2.22 7.03L5.88 9.87C6.74 7.29 9.15 5.38 12 5.38Z"
+            fill="var(--Auth-Color-Google-Red)"
+        />
+    </svg>
+);
 
 const SignupForm = ({ onBackToLogin, onBackToLanding, postAuthView }) => {
     const dispatch = useDispatch();
@@ -89,6 +266,8 @@ const SignupForm = ({ onBackToLogin, onBackToLanding, postAuthView }) => {
         if (password.length < 8) return "Password is too short.";
         return "Password length looks good.";
     }, [password]);
+
+    const confirmError = Boolean(confirmPassword && password !== confirmPassword);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -114,85 +293,105 @@ const SignupForm = ({ onBackToLogin, onBackToLanding, postAuthView }) => {
     return (
         <AuthShell
             title={postAuthView ? "Create an account to join" : "Create your workspace"}
-            subtitle={postAuthView ? "Sign up first, then enter the meeting code shared by the host." : "Register a host account and start capturing meeting context."}
-            eyebrow={postAuthView ? "Participant access" : "Get started"}
+            subtitle={
+                postAuthView
+                    ? "Sign up first, then enter the meeting code shared by the host."
+                    : "Register a host account and start capturing meeting context."
+            }
             onBackToLanding={onBackToLanding}
+            footer={
+                <ToggleText>
+                    Already have an account?
+                    <ToggleLink type="button" onClick={onBackToLogin}>
+                        Sign in
+                        <ArrowRight aria-hidden="true" />
+                    </ToggleLink>
+                </ToggleText>
+            }
         >
-            <SocialGrid>
-                <Button type="button" mode="secondary" title="Social signup placeholder" disabled>
-                    Google
-                </Button>
-                <Button type="button" mode="secondary" title="Social signup placeholder" disabled>
-                    Microsoft
-                </Button>
-            </SocialGrid>
-            <Divider>Email registration</Divider>
             <Form onSubmit={handleSubmit}>
-                <Input
-                    label="Email Address"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="host@meetai.studio"
-                    id="signup-email"
-                    autoComplete="email"
-                />
-                <Input
-                    label="Password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    id="signup-password"
-                    autoComplete="new-password"
-                    helpText={passwordHelp}
-                    addon={
+                <Field>
+                    <Label htmlFor="signup-email">Email Address</Label>
+                    <TextInput
+                        id="signup-email"
+                        name="email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="jane@editorial.co"
+                        autoComplete="email"
+                    />
+                </Field>
+
+                <Field>
+                    <Label htmlFor="signup-password">Password</Label>
+                    <InputShell>
+                        <TextInput
+                            id="signup-password"
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="At least 8 characters"
+                            autoComplete="new-password"
+                            $hasAddon
+                        />
                         <PasswordToggle
                             type="button"
                             onClick={() => setShowPassword((value) => !value)}
                             aria-label={showPassword ? "Hide password" : "Show password"}
                         >
-                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                         </PasswordToggle>
-                    }
-                />
-                <Input
-                    label="Confirm Password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter your password"
-                    id="signup-confirm-password"
-                    autoComplete="new-password"
-                    error={confirmPassword && password !== confirmPassword ? "Passwords do not match." : ""}
-                    addon={
+                    </InputShell>
+                    <HelpText>{passwordHelp}</HelpText>
+                </Field>
+
+                <Field>
+                    <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                    <InputShell>
+                        <TextInput
+                            id="signup-confirm-password"
+                            name="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            required
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Re-enter your password"
+                            autoComplete="new-password"
+                            $hasAddon
+                            $hasError={confirmError}
+                        />
                         <PasswordToggle
                             type="button"
                             onClick={() => setShowConfirmPassword((value) => !value)}
                             aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                         >
-                            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            {showConfirmPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                         </PasswordToggle>
-                    }
-                />
+                    </InputShell>
+                    {confirmError && <HelpText $error>Passwords do not match.</HelpText>}
+                </Field>
 
                 <Alert>{error}</Alert>
 
-                <Button type="submit" block loader={status === "loading"}>
-                    Create Account
-                    <ArrowRight size={16} />
-                </Button>
+                <ActionArea>
+                    <PrimaryButton type="submit" disabled={status === "loading"}>
+                        {status === "loading" ? "Creating account" : "Create Account"}
+                    </PrimaryButton>
+                </ActionArea>
             </Form>
 
-            <ToggleRow>
-                Already have an account?{" "}
-                <ToggleLink type="button" onClick={onBackToLogin}>
-                    Sign in
-                </ToggleLink>
-            </ToggleRow>
+            <Divider>
+                <span>Or</span>
+            </Divider>
+
+            <GoogleButton type="button" title="Google signup placeholder">
+                <GoogleLogo />
+                Continue with Google
+            </GoogleButton>
         </AuthShell>
     );
 };

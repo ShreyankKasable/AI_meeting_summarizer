@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import { Bot, Send, Sparkles } from "lucide-react";
+import { Bot, CornerDownLeft, FileText, Send, Sparkles } from "lucide-react";
 import Avatar from "common/components/Avatar";
 import Badge from "common/components/Badge";
 import { H3, Body3 } from "common/global-styled-components";
@@ -9,11 +9,45 @@ const Wrapper = styled.div`
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-height: 0;
+    min-height: 580px;
 `;
 
-const Info = styled.div`
-    padding: var(--Size-Padding-XL) var(--Size-Padding-XXL) 0;
+const Suggestions = styled.div`
+    display: grid;
+    gap: var(--Size-Gap-M);
+    padding: var(--Size-Padding-XXL) var(--Size-Padding-XXL) 0;
+`;
+
+const SuggestionGrid = styled.div`
+    display: grid;
+    gap: var(--Size-Gap-M);
+`;
+
+const PromptButton = styled.button`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--Size-Gap-L);
+    min-height: 44px;
+    padding: 0 var(--Size-Padding-L);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Subtle);
+    color: var(--Color-Text-Default);
+    font-size: var(--body-3-d);
+    text-align: left;
+    transition: all var(--transition-fast);
+
+    &:hover {
+        background: var(--Color-Background-Default);
+        border-color: var(--Color-Border-Action);
+        box-shadow: var(--Color-Shadow-Card);
+    }
+
+    svg {
+        flex-shrink: 0;
+        color: var(--Color-Icon-Action);
+    }
 `;
 
 const Messages = styled.div`
@@ -23,7 +57,7 @@ const Messages = styled.div`
     padding: var(--Size-Padding-XXL);
     display: flex;
     flex-direction: column;
-    gap: var(--Size-Gap-L);
+    gap: var(--Size-Gap-XL);
 `;
 
 const Row = styled.div`
@@ -33,18 +67,33 @@ const Row = styled.div`
     align-items: flex-start;
 `;
 
-const Bubble = styled(Body3)`
+const BubbleStack = styled.div`
     max-width: 88%;
+    display: grid;
+    gap: var(--Size-Gap-S);
+`;
+
+const Bubble = styled(Body3)`
     padding: var(--Size-Padding-L) var(--Size-Padding-XL);
-    border: 1px solid ${({ $isUser }) => ($isUser ? "transparent" : "var(--Color-Border-Subtle)")};
-    border-radius: ${({ $isUser }) =>
-        $isUser
-            ? "var(--Size-CornerRadius-L) var(--Size-CornerRadius-L) var(--Size-CornerRadius-S) var(--Size-CornerRadius-L)"
-            : "var(--Size-CornerRadius-L) var(--Size-CornerRadius-L) var(--Size-CornerRadius-L) var(--Size-CornerRadius-S)"};
-    background: ${({ $isUser }) => ($isUser ? "var(--Color-Background-Bold)" : "var(--Color-Background-Default)")};
+    border: 1px solid ${({ $isUser }) => ($isUser ? "var(--Color-Border-Action)" : "var(--Color-Border-Subtle)")};
+    border-radius: var(--Size-CornerRadius-M);
+    background: ${({ $isUser }) =>
+        $isUser ? "var(--Color-Background-Action)" : "var(--Color-Background-Subtle)"};
     color: ${({ $isUser }) => ($isUser ? "var(--Color-Text-Inverse)" : "var(--Color-Text-Default)")};
-    box-shadow: ${({ $isUser }) => ($isUser ? "0 12px 24px rgba(17, 19, 22, 0.16)" : "var(--Color-Shadow-Card)")};
+    box-shadow: ${({ $isUser }) => ($isUser ? "var(--Color-Shadow-Action)" : "none")};
     white-space: pre-wrap;
+`;
+
+const SourceNote = styled.span`
+    display: inline-flex;
+    align-items: center;
+    gap: var(--Size-Gap-S);
+    width: fit-content;
+    color: var(--Color-Text-Subtlest);
+    font-family: var(--mono-font);
+    font-size: var(--body-5-d);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
 `;
 
 const EmptyState = styled.div`
@@ -62,7 +111,7 @@ const EmptyIcon = styled.div`
     align-items: center;
     justify-content: center;
     margin: 0 auto var(--Size-Gap-L);
-    border-radius: var(--Size-CornerRadius-L);
+    border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Accent-Action);
     color: var(--Color-Icon-Action);
 `;
@@ -71,7 +120,7 @@ const InputRow = styled.form`
     position: relative;
     padding: var(--Size-Padding-XL);
     border-top: 1px solid var(--Color-Border-Subtle);
-    background: rgba(255, 255, 255, 0.86);
+    background: var(--Color-Background-Default);
 `;
 
 const TextArea = styled.textarea`
@@ -82,15 +131,21 @@ const TextArea = styled.textarea`
     padding: var(--Size-Padding-L) 48px var(--Size-Padding-L) var(--Size-Padding-XL);
     font-size: var(--body-3-d);
     font-family: var(--body-font);
-    background: var(--Color-Background-Default);
+    background: var(--Color-Background-Subtle);
+    color: var(--Color-Text-Bold);
     border: 1px solid var(--Color-Border-Default);
-    border-radius: var(--Size-CornerRadius-L);
+    border-radius: var(--Size-CornerRadius-M);
     outline: none;
     transition: all var(--transition-fast);
+
+    &::placeholder {
+        color: var(--Color-Text-Subtlest);
+    }
 
     &:focus {
         border-color: var(--Color-Border-Action);
         box-shadow: var(--Color-Shadow-Focus);
+        background: var(--Color-Background-Default);
     }
 `;
 
@@ -126,6 +181,12 @@ const Thinking = styled.span`
     gap: var(--Size-Gap-S);
 `;
 
+const PROMPTS = [
+    "What decisions were made?",
+    "List open risks from the conversation.",
+    "Draft a follow-up email.",
+];
+
 const ChatTab = ({ messages = [], onSend, sending = false }) => {
     const [question, setQuestion] = useState("");
     const scrollRef = useRef(null);
@@ -134,21 +195,33 @@ const ChatTab = ({ messages = [], onSend, sending = false }) => {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }, [messages]);
 
+    const sendQuestion = (value) => {
+        if (!value.trim() || sending) return;
+        onSend(value.trim());
+        setQuestion("");
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!question.trim() || sending) return;
-        onSend(question.trim());
-        setQuestion("");
+        sendQuestion(question);
     };
 
     return (
         <Wrapper>
-            <Info>
+            <Suggestions>
                 <Badge tone="neutral">
                     <Sparkles size={13} />
-                    AI Chat
+                    Suggested prompts
                 </Badge>
-            </Info>
+                <SuggestionGrid>
+                    {PROMPTS.map((prompt) => (
+                        <PromptButton key={prompt} type="button" onClick={() => sendQuestion(prompt)}>
+                            {prompt}
+                            <CornerDownLeft size={14} />
+                        </PromptButton>
+                    ))}
+                </SuggestionGrid>
+            </Suggestions>
             {messages.length === 0 && !sending ? (
                 <EmptyState>
                     <div>
@@ -157,7 +230,7 @@ const ChatTab = ({ messages = [], onSend, sending = false }) => {
                         </EmptyIcon>
                         <H3 style={{ fontSize: "var(--subtitle-2-d)" }}>Ask about this meeting</H3>
                         <Body3 style={{ marginTop: "var(--Size-Gap-S)" }}>
-                            Questions and answers will appear here.
+                            Questions, answers, and transcript-grounded notes will appear here.
                         </Body3>
                     </div>
                 </EmptyState>
@@ -166,18 +239,28 @@ const ChatTab = ({ messages = [], onSend, sending = false }) => {
                     {messages.map((m, index) => (
                         <Row key={m.id || `${m.role}-${index}`} $isUser={m.role === "user"}>
                             {m.role !== "user" && <Avatar name="AI" size="small" />}
-                            <Bubble $isUser={m.role === "user"}>{m.content}</Bubble>
+                            <BubbleStack>
+                                <Bubble $isUser={m.role === "user"}>{m.content}</Bubble>
+                                {m.role !== "user" && (
+                                    <SourceNote>
+                                        <FileText size={12} />
+                                        Transcript referenced
+                                    </SourceNote>
+                                )}
+                            </BubbleStack>
                         </Row>
                     ))}
                     {sending && (
                         <Row>
                             <Avatar name="AI" size="small" />
-                            <Bubble>
-                                <Thinking>
-                                    <Sparkles size={13} />
-                                    Thinking...
-                                </Thinking>
-                            </Bubble>
+                            <BubbleStack>
+                                <Bubble>
+                                    <Thinking>
+                                        <Sparkles size={13} />
+                                        Thinking...
+                                    </Thinking>
+                                </Bubble>
+                            </BubbleStack>
                         </Row>
                     )}
                 </Messages>

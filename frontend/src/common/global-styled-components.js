@@ -43,7 +43,7 @@ export const H3 = styled.h3`
 `;
 
 export const SubTitle1 = styled.div`
-    font-family: var(--heading-font);
+    font-family: var(--body-font);
     font-weight: var(--semi-bold);
     font-size: var(--subtitle-1-d);
     line-height: var(--line-height-140);
@@ -51,7 +51,7 @@ export const SubTitle1 = styled.div`
 `;
 
 export const SubTitle2 = styled.div`
-    font-family: var(--heading-font);
+    font-family: var(--body-font);
     font-weight: var(--semi-bold);
     font-size: var(--subtitle-2-d);
     line-height: var(--line-height-140);
@@ -101,18 +101,18 @@ export const Body3_Bold = styled(Body3)`
 
 export const Eyebrow = styled.span`
     display: block;
-    font-family: var(--body-font);
-    font-weight: var(--bold);
+    font-family: var(--mono-font);
+    font-weight: var(--medium);
     font-size: var(--body-4-d);
-    letter-spacing: var(--letter-spacing-wide);
+    letter-spacing: var(--letter-spacing-widest);
     text-transform: uppercase;
     color: var(--Color-Text-Subtle);
 `;
 
 export const MonoLabel = styled.span`
     font-family: var(--mono-font);
-    font-weight: var(--semi-bold);
-    font-size: var(--body-5-d);
+    font-weight: var(--medium);
+    font-size: var(--body-4-d);
     letter-spacing: var(--letter-spacing-widest);
     text-transform: uppercase;
     color: var(--Color-Text-Action);
