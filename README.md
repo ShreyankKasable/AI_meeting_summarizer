@@ -27,6 +27,7 @@ chat with the meeting transcript.
 - PostgreSQL for persistent data
 - pgvector for transcript similarity search
 - Redis + BullMQ for background embedding jobs
+- Cloudflare R2 compatible recording storage
 - `pg` for database access
 - OpenAI-compatible, Anthropic, Deepgram, AssemblyAI, Hugging Face, and Notion integrations
 
@@ -67,6 +68,8 @@ OPENAI_API_KEY=your_openai_key
 EMBEDDING_MODEL=text-embedding-3-small
 EMBEDDING_DIMENSIONS=1536
 EMBEDDING_WORKER_CONCURRENCY=2
+
+AUDIO_STORAGE_PROVIDER=local
 ```
 
 Start the app:
@@ -126,6 +129,26 @@ receives the summary and the most relevant transcript excerpts. Embedding
 generation runs in the BullMQ worker after the meeting transcript is saved, so
 recording processing does not block on vector indexing.
 
+## Recording Storage
+
+By default, recordings are stored locally in `data/audio`. To store completed
+recordings in Cloudflare R2, create an R2 bucket and API token, then configure:
+
+```env
+AUDIO_STORAGE_PROVIDER=r2
+R2_ACCOUNT_ID=your_cloudflare_account_id
+R2_BUCKET=your_bucket_name
+R2_ACCESS_KEY_ID=your_r2_access_key_id
+R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
+R2_REGION=auto
+R2_KEY_PREFIX=recordings
+```
+
+`R2_ENDPOINT` is optional when `R2_ACCOUNT_ID` is set. The backend keeps a
+temporary local audio file only while transcription and processing run, uploads
+the final recording to R2, deletes the local copy, and streams playback through
+the existing `/data/audio/...` route.
+
 ## Project Structure
 
 ```text
@@ -141,7 +164,7 @@ backend/
 frontend/
   src/                   React application
 data/
-  audio/                 recorded audio files
+  audio/                 local temporary and local-provider recorded audio files
 docker-compose.yml       local PostgreSQL and Redis
 .env.example             sample environment
 ```

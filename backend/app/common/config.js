@@ -156,6 +156,23 @@ const config = convict({
     sample_rate: { format: 'int', default: 16000, env: 'AUDIO_SAMPLE_RATE' },
     channels: { format: 'int', default: 1, env: 'AUDIO_CHANNELS' },
   },
+  audio_storage: {
+    provider: {
+      doc: 'Recording storage backend: local | r2',
+      format: ['local', 'r2'],
+      default: 'local',
+      env: 'AUDIO_STORAGE_PROVIDER',
+    },
+  },
+  r2: {
+    account_id: { format: String, default: '', env: 'R2_ACCOUNT_ID' },
+    endpoint: { format: String, default: '', env: 'R2_ENDPOINT' },
+    bucket: { format: String, default: '', env: 'R2_BUCKET' },
+    access_key_id: { format: String, default: '', env: 'R2_ACCESS_KEY_ID', sensitive: true },
+    secret_access_key: { format: String, default: '', env: 'R2_SECRET_ACCESS_KEY', sensitive: true },
+    region: { format: String, default: 'auto', env: 'R2_REGION' },
+    key_prefix: { format: String, default: 'recordings', env: 'R2_KEY_PREFIX' },
+  },
   notion: {
     enabled: { format: Boolean, default: false, env: 'NOTION_ENABLED' },
     api_key: { format: String, default: '', env: 'NOTION_API_KEY', sensitive: true },

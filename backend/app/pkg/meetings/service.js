@@ -2,12 +2,9 @@
  * Meetings domain service: data access for meetings, action items and
  * participants.
  */
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import config from '#app/common/config.js';
-import logger from '#app/common/logger.js';
 import { EMBEDDING_STATUS } from '#app/common/constants.js';
 import { query, withTransaction } from '#app/connections/database.js';
+import { recordingStorageService } from '#app/pkg/storage/recording.service.js';
 
 const nowIso = () => new Date().toISOString();
 
@@ -89,7 +86,7 @@ export class MeetingsService {
     const deleted = result.rows[0];
     if (!deleted) return null;
 
-    await removeLocalAudioFile(deleted.audio_file_path);
+    await recordingStorageService.deleteRecording(deleted.audio_file_path);
     return formatMeeting(deleted);
   }
 
@@ -241,35 +238,6 @@ function safeJson (s) {
 function toIso (value) {
   if (!value) return null;
   return value instanceof Date ? value.toISOString() : value;
-}
-
-async function removeLocalAudioFile (audioFilePath) {
-  const resolved = resolveLocalAudioPath(audioFilePath);
-  if (!resolved) return;
-
-  try {
-    await fs.unlink(resolved);
-  } catch (error) {
-    if (error.code !== 'ENOENT') logger.warn(`Could not delete audio file ${resolved}:`, error.message);
-  }
-}
-
-function resolveLocalAudioPath (audioFilePath) {
-  if (!audioFilePath || typeof audioFilePath !== 'string') return null;
-
-  const audioDir = path.resolve(config.paths.AUDIO_DIR);
-  let candidate = null;
-
-  if (audioFilePath.startsWith('/data/audio/') || audioFilePath.startsWith('\\data\\audio\\')) {
-    candidate = path.resolve(audioDir, path.basename(audioFilePath));
-  } else if (path.isAbsolute(audioFilePath)) {
-    candidate = path.resolve(audioFilePath);
-  }
-
-  if (!candidate) return null;
-  const relative = path.relative(audioDir, candidate);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
-  return candidate;
 }
 
 export const meetingsService = new MeetingsService();

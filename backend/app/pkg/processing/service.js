@@ -9,13 +9,13 @@
  * connected browser tab receives it.
  */
 import fs from 'node:fs';
-import path from 'node:path';
 import logger from '#app/common/logger.js';
 import { SOCKET_EVENTS, PROCESSING_STATUS, EMBEDDING_STATUS } from '#app/common/constants.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 import { transcriptionService } from '#app/pkg/transcription/service.js';
 import { summarizerService } from '#app/pkg/summarizer/service.js';
 import { extractionService } from '#app/pkg/extraction/service.js';
+import { recordingStorageService } from '#app/pkg/storage/recording.service.js';
 import { enqueueEmbeddingJob } from '#app/queues/embedding.queue.js';
 
 export class ProcessingService {
@@ -31,11 +31,12 @@ export class ProcessingService {
 
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.EXTRACTING_ACTIONS });
       const rawItems = await extractionService.extract(transcript, summary);
+      const audioFilePath = await recordingStorageService.persistRecording(audioFile, { meetingId });
 
       const meeting = await meetingsService.endMeeting(meetingId, {
         transcript,
         summary: summary || 'No summary generated',
-        audioFilePath: audioFile ? `/data/audio/${path.basename(audioFile)}` : null,
+        audioFilePath,
       });
 
       try {

@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'node:crypto';
 import multer from 'multer';
 import { NotFound, UnauthorizedRequest, BadRequest } from '#app/common/error/index.js';
 import config from '#app/common/config.js';
@@ -37,7 +38,7 @@ const audioUpload = multer({
     destination: (req, file, cb) => cb(null, config.paths.AUDIO_DIR),
     filename: (req, file, cb) => {
       const prefix = req.path.endsWith('/audio-chunk') ? 'chunk' : 'meeting';
-      cb(null, `${prefix}_${req.params.id}_${Date.now()}.wav`);
+      cb(null, `${prefix}_${req.params.id}_${Date.now()}_${crypto.randomUUID()}.wav`);
     },
   }),
   limits: { fileSize: MAX_AUDIO_BYTES },
