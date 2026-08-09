@@ -58,6 +58,7 @@ Copy `.env.example` to `.env` and configure provider keys:
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/ai_meeting_summarizer
 DATABASE_SSL=false
 REDIS_URL=redis://127.0.0.1:6379
+FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 
 TRANSCRIPTION_MODEL=deepgram
 DEEPGRAM_API_KEY=your_deepgram_key
@@ -78,10 +79,11 @@ AUDIO_COMPRESSION_BITRATE_KBPS=48
 Start the app:
 
 ```bash
-npm start
+npm run dev
 ```
 
-The backend serves the frontend at `http://127.0.0.1:5000`.
+The frontend runs at `http://localhost:5173` and proxies API/Socket.IO traffic
+to the backend at `http://localhost:5000`.
 
 ## Development
 
@@ -94,8 +96,12 @@ npm run dev
 Run only the backend:
 
 ```bash
-node backend/index.js
+npm start
 ```
+
+The backend is API/Socket.IO only. It does not serve the React app; deploy the
+frontend separately and set `FRONTEND_ORIGINS` on the backend to the deployed
+frontend origin.
 
 Run only the embedding worker:
 

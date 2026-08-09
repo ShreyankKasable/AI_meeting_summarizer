@@ -46,6 +46,12 @@ const config = convict({
     default: 'dev-secret-key-change-in-production',
     env: 'SECRET_KEY',
   },
+  frontend_origins: {
+    doc: 'Comma-separated frontend origins allowed to call the API and Socket.IO with credentials',
+    format: String,
+    default: 'http://localhost:5173,http://127.0.0.1:5173',
+    env: 'FRONTEND_ORIGINS',
+  },
   database: {
     url: {
       doc: 'PostgreSQL connection URL',

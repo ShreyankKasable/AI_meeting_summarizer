@@ -14,13 +14,14 @@ import { SOCKET_EVENTS } from '#app/common/constants.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 import { authService } from '#app/pkg/auth/service.js';
 import { AUTH_ACCESS_COOKIE_NAME, getCookieValue } from '#app/api/middlewares/auth.js';
+import { corsOrigin } from '#app/api/middlewares/cors.js';
 
 let io = null;
 
 const hostRoom = (hostId) => `host:${hostId}`;
 
 export function setupSocket (httpServer) {
-  io = new Server(httpServer, { cors: { origin: true, credentials: true } });
+  io = new Server(httpServer, { cors: { origin: corsOrigin, credentials: true } });
 
   // Reject connections without the same valid host access JWT used by the REST API.
   // The production path reads it from the HTTP-only cookie; the handshake auth

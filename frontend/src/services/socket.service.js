@@ -3,10 +3,11 @@ import { io } from "socket.io-client";
 // Singleton connection opened once by useSocket. Auth is sent through the
 // HTTP-only cookie that the backend set during login.
 let socket = null;
+const SOCKET_URL = import.meta.env?.VITE_API_BASE_URL || undefined;
 
 export function connectSocket() {
     if (socket) return socket;
-    socket = io({ withCredentials: true });
+    socket = io(SOCKET_URL, { withCredentials: true });
     return socket;
 }
 
