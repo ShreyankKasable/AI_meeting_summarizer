@@ -242,6 +242,10 @@ const MeetingContentView = () => {
     }, [activeId]);
 
     useEffect(() => {
+        setTranslatedText(null);
+    }, [activeId]);
+
+    useEffect(() => {
         if (!TABS.some((tab) => tab.id === activeTab)) setActiveTab("chat");
     }, [activeTab]);
 
@@ -293,6 +297,11 @@ const MeetingContentView = () => {
     };
 
     const handleTranslate = async (language) => {
+        if (!language) {
+            setTranslatedText(null);
+            return;
+        }
+
         setTranslating(true);
         try {
             const { data } = await MeetingService.translate(activeId, language);

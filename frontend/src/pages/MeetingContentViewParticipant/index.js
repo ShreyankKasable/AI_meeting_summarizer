@@ -268,6 +268,10 @@ const MeetingContentViewParticipant = ({ token }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
+    useEffect(() => {
+        setTranslatedText(null);
+    }, [token, meeting?.id]);
+
     if (invalid) return <InvalidToken />;
 
     if (!meeting) {
@@ -323,6 +327,11 @@ const MeetingContentViewParticipant = ({ token }) => {
     };
 
     const handleTranslate = async (language) => {
+        if (!language) {
+            setTranslatedText(null);
+            return;
+        }
+
         setTranslating(true);
         try {
             const { data } = await ShareService.translate(token, language);

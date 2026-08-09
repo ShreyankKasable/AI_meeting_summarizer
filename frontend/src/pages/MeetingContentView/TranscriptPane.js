@@ -331,7 +331,7 @@ const TranscriptPane = ({
     const handleLanguageChange = (e) => {
         const lang = e.target.value;
         setLanguage(lang);
-        if (lang) onTranslate?.(lang);
+        onTranslate?.(lang);
     };
 
     return (
