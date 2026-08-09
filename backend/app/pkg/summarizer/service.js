@@ -4,6 +4,9 @@
  */
 import config from '#app/common/config.js';
 import logger from '#app/common/logger.js';
+import {
+  chunkTextByWords, countWords, positiveInt, transcriptToText, trimToWordLimit,
+} from '#app/pkg/llm/transcript-context.js';
 
 export class SummarizerService {
   constructor () {
@@ -49,16 +52,39 @@ export class SummarizerService {
 
   async summarize (transcriptData) {
     await this._ready;
-    const text = transcriptData && typeof transcriptData === 'object'
-      ? (transcriptData.text || '')
-      : (transcriptData || '');
-    const prompt = this._buildPrompt(text);
+    const text = transcriptToText(transcriptData);
+    if (!text) return this._fallback(text);
 
-    if (this.useLocal && this._llama) return this._summarizeLocal(prompt);
-    const provider = this._resolveProvider();
-    if (provider === 'anthropic') return this._summarizeClaude(prompt);
-    if (provider) return this._summarizeOpenAI(prompt, provider);
-    return this._fallback(text);
+    const directWordLimit = positiveInt(config.get('llm.direct_transcript_words'), 6000);
+    if (countWords(text) > directWordLimit) {
+      return this._summarizeLongTranscript(text, directWordLimit);
+    }
+
+    const summary = await this._summarizePrompt(this._buildPrompt(text), { maxTokens: 2500 });
+    return summary || this._fallback(text);
+  }
+
+  async _summarizeLongTranscript (transcript, directWordLimit) {
+    const chunkWords = positiveInt(config.get('llm.summary_chunk_words'), 1200);
+    const overlapWords = Math.min(
+      positiveInt(config.get('llm.summary_chunk_overlap_words'), 120),
+      Math.floor(chunkWords / 2)
+    );
+    const chunks = chunkTextByWords(transcript, { chunkWords, overlapWords });
+
+    logger.info(`Summarizing long transcript in ${chunks.length} chunks (${countWords(transcript)} words)`);
+
+    const chunkSummaries = [];
+    for (const chunk of chunks) {
+      const summary = await this._summarizePrompt(this._buildChunkPrompt(chunk, chunks.length), { maxTokens: 700 }); // eslint-disable-line no-await-in-loop
+      if (summary) chunkSummaries.push(`Excerpt ${chunk.index}:\n${summary}`);
+    }
+
+    if (!chunkSummaries.length) return this._fallback(transcript);
+
+    const compactSummaries = trimToWordLimit(chunkSummaries.join('\n\n'), directWordLimit);
+    const merged = await this._summarizePrompt(this._buildMergePrompt(compactSummaries), { maxTokens: 2500 });
+    return merged || compactSummaries;
   }
 
   _buildPrompt (transcript) {
@@ -123,7 +149,53 @@ ${transcript}
 Please provide the final answer as polished Markdown with specific examples and short quotes where relevant:`;
   }
 
-  async _summarizeOpenAI (prompt, provider) {
+  _buildChunkPrompt (chunk, totalChunks) {
+    return `You are summarizing one excerpt from a longer meeting transcript.
+
+Return a compact Markdown brief for this excerpt only. Focus on:
+- Main topics
+- Key facts or concerns
+- Decisions
+- Action items and owners
+- Open questions
+
+Excerpt ${chunk.index} of ${totalChunks}:
+${chunk.text}
+
+Compact excerpt brief:`;
+  }
+
+  _buildMergePrompt (chunkSummaries) {
+    return `You are an expert meeting analyst. Combine the following excerpt briefs into one polished meeting summary.
+
+Return Markdown only. Avoid repeating the same point multiple times. Preserve concrete decisions, action items, owners, risks, and open questions.
+
+Use these sections:
+
+## Meeting Overview
+## Main Topics Discussed
+## Key Points and Insights
+## Decisions Made
+## Action Items and Next Steps
+## Discussion Details
+## Participants and Contributions
+## Follow-up Items
+
+Excerpt Briefs:
+${chunkSummaries}
+
+Final meeting summary:`;
+  }
+
+  async _summarizePrompt (prompt, { maxTokens = 2500 } = {}) {
+    if (this.useLocal && this._llama) return this._summarizeLocal(prompt, maxTokens);
+    const provider = this._resolveProvider();
+    if (provider === 'anthropic') return this._summarizeClaude(prompt, maxTokens);
+    if (provider) return this._summarizeOpenAI(prompt, provider, maxTokens);
+    return null;
+  }
+
+  async _summarizeOpenAI (prompt, provider, maxTokens = 2500) {
     try {
       const client = this.openAIClients[provider];
       const response = await client.chat.completions.create({
@@ -133,7 +205,7 @@ Please provide the final answer as polished Markdown with specific examples and 
           { role: 'user', content: prompt },
         ],
         temperature: 0.3,
-        max_tokens: 2500,
+        max_tokens: maxTokens,
       });
       return response.choices[0].message.content;
     } catch (e) {
@@ -142,11 +214,11 @@ Please provide the final answer as polished Markdown with specific examples and 
     }
   }
 
-  async _summarizeClaude (prompt) {
+  async _summarizeClaude (prompt, maxTokens = 1500) {
     try {
       const response = await this.anthropicClient.messages.create({
         model: config.get('anthropic.model'),
-        max_tokens: 1500,
+        max_tokens: maxTokens,
         temperature: 0.3,
         system: 'You are an expert meeting analyst who provides comprehensive, detailed meeting summaries in clean Markdown. Always return Markdown only, with headings and bullet lists.',
         messages: [{ role: 'user', content: prompt }],
@@ -180,14 +252,14 @@ Please provide the final answer as polished Markdown with specific examples and 
     return config.get('openai.model');
   }
 
-  async _summarizeLocal (prompt) {
+  async _summarizeLocal (prompt, maxTokens = 1500) {
     try {
       const { getLlama, LlamaChatSession } = this._llama;
       const llama = await getLlama();
       const model = await llama.loadModel({ modelPath: config.get('local_model_path') });
       const context = await model.createContext();
       const session = new LlamaChatSession({ contextSequence: context.getSequence() });
-      return await session.prompt(prompt, { temperature: 0.3, maxTokens: 1500 });
+      return await session.prompt(prompt, { temperature: 0.3, maxTokens });
     } catch (e) {
       logger.error('Local model summarization error:', e.message);
       return null;

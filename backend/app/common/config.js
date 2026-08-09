@@ -92,6 +92,32 @@ const config = convict({
     default: 'openai',
     env: 'LLM_PROVIDER',
   },
+  llm: {
+    direct_transcript_words: {
+      doc: 'Maximum transcript words sent directly to summary/action LLM calls before compacting',
+      format: 'int',
+      default: 6000,
+      env: 'LLM_DIRECT_TRANSCRIPT_WORDS',
+    },
+    summary_chunk_words: {
+      doc: 'Transcript words per chunk for long-meeting summarization',
+      format: 'int',
+      default: 1200,
+      env: 'LLM_SUMMARY_CHUNK_WORDS',
+    },
+    summary_chunk_overlap_words: {
+      doc: 'Overlapping transcript words between long-meeting summary chunks',
+      format: 'int',
+      default: 120,
+      env: 'LLM_SUMMARY_CHUNK_OVERLAP_WORDS',
+    },
+    action_context_words: {
+      doc: 'Maximum compact transcript words sent to action-item extraction for long meetings',
+      format: 'int',
+      default: 4500,
+      env: 'LLM_ACTION_CONTEXT_WORDS',
+    },
+  },
   embedding: {
     model: { format: String, default: 'text-embedding-3-small', env: 'EMBEDDING_MODEL' },
     dimensions: { format: 'int', default: 1536, env: 'EMBEDDING_DIMENSIONS' },

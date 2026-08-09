@@ -4,6 +4,9 @@
  */
 import config from '#app/common/config.js';
 import logger from '#app/common/logger.js';
+import {
+  countWords, positiveInt, selectActionCandidateText, transcriptToText, trimToWordLimit,
+} from '#app/pkg/llm/transcript-context.js';
 
 export class ExtractionService {
   constructor () {
@@ -38,10 +41,11 @@ export class ExtractionService {
 
   async extract (transcriptData, summary = null) {
     await this._ready;
-    const text = transcriptData && typeof transcriptData === 'object'
-      ? (transcriptData.text || '')
-      : (transcriptData || '');
-    const prompt = this._buildPrompt(text, summary);
+    const text = transcriptToText(transcriptData);
+    const directWordLimit = positiveInt(config.get('llm.direct_transcript_words'), 6000);
+    const prompt = countWords(text) > directWordLimit
+      ? this._buildCompactPrompt(text, summary)
+      : this._buildPrompt(text, summary);
 
     const provider = this._resolveProvider();
     if (provider === 'anthropic') return this._extractClaude(prompt);
@@ -79,6 +83,39 @@ Example output format:
     "priority": "medium"
   }
 ]
+
+Action Items (JSON array):`;
+  }
+
+  _buildCompactPrompt (transcript, summary) {
+    const maxContextWords = positiveInt(config.get('llm.action_context_words'), 4500);
+    const summaryWords = summary ? trimToWordLimit(summary, Math.min(1800, Math.floor(maxContextWords / 2))) : '';
+    const transcriptBudget = Math.max(1000, maxContextWords - countWords(summaryWords));
+    const candidates = selectActionCandidateText(transcript, { maxWords: transcriptBudget });
+
+    logger.info(
+      `Extracting action items from compact context (${countWords(transcript)} transcript words -> ${countWords(candidates)} candidate words)`
+    );
+
+    return `You are an expert at identifying action items from meeting transcripts.
+
+The original transcript is long, so you are given:
+1. A meeting summary generated from the full transcript
+2. The transcript passages most likely to contain assignments, deadlines, owners, and follow-ups
+
+Extract ALL concrete action items you can identify. For each action item, provide:
+1. description: Clear description of what needs to be done
+2. assignee: Who is responsible (if mentioned, otherwise null)
+3. due_date: When it's due (if mentioned, otherwise null)
+4. priority: Priority level (high, medium, or low)
+
+Return your response as a JSON array of action items. Do not include commentary outside JSON.
+
+Meeting Summary:
+${summaryWords || 'No summary available.'}
+
+Likely Action Passages:
+${candidates || 'No action-like transcript passages found.'}
 
 Action Items (JSON array):`;
   }
