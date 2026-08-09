@@ -62,10 +62,28 @@ const MeetingService = {
         return ApiService.put(URLS.meetingSpeakers(id), { data: { speaker, name } });
     },
 
-    uploadAudio(id, blob) {
+    startMultipartAudio(id, { contentType, extension } = {}) {
+        return ApiService.post(URLS.meetingAudioMultipartStart(id), {
+            data: { content_type: contentType, extension },
+        });
+    },
+    uploadMultipartAudioPart(id, { uploadId, key, partNumber, blob }) {
         const formData = new FormData();
-        formData.append("audio", blob, "audio.wav");
-        return ApiService.postForm(`${URLS.meeting(id)}/audio`, formData);
+        formData.append("uploadId", uploadId);
+        formData.append("key", key);
+        formData.append("partNumber", String(partNumber));
+        formData.append("audio", blob, `part_${partNumber}.part`);
+        return ApiService.postForm(URLS.meetingAudioMultipartPart(id), formData);
+    },
+    completeMultipartAudio(id, { uploadId, key, parts }) {
+        return ApiService.post(URLS.meetingAudioMultipartComplete(id), {
+            data: { uploadId, key, parts },
+        });
+    },
+    abortMultipartAudio(id, { uploadId, key }) {
+        return ApiService.post(URLS.meetingAudioMultipartAbort(id), {
+            data: { uploadId, key },
+        });
     },
     uploadAudioChunk(id, blob) {
         const formData = new FormData();

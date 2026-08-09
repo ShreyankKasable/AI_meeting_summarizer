@@ -168,7 +168,7 @@ const RecordMeeting = () => {
         if (activeId && !startedRef.current) {
             startedRef.current = true;
             start().catch((err) => {
-                toast.error("Could not access microphone", { message: err.message });
+                toast.error("Could not start recording", { message: err.message });
             });
         }
     }, [activeId, start]);
@@ -181,7 +181,12 @@ const RecordMeeting = () => {
 
     const handleStop = async () => {
         setIsStopping(true);
-        await stop();
+        try {
+            await stop();
+        } catch (err) {
+            setIsStopping(false);
+            toast.error("Could not process recording", { message: err.message });
+        }
     };
 
     const progress = Math.max(4, Math.min(100, processingStatus?.progress || 12));

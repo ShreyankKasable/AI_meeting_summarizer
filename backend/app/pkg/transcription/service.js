@@ -41,6 +41,21 @@ export class TranscriptionService {
     return this._whisper(audioFile);
   }
 
+  async transcribeBuffer (audioData, { contentType = 'audio/wav', sourceName = 'live audio chunk' } = {}) {
+    if (!Buffer.isBuffer(audioData) || !audioData.length) {
+      throw new Error('Audio buffer is empty');
+    }
+    logger.info(`Transcribing audio buffer: ${sourceName} (${audioData.length} bytes)`);
+
+    const modelType = config.get('transcription_model');
+    if (modelType === 'deepgram') return this._deepgramBuffer(audioData, { contentType, sourceName });
+    if (modelType === 'assemblyai') return this._assemblyaiBuffer(audioData, { sourceName });
+    if (modelType === 'huggingface') return this._huggingfaceBuffer(audioData, { contentType, sourceName });
+
+    logger.warn(`Live buffer transcription is not supported for ${modelType}; configure Deepgram for direct live chunks.`);
+    return this._fallback(sourceName);
+  }
+
   async _whisper (audioFile) {
     if (!this.whisper) return this._fallback(audioFile);
     try {
@@ -57,16 +72,23 @@ export class TranscriptionService {
   }
 
   async _deepgram (audioFile) {
+    const audioData = fs.readFileSync(audioFile);
+    return this._deepgramBuffer(audioData, {
+      contentType: contentTypeFromFileName(audioFile),
+      sourceName: audioFile,
+    });
+  }
+
+  async _deepgramBuffer (audioData, { contentType = 'audio/wav', sourceName = 'audio' } = {}) {
     try {
       const apiKey = config.get('deepgram.api_key');
       if (!apiKey) throw new Error('DEEPGRAM_API_KEY not configured');
       const model = encodeURIComponent(config.get('deepgram.model'));
-      const audioData = fs.readFileSync(audioFile);
       const res = await axios.post(
         `https://api.deepgram.com/v1/listen?model=${model}&smart_format=true&diarize=true`,
         audioData,
         {
-          headers: { Authorization: `Token ${apiKey}`, 'Content-Type': 'audio/wav' },
+          headers: { Authorization: `Token ${apiKey}`, 'Content-Type': contentType || 'application/octet-stream' },
           timeout: 60000,
           maxBodyLength: Infinity,
           maxContentLength: Infinity,
@@ -78,18 +100,21 @@ export class TranscriptionService {
       return { text: transcript, segments: segmentsFromDeepgramWords(alt?.words), language: 'en' };
     } catch (e) {
       logger.error('Deepgram transcription error:', e.message);
-      return this._fallback(audioFile);
+      return this._fallback(sourceName);
     }
   }
 
   async _assemblyai (audioFile) {
+    return this._assemblyaiBuffer(fs.readFileSync(audioFile), { sourceName: audioFile });
+  }
+
+  async _assemblyaiBuffer (audioData, { sourceName = 'audio' } = {}) {
     try {
       const apiKey = config.get('assemblyai.api_key');
       if (!apiKey) throw new Error('ASSEMBLYAI_API_KEY not configured');
       const base = 'https://api.assemblyai.com/v2';
       const headers = { Authorization: apiKey };
 
-      const audioData = fs.readFileSync(audioFile);
       const upload = await axios.post(`${base}/upload`, audioData, {
         headers: { ...headers, 'Content-Type': 'application/octet-stream' },
         maxBodyLength: Infinity,
@@ -116,21 +141,27 @@ export class TranscriptionService {
       }
     } catch (e) {
       logger.error('AssemblyAI transcription error:', e.message);
-      return this._fallback(audioFile);
+      return this._fallback(sourceName);
     }
   }
 
   async _huggingface (audioFile) {
+    return this._huggingfaceBuffer(fs.readFileSync(audioFile), {
+      contentType: contentTypeFromFileName(audioFile),
+      sourceName: audioFile,
+    });
+  }
+
+  async _huggingfaceBuffer (audioData, { contentType = 'audio/wav', sourceName = 'audio' } = {}) {
     try {
       const apiKey = config.get('huggingface.api_key');
       if (!apiKey) throw new Error('HUGGINGFACE_API_KEY not configured');
       const model = config.get('huggingface.asr_model');
-      const audioData = fs.readFileSync(audioFile);
       const res = await axios.post(
         `https://router.huggingface.co/hf-inference/models/${model}`,
         audioData,
         {
-          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'audio/wav', Accept: 'application/json' },
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': contentType || 'application/octet-stream', Accept: 'application/json' },
           timeout: 60000,
           maxBodyLength: Infinity,
           maxContentLength: Infinity,
@@ -141,7 +172,7 @@ export class TranscriptionService {
       return { text: transcript, segments: [], language: 'en' };
     } catch (e) {
       logger.error('Hugging Face transcription error:', e.response?.data ? JSON.stringify(e.response.data) : e.message);
-      return this._fallback(audioFile);
+      return this._fallback(sourceName);
     }
   }
 
@@ -155,6 +186,16 @@ export class TranscriptionService {
       language: 'en',
     };
   }
+}
+
+function contentTypeFromFileName (fileName) {
+  const ext = String(fileName || '').toLowerCase().split('.').pop();
+  if (ext === 'webm') return 'audio/webm';
+  if (ext === 'mp3') return 'audio/mpeg';
+  if (ext === 'm4a' || ext === 'mp4') return 'audio/mp4';
+  if (ext === 'ogg' || ext === 'oga') return 'audio/ogg';
+  if (ext === 'wav') return 'audio/wav';
+  return 'application/octet-stream';
 }
 
 // Renumbers whatever raw speaker ids a provider used (0/1/2, 'A'/'B', ...) to

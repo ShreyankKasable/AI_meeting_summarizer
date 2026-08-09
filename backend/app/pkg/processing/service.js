@@ -3,15 +3,12 @@
  * summary and action items, persists them, and broadcasts progress over
  * Socket.IO.
  *
- * Shared by the Socket.IO `stop_recording` handler and the REST
- * `POST /api/meetings/:id/audio` upload route, so both entry points run the
- * exact same pipeline. Progress is broadcast with `io.emit(...)` so any
- * connected browser tab receives it.
+ * Final recordings are processed after the R2 multipart upload completes.
+ * Live audio chunks use `processLiveChunk` for partial transcription updates.
+ * Progress is broadcast with `io.emit(...)` so any connected browser tab
+ * receives it.
  */
-import crypto from 'node:crypto';
 import fsp from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 import logger from '#app/common/logger.js';
 import { SOCKET_EVENTS, PROCESSING_STATUS, EMBEDDING_STATUS } from '#app/common/constants.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
@@ -21,9 +18,6 @@ import { extractionService } from '#app/pkg/extraction/service.js';
 import { audioCompressionService } from '#app/pkg/audio/compression.service.js';
 import { recordingStorageService } from '#app/pkg/storage/recording.service.js';
 import { enqueueEmbeddingJob } from '#app/queues/embedding.queue.js';
-
-const TEMP_AUDIO_DIR = path.join(os.tmpdir(), 'meetai-audio');
-const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.webm', '.m4a', '.mp4', '.ogg']);
 
 export class ProcessingService {
   async processRecording ({ io, hostId, meetingId, audioFile }) {
@@ -72,41 +66,41 @@ export class ProcessingService {
     }
   }
 
-  async processLiveChunk ({ io, hostId, meetingId, chunkFile, chunkBuffer, chunkOriginalName }) {
-    const liveChunkFile = chunkFile || await writeTempAudioBuffer(chunkBuffer, {
-      meetingId,
-      originalName: chunkOriginalName,
-      prefix: 'chunk',
-    });
-    if (!liveChunkFile) return;
+  async processLiveChunk ({ io, hostId, meetingId, chunkBuffer, chunkMimeType = 'audio/wav', chunkOriginalName = 'chunk.wav' }) {
+    if (!Buffer.isBuffer(chunkBuffer) || !chunkBuffer.length) return null;
     try {
-      const result = await transcriptionService.transcribe(liveChunkFile);
+      const result = await transcriptionService.transcribeBuffer(chunkBuffer, {
+        contentType: chunkMimeType,
+        sourceName: chunkOriginalName,
+      });
       const text = (result?.text || '').trim();
-      if (text && io) {
-        (hostId ? io.to(`host:${hostId}`) : io).emit(SOCKET_EVENTS.LIVE_TRANSCRIPT_UPDATE, { meeting_id: meetingId, text });
+      if (text) {
+        await meetingsService.appendLiveTranscript(meetingId, result);
+        if (io) {
+          (hostId ? io.to(`host:${hostId}`) : io).emit(SOCKET_EVENTS.LIVE_TRANSCRIPT_UPDATE, { meeting_id: meetingId, text });
+        }
       }
+      return { text, transcript: result };
     } catch (e) {
       logger.error('[LIVE] Error processing chunk:', e.message);
-    } finally {
-      await removeFileIfExists(liveChunkFile);
+      return null;
     }
   }
-}
 
-async function writeTempAudioBuffer (buffer, { meetingId, originalName, prefix }) {
-  if (!Buffer.isBuffer(buffer) || !buffer.length) return null;
-  await fsp.mkdir(TEMP_AUDIO_DIR, { recursive: true });
+  async processStoredRecording ({ io, hostId, meetingId, audioPathOrKey, cleanupSource = false }) {
+    const audioFile = await recordingStorageService.materializeRecordingToTemp(audioPathOrKey);
+    if (!audioFile) throw new Error('Could not materialize completed recording for processing');
 
-  const safeMeetingId = meetingId == null ? 'unknown' : String(meetingId).replace(/[^\w-]/g, '_');
-  const ext = safeAudioExtension(originalName);
-  const filePath = path.join(TEMP_AUDIO_DIR, `${prefix}_${safeMeetingId}_${Date.now()}_${crypto.randomUUID()}${ext}`);
-  await fsp.writeFile(filePath, buffer);
-  return filePath;
-}
-
-function safeAudioExtension (fileName) {
-  const ext = path.extname(String(fileName || '')).toLowerCase();
-  return AUDIO_EXTENSIONS.has(ext) ? ext : '.wav';
+    let processed = false;
+    try {
+      const result = await this.processRecording({ io, hostId, meetingId, audioFile });
+      processed = true;
+      return result;
+    } finally {
+      await removeFileIfExists(audioFile);
+      if (processed && cleanupSource) await recordingStorageService.deleteR2Object(audioPathOrKey);
+    }
+  }
 }
 
 async function cleanupFailedRecordingFiles (audioFile, storageFile) {

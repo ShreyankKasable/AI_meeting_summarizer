@@ -3,13 +3,27 @@ import { concatFloat32, encodeWav } from "common/utils/audio";
 import MeetingService from "services/meeting.service";
 import { LIVE_CHUNK_MS } from "common/constants";
 
-// Ports the Web Audio capture pipeline from the old frontend/app.js +
-// bridge.js: getUserMedia -> AudioContext -> ScriptProcessorNode, buffering
-// raw PCM into a full-recording buffer and a "since last flush" chunk
-// buffer that's uploaded every LIVE_CHUNK_MS. `meetingId` is read from a
-// ref (not a closure) so the chunk-flush interval always sees the latest
-// value even though the meeting is typically created moments after
-// recording starts (the socket's `recording_started` event lands the id).
+const MULTIPART_TIMESLICE_MS = 5000;
+const DEFAULT_MIN_PART_SIZE = 5 * 1024 * 1024;
+const RECORDING_MIME_TYPES = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+];
+
+function chooseRecordingMimeType() {
+    if (!window.MediaRecorder) return "";
+    return RECORDING_MIME_TYPES.find((type) => window.MediaRecorder.isTypeSupported(type)) || "";
+}
+
+function extensionForMimeType(mimeType) {
+    if (mimeType.includes("mp4")) return ".m4a";
+    return ".webm";
+}
+
+// Captures audio through Web Audio for live WAV transcript chunks and through
+// MediaRecorder for production final recording upload. The final recording is
+// uploaded to R2 multipart in joined-safe WebM/Opus parts while recording.
 const useAudioRecorder = (meetingId) => {
     const [isRecording, setIsRecording] = useState(false);
     const [elapsedMs, setElapsedMs] = useState(0);
@@ -22,11 +36,59 @@ const useAudioRecorder = (meetingId) => {
     const sourceRef = useRef(null);
     const processorRef = useRef(null);
     const streamRef = useRef(null);
-    const blocksRef = useRef([]);
+    const mediaRecorderRef = useRef(null);
     const chunkBlocksRef = useRef([]);
     const chunkTimerRef = useRef(null);
     const elapsedTimerRef = useRef(null);
     const startTimeRef = useRef(null);
+    const multipartRef = useRef(null);
+    const partUploadChainRef = useRef(Promise.resolve());
+    const multipartErrorRef = useRef(null);
+
+    const abortMultipart = useCallback(async () => {
+        const state = multipartRef.current;
+        multipartRef.current = null;
+        partUploadChainRef.current = Promise.resolve();
+        if (!state?.uploadId || !state?.key) return;
+        try {
+            await MeetingService.abortMultipartAudio(meetingIdRef.current, {
+                uploadId: state.uploadId,
+                key: state.key,
+            });
+        } catch {
+            // Best-effort cleanup; R2 also expires incomplete multipart uploads.
+        }
+    }, []);
+
+    const enqueueMultipartPart = useCallback((force = false) => {
+        const id = meetingIdRef.current;
+        const state = multipartRef.current;
+        if (!id || !state || !state.pendingSize) return Promise.resolve();
+        if (!force && state.pendingSize < state.minPartSize) return Promise.resolve();
+
+        const blob = new Blob(state.pendingBlobs, { type: state.contentType });
+        state.pendingBlobs = [];
+        state.pendingSize = 0;
+        const partNumber = state.nextPartNumber;
+        state.nextPartNumber += 1;
+
+        const upload = partUploadChainRef.current.then(async () => {
+            const { data } = await MeetingService.uploadMultipartAudioPart(id, {
+                uploadId: state.uploadId,
+                key: state.key,
+                partNumber,
+                blob,
+            });
+            state.parts.push(data.part);
+        });
+
+        const tracked = upload.catch((error) => {
+            multipartErrorRef.current = error;
+            throw error;
+        });
+        partUploadChainRef.current = tracked.catch(() => {});
+        return tracked;
+    }, []);
 
     const flushChunk = useCallback(async () => {
         const id = meetingIdRef.current;
@@ -36,13 +98,108 @@ const useAudioRecorder = (meetingId) => {
         try {
             await MeetingService.uploadAudioChunk(id, encodeWav(samples, audioContextRef.current.sampleRate));
         } catch {
-            // live chunk upload is best-effort — the full recording is what matters
+            // Live chunk upload is best-effort; final recording processing is authoritative.
         }
     }, []);
+
+    const setupMultipartRecorder = useCallback(async (stream) => {
+        const id = meetingIdRef.current;
+        const mimeType = chooseRecordingMimeType();
+        if (!id || !mimeType) return false;
+
+        try {
+            const extension = extensionForMimeType(mimeType);
+            const { data } = await MeetingService.startMultipartAudio(id, {
+                contentType: mimeType,
+                extension,
+            });
+            if (!data?.enabled || !data.uploadId || !data.key) return false;
+
+            multipartRef.current = {
+                uploadId: data.uploadId,
+                key: data.key,
+                contentType: data.contentType || mimeType,
+                extension: data.extension || extension,
+                minPartSize: Number(data.minPartSize) || DEFAULT_MIN_PART_SIZE,
+                nextPartNumber: 1,
+                pendingBlobs: [],
+                pendingSize: 0,
+                parts: [],
+            };
+            multipartErrorRef.current = null;
+            partUploadChainRef.current = Promise.resolve();
+
+            const recorder = new MediaRecorder(stream, { mimeType });
+            recorder.ondataavailable = (event) => {
+                const state = multipartRef.current;
+                if (!state || !event.data?.size) return;
+                state.pendingBlobs.push(event.data);
+                state.pendingSize += event.data.size;
+                if (state.pendingSize >= state.minPartSize) enqueueMultipartPart(false);
+            };
+            recorder.onerror = (event) => {
+                multipartErrorRef.current = event.error || new Error("MediaRecorder failed");
+            };
+            recorder.start(MULTIPART_TIMESLICE_MS);
+            mediaRecorderRef.current = recorder;
+            return true;
+        } catch {
+            multipartRef.current = null;
+            mediaRecorderRef.current = null;
+            return false;
+        }
+    }, [enqueueMultipartPart]);
+
+    const stopMediaRecorder = useCallback(() => {
+        const recorder = mediaRecorderRef.current;
+        mediaRecorderRef.current = null;
+        if (!recorder || recorder.state === "inactive") return Promise.resolve();
+
+        return new Promise((resolve) => {
+            recorder.onstop = () => resolve();
+            try {
+                recorder.requestData();
+                recorder.stop();
+            } catch {
+                resolve();
+            }
+        });
+    }, []);
+
+    const completeMultipartRecording = useCallback(async () => {
+        const id = meetingIdRef.current;
+        const state = multipartRef.current;
+        if (!id || !state) return null;
+
+        try {
+            await enqueueMultipartPart(true);
+            await partUploadChainRef.current;
+            if (multipartErrorRef.current) throw multipartErrorRef.current;
+            if (!state.parts.length) throw new Error("No recording data captured");
+
+            const result = await MeetingService.completeMultipartAudio(id, {
+                uploadId: state.uploadId,
+                key: state.key,
+                parts: state.parts,
+            });
+            multipartRef.current = null;
+            partUploadChainRef.current = Promise.resolve();
+            return result;
+        } catch (error) {
+            await abortMultipart();
+            throw error;
+        }
+    }, [abortMultipart, enqueueMultipartPart]);
 
     const start = useCallback(async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = stream;
+
+        const multipartReady = await setupMultipartRecorder(stream);
+        if (!multipartReady) {
+            stream.getTracks().forEach((track) => track.stop());
+            throw new Error("Cloud recording upload could not start.");
+        }
 
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         const audioContext = new AudioContextClass();
@@ -59,12 +216,10 @@ const useAudioRecorder = (meetingId) => {
         const processor = audioContext.createScriptProcessor(4096, 1, 1);
         processorRef.current = processor;
 
-        blocksRef.current = [];
         chunkBlocksRef.current = [];
 
         processor.onaudioprocess = (e) => {
             const copy = new Float32Array(e.inputBuffer.getChannelData(0));
-            blocksRef.current.push(copy);
             chunkBlocksRef.current.push(copy);
         };
 
@@ -80,35 +235,35 @@ const useAudioRecorder = (meetingId) => {
         }, 1000);
 
         setIsRecording(true);
-    }, [flushChunk]);
+    }, [flushChunk, setupMultipartRecorder]);
 
     const stop = useCallback(async () => {
         clearInterval(chunkTimerRef.current);
         clearInterval(elapsedTimerRef.current);
+        await flushChunk();
 
         if (processorRef.current) {
             processorRef.current.disconnect();
             processorRef.current.onaudioprocess = null;
         }
         sourceRef.current?.disconnect();
-        streamRef.current?.getTracks().forEach((t) => t.stop());
 
-        const sampleRate = audioContextRef.current?.sampleRate;
         if (audioContextRef.current) await audioContextRef.current.close();
 
         setIsRecording(false);
         setAnalyser(null);
 
-        const samples = concatFloat32(blocksRef.current);
-        blocksRef.current = [];
-        chunkBlocksRef.current = [];
+        await stopMediaRecorder();
+        streamRef.current?.getTracks().forEach((t) => t.stop());
 
-        const id = meetingIdRef.current;
-        if (id && samples.length) {
-            return MeetingService.uploadAudio(id, encodeWav(samples, sampleRate));
+        if (multipartRef.current) {
+            chunkBlocksRef.current = [];
+            return completeMultipartRecording();
         }
-        return null;
-    }, []);
+
+        chunkBlocksRef.current = [];
+        throw new Error("Cloud recording upload session is not active.");
+    }, [completeMultipartRecording, flushChunk, stopMediaRecorder]);
 
     return { start, stop, isRecording, elapsedMs, analyser };
 };

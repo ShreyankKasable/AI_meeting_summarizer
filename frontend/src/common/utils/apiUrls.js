@@ -11,6 +11,10 @@ const URLS = {
     // meetings (host-authenticated)
     meetings: `${BASE_URL}/api/meetings`,
     meeting: (id) => `${BASE_URL}/api/meetings/${id}`,
+    meetingAudioMultipartStart: (id) => `${BASE_URL}/api/meetings/${id}/audio-multipart/start`,
+    meetingAudioMultipartPart: (id) => `${BASE_URL}/api/meetings/${id}/audio-multipart/part`,
+    meetingAudioMultipartComplete: (id) => `${BASE_URL}/api/meetings/${id}/audio-multipart/complete`,
+    meetingAudioMultipartAbort: (id) => `${BASE_URL}/api/meetings/${id}/audio-multipart/abort`,
     meetingActionItems: (id) => `${BASE_URL}/api/meetings/${id}/action-items`,
     actionItemComplete: (id) => `${BASE_URL}/api/action-items/${id}/complete`,
     meetingTitle: (id) => `${BASE_URL}/api/meetings/${id}/title`,

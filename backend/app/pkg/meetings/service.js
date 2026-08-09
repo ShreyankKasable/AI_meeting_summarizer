@@ -54,6 +54,39 @@ export class MeetingsService {
     return this.getMeetingById(id);
   }
 
+  async appendLiveTranscript (id, transcriptChunk = {}) {
+    const text = (transcriptChunk?.text || '').trim();
+    if (!text) return this.getMeetingById(id);
+
+    await withTransaction(async (client) => {
+      const result = await client.query('SELECT transcript, end_time FROM meetings WHERE id = $1 FOR UPDATE', [id]);
+      const row = result.rows[0];
+      if (!row || row.end_time) return;
+
+      const current = safeJson(row.transcript);
+      if (current && typeof current === 'object' && current.partial !== true && current.text) return;
+
+      const currentObject = current && typeof current === 'object' ? current : {};
+      const existingText = typeof currentObject.text === 'string'
+        ? currentObject.text.trim()
+        : (typeof current === 'string' ? current.trim() : '');
+      const segments = Array.isArray(transcriptChunk.segments) ? transcriptChunk.segments : [];
+      const existingSegments = Array.isArray(currentObject.segments) ? currentObject.segments : [];
+      const nextTranscript = {
+        ...currentObject,
+        text: [existingText, text].filter(Boolean).join('\n'),
+        segments: [...existingSegments, ...segments],
+        language: currentObject.language || transcriptChunk.language || 'en',
+        partial: true,
+        updatedAt: nowIso(),
+      };
+
+      await client.query('UPDATE meetings SET transcript = $1 WHERE id = $2', [JSON.stringify(nextTranscript), id]);
+    });
+
+    return this.getMeetingById(id);
+  }
+
   async updateEmbeddingStatus (id, status = EMBEDDING_STATUS.NOT_STARTED, { error = null, jobId } = {}) {
     const fields = ['embedding_status = $1', 'embedding_error = $2'];
     const values = [status, error || null];

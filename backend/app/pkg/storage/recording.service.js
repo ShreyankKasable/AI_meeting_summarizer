@@ -1,20 +1,27 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
+  UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import config from '#app/common/config.js';
 import logger from '#app/common/logger.js';
 
 const AUDIO_ROUTE_PREFIX = '/data/audio/';
 const DEFAULT_AUDIO_CONTENT_TYPE = 'audio/wav';
+const TEMP_AUDIO_DIR = path.join(os.tmpdir(), 'meetai-audio');
 const AUDIO_CONTENT_TYPES = {
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
@@ -42,6 +49,93 @@ export class RecordingStorageService {
     await this.uploadLocalFile(localFile, key);
     await this.removeLocalFile(localFile);
     return this.publicAudioPath(key);
+  }
+
+  async createMultipartRecording ({ meetingId, extension = '.webm', contentType } = {}) {
+    if (!this.isR2Enabled()) return null;
+
+    const key = this.buildObjectKeyForExtension(extension, meetingId, { group: 'raw' });
+    const r2 = this.r2Config();
+    const result = await this.getClient(r2).send(new CreateMultipartUploadCommand({
+      Bucket: r2.bucket,
+      Key: key,
+      ContentType: contentType || contentTypeForExtension(extension),
+    }));
+
+    logger.info(`Created R2 multipart recording upload: ${key}`);
+    return { uploadId: result.UploadId, key };
+  }
+
+  async uploadMultipartRecordingPart ({ key, uploadId, partNumber, localFile }) {
+    if (!this.isR2Enabled()) throw new Error('R2 multipart upload requires AUDIO_STORAGE_PROVIDER=r2');
+    if (!key || !uploadId || !partNumber || !localFile) throw new Error('Missing multipart upload part data');
+
+    const r2 = this.r2Config();
+    const stats = await fsp.stat(localFile);
+    const result = await this.getClient(r2).send(new UploadPartCommand({
+      Bucket: r2.bucket,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: Number(partNumber),
+      Body: fs.createReadStream(localFile),
+      ContentLength: stats.size,
+    }));
+
+    return { PartNumber: Number(partNumber), ETag: result.ETag };
+  }
+
+  async completeMultipartRecording ({ key, uploadId, parts }) {
+    if (!this.isR2Enabled()) throw new Error('R2 multipart upload requires AUDIO_STORAGE_PROVIDER=r2');
+    if (!key || !uploadId || !Array.isArray(parts) || !parts.length) throw new Error('Missing multipart completion data');
+
+    const r2 = this.r2Config();
+    const normalizedParts = parts
+      .map((part) => ({ PartNumber: Number(part.PartNumber), ETag: part.ETag }))
+      .filter((part) => Number.isInteger(part.PartNumber) && part.PartNumber > 0 && part.ETag)
+      .sort((a, b) => a.PartNumber - b.PartNumber);
+
+    if (!normalizedParts.length) throw new Error('No valid multipart parts provided');
+
+    await this.getClient(r2).send(new CompleteMultipartUploadCommand({
+      Bucket: r2.bucket,
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: { Parts: normalizedParts },
+    }));
+
+    logger.info(`Completed R2 multipart recording upload: ${key}`);
+    return { key, audioPath: this.publicAudioPath(key) };
+  }
+
+  async abortMultipartRecording ({ key, uploadId }) {
+    if (!this.isR2Enabled() || !key || !uploadId) return;
+
+    try {
+      const r2 = this.r2Config();
+      await this.getClient(r2).send(new AbortMultipartUploadCommand({
+        Bucket: r2.bucket,
+        Key: key,
+        UploadId: uploadId,
+      }));
+      logger.info(`Aborted R2 multipart recording upload: ${key}`);
+    } catch (error) {
+      logger.warn(`Could not abort R2 multipart recording ${key}:`, error.message);
+    }
+  }
+
+  async materializeRecordingToTemp (audioPathOrKey, { extension } = {}) {
+    const key = this.keyFromAudioPath(audioPathOrKey);
+    if (!key) return null;
+
+    if (!this.isR2Enabled()) return resolveLocalAudioPath(audioPathOrKey);
+
+    await fsp.mkdir(TEMP_AUDIO_DIR, { recursive: true });
+    const ext = safeExtension(extension || path.extname(key) || '.audio');
+    const localFile = path.join(TEMP_AUDIO_DIR, `recording_${Date.now()}_${crypto.randomUUID()}${ext}`);
+    const r2 = this.r2Config();
+    const object = await this.getClient(r2).send(new GetObjectCommand({ Bucket: r2.bucket, Key: key }));
+    await pipelineObjectBody(object.Body, fs.createWriteStream(localFile));
+    return localFile;
   }
 
   async streamRecording (audioPathOrKey, req, res) {
@@ -108,10 +202,15 @@ export class RecordingStorageService {
 
   buildObjectKey (localFile, meetingId) {
     const ext = path.extname(localFile) || '.wav';
+    return this.buildObjectKeyForExtension(ext, meetingId);
+  }
+
+  buildObjectKeyForExtension (extension, meetingId, { group } = {}) {
+    const ext = safeExtension(extension || '.wav');
     const safeMeetingId = meetingId == null ? 'unknown' : String(meetingId).replace(/[^\w-]/g, '_');
     const fileName = `meeting_${safeMeetingId}_${Date.now()}_${crypto.randomUUID()}${ext}`;
     const prefix = String(config.get('r2.key_prefix') || '').replace(/^\/+|\/+$/g, '');
-    return prefix ? `${prefix}/${fileName}` : fileName;
+    return [prefix, group, fileName].filter(Boolean).join('/');
   }
 
   async uploadLocalFile (localFile, key) {
@@ -247,6 +346,19 @@ function pipeObjectBody (body, res) {
   Readable.from(body).pipe(res);
 }
 
+async function pipelineObjectBody (body, writable) {
+  if (!body) throw new Error('R2 object returned an empty response body');
+  if (typeof body.pipe === 'function') {
+    await pipeline(body, writable);
+    return;
+  }
+  if (typeof body.transformToWebStream === 'function') {
+    await pipeline(Readable.fromWeb(body.transformToWebStream()), writable);
+    return;
+  }
+  await pipeline(Readable.from(body), writable);
+}
+
 function isMissingObjectError (error) {
   return ['NoSuchKey', 'NotFound', 'NotFoundError'].includes(error?.name)
     || error?.$metadata?.httpStatusCode === 404;
@@ -254,6 +366,16 @@ function isMissingObjectError (error) {
 
 function contentTypeForPath (filePath) {
   return AUDIO_CONTENT_TYPES[path.extname(filePath).toLowerCase()] || DEFAULT_AUDIO_CONTENT_TYPE;
+}
+
+function contentTypeForExtension (extension) {
+  return AUDIO_CONTENT_TYPES[String(extension || '').toLowerCase()] || DEFAULT_AUDIO_CONTENT_TYPE;
+}
+
+function safeExtension (extension) {
+  const ext = String(extension || '').trim().toLowerCase();
+  if (/^\.[a-z0-9]{1,8}$/.test(ext)) return ext;
+  return '.wav';
 }
 
 export const recordingStorageService = new RecordingStorageService();

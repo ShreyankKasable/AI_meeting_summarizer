@@ -1,21 +1,17 @@
 /**
- * Socket.IO setup and the live recording pipeline.
+ * Socket.IO setup for meeting lifecycle and processing updates.
  *
  * Events mirror the original Flask-SocketIO contract so browser clients
  * connect unchanged:
  *   start_recording -> recording_started
- *   audio_chunk_ready -> live_transcript_update   (10s live chunks)
- *   stop_recording -> processing_status* -> meeting_processed
  *
- * The transcription/summary/extraction pipeline lives in
- * `pkg/processing/service.js` and is shared with the REST audio-upload route
- * used by the browser flow.
+ * Audio data is uploaded over REST: live chunks go through `/audio-chunk`,
+ * while final recordings complete through R2 multipart upload.
  */
 import { Server } from 'socket.io';
 import logger from '#app/common/logger.js';
 import { SOCKET_EVENTS } from '#app/common/constants.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
-import { processingService } from '#app/pkg/processing/service.js';
 import { authService } from '#app/pkg/auth/service.js';
 import { AUTH_ACCESS_COOKIE_NAME, getCookieValue } from '#app/api/middlewares/auth.js';
 
@@ -53,14 +49,6 @@ export function setupSocket (httpServer) {
         socket.emit(SOCKET_EVENTS.ERROR, { message: `Could not start recording: ${err.message}` });
       });
     });
-    socket.on(SOCKET_EVENTS.AUDIO_CHUNK_READY, (data = {}) =>
-      processingService.processLiveChunk({
-        io, hostId: socket.data.hostId, meetingId: data.meeting_id, chunkFile: data.chunk_file,
-      }));
-    socket.on(SOCKET_EVENTS.STOP_RECORDING, (data = {}) =>
-      processingService.processRecording({
-        io, hostId: socket.data.hostId, meetingId: data.meeting_id, audioFile: data.audio_file,
-      }).catch(() => {}));
 
     socket.on('disconnect', () => logger.info('Client disconnected'));
   });

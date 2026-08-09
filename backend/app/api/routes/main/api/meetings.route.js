@@ -5,7 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 import multer from 'multer';
 import { NotFound, UnauthorizedRequest, BadRequest } from '#app/common/error/index.js';
-import config from '#app/common/config.js';
 import { requireAuth } from '#app/api/middlewares/auth.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
 import { translationService } from '#app/pkg/translation/service.js';
@@ -13,6 +12,7 @@ import { notionService } from '#app/pkg/notion/service.js';
 import { processingService } from '#app/pkg/processing/service.js';
 import { chatbotService } from '#app/pkg/chat/service.js';
 import { sharesService } from '#app/pkg/shares/service.js';
+import { recordingStorageService } from '#app/pkg/storage/recording.service.js';
 import { getIo } from '#app/connections/websocket.js';
 import {
   validateTitlePayload, validateTranslatePayload, validateChatPayload, validateSpeakerNamePayload,
@@ -34,8 +34,8 @@ router.param('id', async (req, res, next, value) => {
   }
 });
 
-const MAX_AUDIO_BYTES = 200 * 1024 * 1024;
 const MAX_AUDIO_CHUNK_BYTES = 25 * 1024 * 1024;
+const MAX_MULTIPART_PART_BYTES = 100 * 1024 * 1024;
 const TEMP_AUDIO_DIR = path.join(os.tmpdir(), 'meetai-audio');
 
 const audioFileFilter = (req, file, cb) => {
@@ -43,27 +43,22 @@ const audioFileFilter = (req, file, cb) => {
   return cb(null, true);
 };
 
-const audioUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, config.paths.AUDIO_DIR),
-    filename: (req, file, cb) => {
-      cb(null, `meeting_${req.params.id}_${Date.now()}_${crypto.randomUUID()}.wav`);
-    },
-  }),
-  limits: { fileSize: MAX_AUDIO_BYTES },
+const audioChunkUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_AUDIO_CHUNK_BYTES },
   fileFilter: audioFileFilter,
 });
 
-const audioChunkUpload = multer({
+const multipartPartUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
       fs.mkdir(TEMP_AUDIO_DIR, { recursive: true }, (err) => cb(err, TEMP_AUDIO_DIR));
     },
     filename: (req, file, cb) => {
-      cb(null, `chunk_${req.params.id}_${Date.now()}_${crypto.randomUUID()}.wav`);
+      cb(null, `r2part_${req.params.id}_${Date.now()}_${crypto.randomUUID()}.part`);
     },
   }),
-  limits: { fileSize: MAX_AUDIO_CHUNK_BYTES },
+  limits: { fileSize: MAX_MULTIPART_PART_BYTES },
   fileFilter: audioFileFilter,
 });
 
@@ -77,8 +72,8 @@ function handleUpload (upload) {
   };
 }
 
-const uploadAudio = handleUpload(audioUpload);
 const uploadAudioChunk = handleUpload(audioChunkUpload);
+const uploadMultipartPart = handleUpload(multipartPartUpload);
 
 router.get('/', async (req, res, next) => {
   try {
@@ -109,16 +104,74 @@ router.get('/:id/action-items', async (req, res, next) => {
   }
 });
 
-router.post('/:id/audio', uploadAudio, async (req, res, next) => {
+router.post('/:id/audio-multipart/start', async (req, res, next) => {
   try {
-    if (!req.file) throw new BadRequest('No audio file uploaded');
-    const result = await processingService.processRecording({
+    const extension = req.body?.extension || '.webm';
+    const contentType = req.body?.content_type || 'audio/webm';
+    const session = await recordingStorageService.createMultipartRecording({
+      meetingId: Number(req.params.id),
+      extension,
+      contentType,
+    });
+
+    if (!session) return res.json({ enabled: false });
+
+    res.json({
+      enabled: true,
+      ...session,
+      minPartSize: 5 * 1024 * 1024,
+      contentType,
+      extension,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:id/audio-multipart/part', uploadMultipartPart, async (req, res, next) => {
+  try {
+    if (!req.file) throw new BadRequest('No audio part uploaded');
+
+    const part = await recordingStorageService.uploadMultipartRecordingPart({
+      key: req.body.key,
+      uploadId: req.body.uploadId,
+      partNumber: Number(req.body.partNumber),
+      localFile: req.file.path,
+    });
+    res.json({ success: true, part });
+  } catch (err) {
+    next(err);
+  } finally {
+    if (req.file?.path) await recordingStorageService.removeLocalFile(req.file.path);
+  }
+});
+
+router.post('/:id/audio-multipart/complete', async (req, res, next) => {
+  try {
+    const { key, uploadId, parts = [] } = req.body || {};
+    await recordingStorageService.completeMultipartRecording({ key, uploadId, parts });
+
+    const result = await processingService.processStoredRecording({
       io: getIo(),
       hostId: req.user.id,
       meetingId: Number(req.params.id),
-      audioFile: req.file.path,
+      audioPathOrKey: key,
+      cleanupSource: true,
     });
+
     res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:id/audio-multipart/abort', async (req, res, next) => {
+  try {
+    await recordingStorageService.abortMultipartRecording({
+      key: req.body?.key,
+      uploadId: req.body?.uploadId,
+    });
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }
@@ -126,14 +179,16 @@ router.post('/:id/audio', uploadAudio, async (req, res, next) => {
 
 router.post('/:id/audio-chunk', uploadAudioChunk, async (req, res, next) => {
   try {
-    if (!req.file) throw new BadRequest('No audio chunk uploaded');
-    await processingService.processLiveChunk({
+    if (!req.file?.buffer) throw new BadRequest('No audio chunk uploaded');
+    const result = await processingService.processLiveChunk({
       io: getIo(),
       hostId: req.user.id,
       meetingId: Number(req.params.id),
-      chunkFile: req.file.path,
+      chunkBuffer: req.file.buffer,
+      chunkMimeType: req.file.mimetype,
+      chunkOriginalName: req.file.originalname,
     });
-    res.json({ success: true });
+    res.json({ success: true, text: result?.text || '' });
   } catch (err) {
     next(err);
   }
