@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
-import { ArrowLeft, Calendar, FileText, MessageSquareText, Share2, Sparkles } from "lucide-react";
+import { ArrowLeft, Calendar, Clock3, FileText, Share2, Sparkles } from "lucide-react";
 import Button from "common/components/Button";
 import Tabs from "common/components/Tabs";
 import Badge from "common/components/Badge";
+import Modal from "common/components/Modal";
 import { SkeletonBlock, SkeletonCard, SkeletonStack } from "common/components/Skeleton";
-import { H1, H2, H3, Body2, Body3, Eyebrow, MonoLabel } from "common/global-styled-components";
+import { H1, H3, Body2, Body3, Eyebrow, MonoLabel } from "common/global-styled-components";
 import { formatDate, getTranscriptText } from "common/utils/utils";
 import {
     fetchMeeting,
@@ -24,18 +25,17 @@ import ActionsTab from "./ActionsTab";
 
 const Wrapper = styled.div`
     min-height: 100vh;
-    padding: var(--Size-Padding-4XL) var(--Size-Padding-XXXL);
-
-    @media (max-width: 768px) {
-        padding: var(--Size-Padding-XXL) var(--Size-Padding-XL);
-    }
+    background: var(--Color-Background-Root);
 `;
 
 const Frame = styled.div`
     max-width: var(--layout-max);
     margin: 0 auto;
-    display: grid;
-    gap: var(--Size-Gap-XXXL);
+    padding: var(--Size-Padding-XXXL) var(--Size-Padding-4XL) var(--Size-Padding-4XL);
+
+    @media (max-width: 768px) {
+        padding: var(--Size-Padding-XXL) var(--Size-Padding-XL);
+    }
 `;
 
 const Header = styled.header`
@@ -43,7 +43,7 @@ const Header = styled.header`
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--Size-Gap-XXXL);
     align-items: start;
-    padding-bottom: var(--Size-Padding-XXXL);
+    padding-bottom: var(--Size-Padding-XXL);
     border-bottom: 1px solid var(--Color-Border-Subtle);
 
     @media (max-width: 980px) {
@@ -60,7 +60,7 @@ const TitleBlock = styled.div`
 const MetaRow = styled.div`
     display: flex;
     align-items: center;
-    gap: var(--Size-Gap-M);
+    gap: var(--Size-Gap-L);
     flex-wrap: wrap;
 `;
 
@@ -71,6 +71,11 @@ const HeaderActions = styled.div`
     gap: var(--Size-Gap-M);
     flex-wrap: wrap;
 
+    button {
+        font-size: var(--body-4-d);
+        line-height: var(--line-height-140);
+    }
+
     @media (max-width: 980px) {
         justify-content: flex-start;
     }
@@ -78,8 +83,8 @@ const HeaderActions = styled.div`
 
 const ContentGrid = styled.div`
     display: grid;
-    grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.62fr);
-    gap: var(--Size-Gap-XXXL);
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+    gap: var(--Size-Gap-4XL);
     align-items: start;
 
     @media (max-width: 1180px) {
@@ -87,18 +92,55 @@ const ContentGrid = styled.div`
     }
 `;
 
+const MeetingDocument = styled.section`
+    min-width: 0;
+    display: grid;
+    gap: var(--Size-Gap-4XL);
+`;
+
 const TranscriptColumn = styled.div`
     min-width: 0;
     display: grid;
-    gap: var(--Size-Gap-XL);
+    gap: var(--Size-Gap-XXL);
 `;
 
-const ColumnHeader = styled.div`
+const TranscriptHeading = styled.div`
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
-    gap: var(--Size-Gap-XXL);
+    gap: var(--Size-Gap-L);
     flex-wrap: wrap;
+`;
+
+const SummaryTrigger = styled.button`
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--Size-Gap-S);
+    padding: 0 var(--Size-Padding-L);
+    border: 1px solid var(--Color-Border-Accent-Action);
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Accent-Action);
+    color: var(--Color-Text-Action);
+    font-family: var(--body-font);
+    font-size: var(--body-5-d);
+    line-height: var(--line-height-140);
+    font-weight: var(--medium);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
+    box-shadow: 0 10px 20px rgba(120, 86, 0, 0.08);
+    transition: all var(--transition-fast);
+
+    &:hover {
+        border-color: var(--Color-Border-Action);
+        background: var(--Color-Background-Action-Soft);
+        transform: translateY(-1px);
+    }
+
+    svg {
+        flex-shrink: 0;
+    }
 `;
 
 const IntelligencePanel = styled.aside`
@@ -107,30 +149,53 @@ const IntelligencePanel = styled.aside`
     min-width: 0;
     background: var(--Color-Background-Default);
     border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-M);
+    border-radius: var(--Size-CornerRadius-S);
     box-shadow: var(--Color-Shadow-Card);
     overflow: hidden;
+    height: calc(100vh - 64px);
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+
+    [role="tab"] {
+        font-family: var(--mono-font);
+        font-size: var(--body-5-d);
+        line-height: var(--line-height-140);
+        font-weight: var(--medium);
+        letter-spacing: var(--letter-spacing-wide);
+        text-transform: uppercase;
+    }
 
     @media (max-width: 1180px) {
         position: static;
+        height: auto;
+        min-height: 560px;
     }
 `;
 
-const PanelHeader = styled.div`
-    display: grid;
-    gap: var(--Size-Gap-S);
-    padding: var(--Size-Padding-XXL);
-    border-bottom: 1px solid var(--Color-Border-Subtle);
-    background: linear-gradient(180deg, var(--Color-Background-Default), var(--Color-Background-Subtle));
-`;
-
 const TabContent = styled.div`
-    min-height: 580px;
-    max-height: calc(100vh - 300px);
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 
     @media (max-width: 1180px) {
         max-height: none;
+    }
+`;
+
+const SummaryModalContent = styled.div`
+    min-height: min(680px, calc(90vh - 120px));
+    max-height: calc(90vh - 96px);
+    overflow-y: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
     }
 `;
 
@@ -149,22 +214,9 @@ const EmptyCard = styled(SkeletonCard)`
 `;
 
 const TABS = [
-    { id: "summary", label: "Summary" },
-    { id: "actions", label: "Actions" },
     { id: "chat", label: "AI Chat" },
+    { id: "actions", label: "Actions" },
 ];
-
-const PANEL_TITLES = {
-    summary: "Editorial Summary",
-    actions: "Open Decisions & Actions",
-    chat: "Meeting-Aware AI",
-};
-
-const PANEL_COPY = {
-    summary: "A condensed readout of the meeting narrative, decisions, risks, and key themes.",
-    actions: "Follow-up work extracted from the transcript with ownership and priority.",
-    chat: "Ask targeted questions and keep the answer grounded in this meeting.",
-};
 
 const MeetingContentView = () => {
     const dispatch = useDispatch();
@@ -173,9 +225,10 @@ const MeetingContentView = () => {
         state.meetingDetails.list.find((m) => m.id === activeId),
     );
 
-    const [activeTab, setActiveTab] = useState("summary");
+    const [activeTab, setActiveTab] = useState("chat");
     const [chatMessages, setChatMessages] = useState([]);
     const [chatSending, setChatSending] = useState(false);
+    const [summaryOpen, setSummaryOpen] = useState(false);
     const [translatedText, setTranslatedText] = useState(null);
     const [translating, setTranslating] = useState(false);
 
@@ -187,6 +240,10 @@ const MeetingContentView = () => {
         if (!activeId) return;
         MeetingService.getChatHistory(activeId).then(({ data }) => setChatMessages(data));
     }, [activeId]);
+
+    useEffect(() => {
+        if (!TABS.some((tab) => tab.id === activeTab)) setActiveTab("chat");
+    }, [activeTab]);
 
     if (!activeId) {
         return (
@@ -272,83 +329,72 @@ const MeetingContentView = () => {
     return (
         <Wrapper>
             <Frame>
-                <Header>
-                    <TitleBlock>
-                        <Button
-                            type="button"
-                            mode="ghost"
-                            size="small"
-                            onClick={() => dispatch(setHostView(HOST_VIEWS.Dashboard))}
-                            style={{ width: "fit-content", paddingLeft: 0 }}
-                        >
-                            <ArrowLeft size={16} />
-                            Dashboard
-                        </Button>
-                        <Eyebrow>Meeting dossier</Eyebrow>
-                        <H1>{meeting.title}</H1>
-                        <MetaRow>
-                            <Badge tone="neutral">
-                                <Calendar size={13} />
-                                {formatDate(meeting.start_time)}
-                            </Badge>
-                            <Badge tone={meeting.summary ? "success" : "warning"}>
-                                <Sparkles size={13} />
-                                {meeting.summary ? "Summary ready" : "Processing"}
-                            </Badge>
-                            <Badge tone="neutral">
-                                <FileText size={13} />
-                                {actionCount} actions
-                            </Badge>
-                        </MetaRow>
-                    </TitleBlock>
-                    <HeaderActions>
-                        <Button mode="secondary" onClick={handleExportNotion}>
-                            <FileText size={16} />
-                            Export to Notion
-                        </Button>
-                        <Button onClick={() => dispatch(setHostView(HOST_VIEWS.Share))}>
-                            <Share2 size={16} />
-                            Share
-                        </Button>
-                    </HeaderActions>
-                </Header>
-
                 <ContentGrid>
-                    <TranscriptColumn>
-                        <ColumnHeader>
-                            <div>
+                    <MeetingDocument>
+                        <Header>
+                            <TitleBlock>
+                                <Button
+                                    type="button"
+                                    mode="ghost"
+                                    size="small"
+                                    onClick={() => dispatch(setHostView(HOST_VIEWS.Dashboard))}
+                                    style={{ width: "fit-content", paddingLeft: 0 }}
+                                >
+                                    <ArrowLeft size={16} />
+                                    Back to Meetings
+                                </Button>
+                                <H1>{meeting.title}</H1>
+                                <MetaRow>
+                                    <Body3 as="span" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                        <Calendar size={13} />
+                                        {formatDate(meeting.start_time)}
+                                    </Body3>
+                                    <Body3 as="span" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                        <Clock3 size={13} />
+                                        Recorded
+                                    </Body3>
+                                    <Badge tone="neutral">
+                                        <FileText size={13} />
+                                        {actionCount} Actions
+                                    </Badge>
+                                </MetaRow>
+                            </TitleBlock>
+                            <HeaderActions>
+                                <Button mode="secondary" size="small" onClick={handleExportNotion}>
+                                    <FileText size={14} />
+                                    Export to Notion
+                                </Button>
+                                <Button size="small" onClick={() => dispatch(setHostView(HOST_VIEWS.Share))}>
+                                    <Share2 size={14} />
+                                    Share
+                                </Button>
+                            </HeaderActions>
+                        </Header>
+
+                        <TranscriptColumn>
+                            <TranscriptHeading>
                                 <MonoLabel>Transcript</MonoLabel>
-                                <H2 style={{ marginTop: "var(--Size-Gap-S)" }}>Source Record</H2>
-                            </div>
-                            <Body3 style={{ maxWidth: 420 }}>
-                                Speaker turns, search, translation, and audio remain connected to the
-                                original meeting record.
-                            </Body3>
-                        </ColumnHeader>
-                        <TranscriptPane
-                            text={translatedText ?? transcriptText}
-                            segments={translatedText ? null : meeting.transcript?.segments}
-                            speakerNames={meeting.transcript?.speakerNames}
-                            audioSrc={meeting.audio_file_path}
-                            onTranslate={handleTranslate}
-                            translating={translating}
-                            editable
-                            onRenameSpeaker={handleRenameSpeaker}
-                        />
-                    </TranscriptColumn>
+                                <SummaryTrigger type="button" onClick={() => setSummaryOpen(true)}>
+                                    <Sparkles size={13} />
+                                    Summarize
+                                </SummaryTrigger>
+                            </TranscriptHeading>
+                            <TranscriptPane
+                                text={translatedText ?? transcriptText}
+                                segments={translatedText ? null : meeting.transcript?.segments}
+                                speakerNames={meeting.transcript?.speakerNames}
+                                audioSrc={meeting.audio_file_path}
+                                onTranslate={handleTranslate}
+                                translating={translating}
+                                editable
+                                onRenameSpeaker={handleRenameSpeaker}
+                            />
+                        </TranscriptColumn>
+                    </MeetingDocument>
 
                     <IntelligencePanel>
-                        <PanelHeader>
-                            <Badge tone="action">
-                                <MessageSquareText size={13} />
-                                Intelligence
-                            </Badge>
-                            <H3>{PANEL_TITLES[activeTab]}</H3>
-                            <Body3>{PANEL_COPY[activeTab]}</Body3>
-                        </PanelHeader>
                         <Tabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
                         <TabContent>
-                            {activeTab === "summary" && <SummaryTab summary={meeting.summary} />}
                             {activeTab === "actions" && (
                                 <ActionsTab
                                     items={meeting.action_items}
@@ -366,6 +412,18 @@ const MeetingContentView = () => {
                     </IntelligencePanel>
                 </ContentGrid>
             </Frame>
+            {summaryOpen && (
+                <Modal
+                    title="Meeting Summary"
+                    onClose={() => setSummaryOpen(false)}
+                    width="min(1080px, calc(100vw - 48px))"
+                    bare
+                >
+                    <SummaryModalContent>
+                        <SummaryTab summary={meeting.summary} />
+                    </SummaryModalContent>
+                </Modal>
+            )}
         </Wrapper>
     );
 };

@@ -95,7 +95,7 @@ const SignIn = styled.button`
     font-size: var(--body-4-d);
     font-weight: var(--medium);
     line-height: 16px;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--app-letter-spacing);
     text-transform: uppercase;
     transition: color var(--transition-fast);
 
@@ -122,7 +122,7 @@ const PrimaryLink = styled.button`
     font-size: var(--body-4-d);
     font-weight: var(--medium);
     line-height: 16px;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--app-letter-spacing);
     text-transform: uppercase;
     transition: background var(--transition-fast);
 
@@ -156,7 +156,7 @@ const SecondaryButton = styled.button`
     font-size: var(--body-4-d);
     font-weight: var(--medium);
     line-height: 16px;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--app-letter-spacing);
     text-transform: uppercase;
     transition: border-color var(--transition-fast);
 
@@ -221,7 +221,7 @@ const Label = styled.span`
     font-size: var(--body-4-d);
     font-weight: var(--medium);
     line-height: 16px;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--app-letter-spacing);
     text-transform: uppercase;
 `;
 
@@ -232,7 +232,7 @@ const HeroTitle = styled.h1`
     font-size: var(--h1-m);
     font-weight: var(--bold);
     line-height: 40px;
-    letter-spacing: -0.01em;
+    letter-spacing: var(--app-heading-letter-spacing);
 
     span {
         color: var(--Color-Text-Action);
@@ -242,7 +242,7 @@ const HeroTitle = styled.h1`
     @media (min-width: 768px) {
         font-size: var(--h1-d);
         line-height: 56px;
-        letter-spacing: -0.02em;
+        letter-spacing: var(--app-heading-letter-spacing);
     }
 `;
 
@@ -328,7 +328,7 @@ const PreviewHeader = styled.div`
         font-family: var(--mono-font);
         font-size: var(--body-4-d);
         line-height: 16px;
-        letter-spacing: 0.1em;
+        letter-spacing: var(--app-letter-spacing);
         text-transform: uppercase;
     }
 `;
@@ -387,7 +387,7 @@ const TurnMeta = styled.div`
     font-family: var(--mono-font);
     font-size: var(--body-4-d);
     line-height: 16px;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--app-letter-spacing);
     text-transform: uppercase;
 
     strong {
@@ -428,7 +428,7 @@ const InsightsHeader = styled.div`
         font-size: var(--body-4-d);
         font-weight: var(--medium);
         line-height: 16px;
-        letter-spacing: 0.1em;
+        letter-spacing: var(--app-letter-spacing);
         text-transform: uppercase;
     }
 `;
@@ -515,12 +515,12 @@ const SectionIntro = styled.div`
         font-size: var(--h1-m);
         font-weight: var(--bold);
         line-height: 40px;
-        letter-spacing: -0.01em;
+        letter-spacing: var(--app-heading-letter-spacing);
 
         @media (min-width: 768px) {
             font-size: var(--h2-d);
             line-height: 40px;
-            letter-spacing: 0;
+            letter-spacing: var(--app-heading-letter-spacing);
         }
     }
 `;
@@ -795,7 +795,7 @@ const PlanButton = styled.button`
     font-size: var(--body-4-d);
     font-weight: var(--medium);
     line-height: 16px;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--app-letter-spacing);
     text-transform: uppercase;
     transition: all var(--transition-fast);
 
@@ -815,7 +815,7 @@ const Recommended = styled.div`
     font-family: var(--mono-font);
     font-size: 10px;
     line-height: 16px;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--app-letter-spacing);
     text-transform: uppercase;
 `;
 
@@ -845,7 +845,7 @@ const FooterBrand = styled.div`
     font-family: var(--mono-font);
     font-size: var(--body-4-d);
     line-height: 16px;
-    letter-spacing: 0.1em;
+    letter-spacing: var(--app-letter-spacing);
     text-transform: uppercase;
 `;
 

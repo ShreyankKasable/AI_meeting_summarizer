@@ -5,13 +5,21 @@ import { Body3 } from "common/global-styled-components";
 import { formatElapsed } from "common/utils/utils";
 
 const Bar = styled.div`
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
     display: grid;
-    grid-template-columns: auto auto auto auto 1fr auto auto;
+    grid-template-columns: auto auto auto auto 1fr auto;
     align-items: center;
     gap: var(--Size-Gap-L);
-    padding: var(--Size-Padding-L) var(--Size-Padding-XL);
-    background: var(--Color-Background-Subtle);
+    padding: var(--Size-Padding-XL) var(--Size-Padding-M) var(--Size-Padding-L);
+    background: rgba(249, 249, 247, 0.94);
+    backdrop-filter: blur(12px);
     border-top: 1px solid var(--Color-Border-Subtle);
+
+    audio {
+        display: none;
+    }
 
     @media (max-width: 640px) {
         grid-template-columns: auto auto auto 1fr;
@@ -27,9 +35,9 @@ const PlayButton = styled.button`
     justify-content: center;
     border: none;
     border-radius: var(--Size-CornerRadius-Full);
-    background: var(--Color-Background-Bold);
-    color: var(--Color-Text-Inverse);
-    box-shadow: 0 12px 24px rgba(17, 19, 22, 0.18);
+    background: transparent;
+    color: var(--Color-Text-Bold);
+    box-shadow: none;
     transition: all var(--transition-fast);
 
     &:hover {

@@ -61,7 +61,7 @@ const CloseButton = styled.button`
     }
 `;
 
-const Modal = ({ title, onClose, width, bare = false, children, ...props }) => {
+const Modal = ({ title, ariaLabel, onClose, width, bare = false, hideHeader = false, children, ...props }) => {
     useEffect(() => {
         const handleKey = (e) => {
             if (e.key === "Escape") onClose?.();
@@ -87,12 +87,12 @@ const Modal = ({ title, onClose, width, bare = false, children, ...props }) => {
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
-                aria-label={title}
+                aria-label={ariaLabel || title}
                 initial={{ opacity: 0, y: 14, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.18, ease: "easeOut" }}
             >
-                {title && (
+                {title && !hideHeader && (
                     <Header>
                         <H3>{title}</H3>
                         <CloseButton type="button" onClick={onClose} title="Close" aria-label="Close dialog">

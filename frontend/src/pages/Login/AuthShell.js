@@ -136,7 +136,8 @@ const BrandText = styled.h1`
     font-size: var(--Auth-Brand-Font-Size);
     line-height: var(--Auth-Brand-Line-Height);
     font-weight: var(--semi-bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
 `;
 
 const Title = styled.h2`
@@ -146,7 +147,8 @@ const Title = styled.h2`
     font-size: var(--Auth-Title-Font-Size);
     line-height: var(--Auth-Title-Line-Height);
     font-weight: var(--semi-bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
 `;
 
 const Subtitle = styled.p`

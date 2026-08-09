@@ -6,7 +6,8 @@ export const H1 = styled.h1`
     font-weight: var(--bold);
     font-size: var(--h1-d);
     line-height: var(--line-height-110);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Bold);
 
     @media (max-width: 640px) {
@@ -20,7 +21,8 @@ export const H2 = styled.h2`
     font-weight: var(--bold);
     font-size: var(--h2-d);
     line-height: var(--line-height-110);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Bold);
 
     @media (max-width: 640px) {
@@ -34,7 +36,8 @@ export const H3 = styled.h3`
     font-weight: var(--semi-bold);
     font-size: var(--h3-d);
     line-height: var(--line-height-120);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Bold);
 
     @media (max-width: 640px) {
@@ -47,6 +50,8 @@ export const SubTitle1 = styled.div`
     font-weight: var(--semi-bold);
     font-size: var(--subtitle-1-d);
     line-height: var(--line-height-140);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Default);
 `;
 
@@ -55,6 +60,8 @@ export const SubTitle2 = styled.div`
     font-weight: var(--semi-bold);
     font-size: var(--subtitle-2-d);
     line-height: var(--line-height-140);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Default);
 `;
 
@@ -63,6 +70,8 @@ export const Body1 = styled.div`
     font-weight: var(--regular);
     font-size: var(--body-1-d);
     line-height: var(--line-height-160);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Default);
 `;
 
@@ -71,6 +80,8 @@ export const Body2 = styled.div`
     font-weight: var(--regular);
     font-size: var(--body-2-d);
     line-height: var(--line-height-140);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Default);
 `;
 
@@ -87,6 +98,8 @@ export const Body3 = styled.div`
     font-weight: var(--regular);
     font-size: var(--body-3-d);
     line-height: var(--line-height-140);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Subtle);
 `;
 
@@ -104,8 +117,8 @@ export const Eyebrow = styled.span`
     font-family: var(--mono-font);
     font-weight: var(--medium);
     font-size: var(--body-4-d);
-    letter-spacing: var(--letter-spacing-widest);
-    text-transform: uppercase;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Subtle);
 `;
 
@@ -113,7 +126,7 @@ export const MonoLabel = styled.span`
     font-family: var(--mono-font);
     font-weight: var(--medium);
     font-size: var(--body-4-d);
-    letter-spacing: var(--letter-spacing-widest);
-    text-transform: uppercase;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Action);
 `;

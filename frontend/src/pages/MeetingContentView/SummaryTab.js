@@ -1,43 +1,27 @@
 import React from "react";
 import styled from "styled-components";
-import { FileText } from "lucide-react";
-import Badge from "common/components/Badge";
-import { H3, Body2, Body3 } from "common/global-styled-components";
+import { Body3 } from "common/global-styled-components";
 
 const Wrapper = styled.div`
     padding: var(--Size-Padding-XXL);
-    display: grid;
-    gap: var(--Size-Gap-XXL);
+    min-height: 100%;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 `;
 
-const SectionIntro = styled.div`
-    display: grid;
-    gap: var(--Size-Gap-S);
-    padding-bottom: var(--Size-Padding-XL);
-    border-bottom: 1px solid var(--Color-Border-Subtle);
-`;
-
-const EmptyState = styled.div`
-    min-height: 220px;
-    display: grid;
-    place-items: center;
+const SummaryPanel = styled.div`
+    min-height: 520px;
     padding: var(--Size-Padding-XXL);
-    border: 1px dashed var(--Color-Border-Default);
+    border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Subtle);
-    text-align: center;
+    background: var(--Color-Background-Default);
 `;
 
-const EmptyIcon = styled.div`
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto var(--Size-Gap-L);
-    border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Accent-Action);
-    color: var(--Color-Icon-Action);
+const EmptySummary = styled(Body3)`
+    color: var(--Color-Text-Subtle);
 `;
 
 const MarkdownBody = styled.div`
@@ -231,34 +215,18 @@ const SummaryTab = ({ summary }) => {
     if (!summary) {
         return (
             <Wrapper>
-                <EmptyState>
-                    <div>
-                        <EmptyIcon>
-                            <FileText size={20} />
-                        </EmptyIcon>
-                        <H3 style={{ fontSize: "var(--subtitle-2-d)" }}>No summary yet</H3>
-                        <Body3 style={{ marginTop: "var(--Size-Gap-S)" }}>
-                            The summary will appear after processing.
-                        </Body3>
-                    </div>
-                </EmptyState>
+                <SummaryPanel>
+                    <EmptySummary>No summary generated</EmptySummary>
+                </SummaryPanel>
             </Wrapper>
         );
     }
 
     return (
         <Wrapper>
-            <SectionIntro>
-                <Badge tone="action">
-                    <FileText size={13} />
-                    Summary
-                </Badge>
-                <H3 style={{ fontSize: "var(--subtitle-2-d)" }}>Executive readout</H3>
-                <Body2 style={{ color: "var(--Color-Text-Subtle)" }}>
-                    A concise editorial brief generated from the meeting transcript.
-                </Body2>
-            </SectionIntro>
-            <MarkdownBody>{renderMarkdown(summary)}</MarkdownBody>
+            <SummaryPanel>
+                <MarkdownBody>{renderMarkdown(summary)}</MarkdownBody>
+            </SummaryPanel>
         </Wrapper>
     );
 };

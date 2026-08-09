@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import { Bot, CornerDownLeft, FileText, Send, Sparkles } from "lucide-react";
-import Avatar from "common/components/Avatar";
+import { Bot, CornerDownLeft, Send, Sparkles } from "lucide-react";
 import Badge from "common/components/Badge";
 import { H3, Body3 } from "common/global-styled-components";
 
@@ -10,6 +9,7 @@ const Wrapper = styled.div`
     flex-direction: column;
     height: 100%;
     min-height: 580px;
+    font-family: var(--body-font);
 `;
 
 const Suggestions = styled.div`
@@ -34,7 +34,12 @@ const PromptButton = styled.button`
     border-radius: var(--Size-CornerRadius-M);
     background: var(--Color-Background-Subtle);
     color: var(--Color-Text-Default);
+    font-family: var(--body-font);
     font-size: var(--body-3-d);
+    line-height: var(--line-height-140);
+    font-weight: var(--medium);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     text-align: left;
     transition: all var(--transition-fast);
 
@@ -58,6 +63,11 @@ const Messages = styled.div`
     display: flex;
     flex-direction: column;
     gap: var(--Size-Gap-XL);
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 `;
 
 const Row = styled.div`
@@ -68,32 +78,29 @@ const Row = styled.div`
 `;
 
 const BubbleStack = styled.div`
-    max-width: 88%;
+    max-width: 82%;
     display: grid;
     gap: var(--Size-Gap-S);
 `;
 
 const Bubble = styled(Body3)`
-    padding: var(--Size-Padding-L) var(--Size-Padding-XL);
-    border: 1px solid ${({ $isUser }) => ($isUser ? "var(--Color-Border-Action)" : "var(--Color-Border-Subtle)")};
-    border-radius: var(--Size-CornerRadius-M);
-    background: ${({ $isUser }) =>
-        $isUser ? "var(--Color-Background-Action)" : "var(--Color-Background-Subtle)"};
-    color: ${({ $isUser }) => ($isUser ? "var(--Color-Text-Inverse)" : "var(--Color-Text-Default)")};
-    box-shadow: ${({ $isUser }) => ($isUser ? "var(--Color-Shadow-Action)" : "none")};
-    white-space: pre-wrap;
-`;
-
-const SourceNote = styled.span`
-    display: inline-flex;
-    align-items: center;
-    gap: var(--Size-Gap-S);
     width: fit-content;
-    color: var(--Color-Text-Subtlest);
-    font-family: var(--mono-font);
+    max-width: 100%;
+    padding: 8px 14px;
+    font-family: var(--body-font);
     font-size: var(--body-5-d);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
+    line-height: var(--line-height-160);
+    font-weight: var(--medium);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
+    border: 1px solid
+        ${({ $isUser }) => ($isUser ? "rgba(120, 86, 0, 0.08)" : "var(--Color-Border-Subtle)")};
+    border-radius: ${({ $isUser }) => ($isUser ? "20px 6px 20px 20px" : "6px 20px 20px 20px")};
+    background: ${({ $isUser }) =>
+        $isUser ? "var(--Color-Background-Action-Soft)" : "var(--Color-Background-Subtle)"};
+    color: var(--Color-Text-Default);
+    box-shadow: ${({ $isUser }) => ($isUser ? "0 8px 18px rgba(120, 86, 0, 0.08)" : "none")};
+    white-space: pre-wrap;
 `;
 
 const EmptyState = styled.div`
@@ -129,8 +136,12 @@ const TextArea = styled.textarea`
     min-height: 46px;
     max-height: 140px;
     padding: var(--Size-Padding-L) 48px var(--Size-Padding-L) var(--Size-Padding-XL);
-    font-size: var(--body-3-d);
+    font-size: var(--body-5-d);
     font-family: var(--body-font);
+    line-height: var(--line-height-140);
+    font-weight: var(--regular);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     background: var(--Color-Background-Subtle);
     color: var(--Color-Text-Bold);
     border: 1px solid var(--Color-Border-Default);
@@ -208,20 +219,22 @@ const ChatTab = ({ messages = [], onSend, sending = false }) => {
 
     return (
         <Wrapper>
-            <Suggestions>
-                <Badge tone="neutral">
-                    <Sparkles size={13} />
-                    Suggested prompts
-                </Badge>
-                <SuggestionGrid>
-                    {PROMPTS.map((prompt) => (
-                        <PromptButton key={prompt} type="button" onClick={() => sendQuestion(prompt)}>
-                            {prompt}
-                            <CornerDownLeft size={14} />
-                        </PromptButton>
-                    ))}
-                </SuggestionGrid>
-            </Suggestions>
+            {messages.length === 0 && !sending && (
+                <Suggestions>
+                    <Badge tone="neutral">
+                        <Sparkles size={13} />
+                        Suggested prompts
+                    </Badge>
+                    <SuggestionGrid>
+                        {PROMPTS.map((prompt) => (
+                            <PromptButton key={prompt} type="button" onClick={() => sendQuestion(prompt)}>
+                                {prompt}
+                                <CornerDownLeft size={14} />
+                            </PromptButton>
+                        ))}
+                    </SuggestionGrid>
+                </Suggestions>
+            )}
             {messages.length === 0 && !sending ? (
                 <EmptyState>
                     <div>
@@ -238,21 +251,13 @@ const ChatTab = ({ messages = [], onSend, sending = false }) => {
                 <Messages ref={scrollRef}>
                     {messages.map((m, index) => (
                         <Row key={m.id || `${m.role}-${index}`} $isUser={m.role === "user"}>
-                            {m.role !== "user" && <Avatar name="AI" size="small" />}
                             <BubbleStack>
                                 <Bubble $isUser={m.role === "user"}>{m.content}</Bubble>
-                                {m.role !== "user" && (
-                                    <SourceNote>
-                                        <FileText size={12} />
-                                        Transcript referenced
-                                    </SourceNote>
-                                )}
                             </BubbleStack>
                         </Row>
                     ))}
                     {sending && (
                         <Row>
-                            <Avatar name="AI" size="small" />
                             <BubbleStack>
                                 <Bubble>
                                     <Thinking>

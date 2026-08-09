@@ -21,8 +21,8 @@ const FieldLabel = styled.span`
 
 const Optional = styled.span`
     font-weight: var(--regular);
-    text-transform: none;
-    letter-spacing: 0;
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Subtlest);
 `;
 
@@ -35,7 +35,10 @@ const fieldStyles = css`
     min-height: 44px;
     padding: var(--Size-Padding-L) ${({ $hasAddon }) => ($hasAddon ? "44px" : "var(--Size-Padding-XL)")}
         var(--Size-Padding-L) var(--Size-Padding-XL);
+    font-family: var(--body-font);
     font-size: var(--body-2-d);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     color: var(--Color-Text-Default);
     background: var(--Color-Background-Subtle);
     border: 1px solid ${({ $hasError }) => ($hasError ? "var(--Color-Border-Accent-Danger)" : "var(--Color-Border-Default)")};

@@ -8,7 +8,10 @@
  * exact same pipeline. Progress is broadcast with `io.emit(...)` so any
  * connected browser tab receives it.
  */
-import fs from 'node:fs';
+import crypto from 'node:crypto';
+import fsp from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import logger from '#app/common/logger.js';
 import { SOCKET_EVENTS, PROCESSING_STATUS, EMBEDDING_STATUS } from '#app/common/constants.js';
 import { meetingsService } from '#app/pkg/meetings/service.js';
@@ -19,10 +22,14 @@ import { audioCompressionService } from '#app/pkg/audio/compression.service.js';
 import { recordingStorageService } from '#app/pkg/storage/recording.service.js';
 import { enqueueEmbeddingJob } from '#app/queues/embedding.queue.js';
 
+const TEMP_AUDIO_DIR = path.join(os.tmpdir(), 'meetai-audio');
+const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.webm', '.m4a', '.mp4', '.ogg']);
+
 export class ProcessingService {
   async processRecording ({ io, hostId, meetingId, audioFile }) {
     const emit = (event, payload) => { if (io) (hostId ? io.to(`host:${hostId}`) : io).emit(event, payload); };
     logger.info(`Processing recording for meeting ${meetingId}, file: ${audioFile}`);
+    let storageAudio = null;
     try {
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.TRANSCRIBING });
       const transcript = await transcriptionService.transcribe(audioFile);
@@ -32,7 +39,7 @@ export class ProcessingService {
 
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.EXTRACTING_ACTIONS });
       const rawItems = await extractionService.extract(transcript, summary);
-      const storageAudio = await audioCompressionService.compressForStorage(audioFile);
+      storageAudio = await audioCompressionService.compressForStorage(audioFile);
       const audioFilePath = await recordingStorageService.persistRecording(storageAudio.filePath, { meetingId });
       await audioCompressionService.removeIfReplaced(audioFile, storageAudio.filePath);
 
@@ -58,16 +65,22 @@ export class ProcessingService {
       logger.info(`Meeting processed: ${meetingId} | Items: ${actionItems.length}`);
       return { meeting, summary, action_items: actionItems };
     } catch (e) {
+      await cleanupFailedRecordingFiles(audioFile, storageAudio?.filePath);
       logger.error('Processing error:', e);
       emit(SOCKET_EVENTS.ERROR, { message: `Processing failed: ${e.message}` });
       throw e;
     }
   }
 
-  async processLiveChunk ({ io, hostId, meetingId, chunkFile }) {
-    if (!chunkFile) return;
+  async processLiveChunk ({ io, hostId, meetingId, chunkFile, chunkBuffer, chunkOriginalName }) {
+    const liveChunkFile = chunkFile || await writeTempAudioBuffer(chunkBuffer, {
+      meetingId,
+      originalName: chunkOriginalName,
+      prefix: 'chunk',
+    });
+    if (!liveChunkFile) return;
     try {
-      const result = await transcriptionService.transcribe(chunkFile);
+      const result = await transcriptionService.transcribe(liveChunkFile);
       const text = (result?.text || '').trim();
       if (text && io) {
         (hostId ? io.to(`host:${hostId}`) : io).emit(SOCKET_EVENTS.LIVE_TRANSCRIPT_UPDATE, { meeting_id: meetingId, text });
@@ -75,8 +88,40 @@ export class ProcessingService {
     } catch (e) {
       logger.error('[LIVE] Error processing chunk:', e.message);
     } finally {
-      try { if (fs.existsSync(chunkFile)) fs.unlinkSync(chunkFile); } catch { /* ignore */ }
+      await removeFileIfExists(liveChunkFile);
     }
+  }
+}
+
+async function writeTempAudioBuffer (buffer, { meetingId, originalName, prefix }) {
+  if (!Buffer.isBuffer(buffer) || !buffer.length) return null;
+  await fsp.mkdir(TEMP_AUDIO_DIR, { recursive: true });
+
+  const safeMeetingId = meetingId == null ? 'unknown' : String(meetingId).replace(/[^\w-]/g, '_');
+  const ext = safeAudioExtension(originalName);
+  const filePath = path.join(TEMP_AUDIO_DIR, `${prefix}_${safeMeetingId}_${Date.now()}_${crypto.randomUUID()}${ext}`);
+  await fsp.writeFile(filePath, buffer);
+  return filePath;
+}
+
+function safeAudioExtension (fileName) {
+  const ext = path.extname(String(fileName || '')).toLowerCase();
+  return AUDIO_EXTENSIONS.has(ext) ? ext : '.wav';
+}
+
+async function cleanupFailedRecordingFiles (audioFile, storageFile) {
+  await Promise.all([
+    removeFileIfExists(storageFile && storageFile !== audioFile ? storageFile : null),
+    removeFileIfExists(audioFile),
+  ]);
+}
+
+async function removeFileIfExists (filePath) {
+  if (!filePath) return;
+  try {
+    await fsp.unlink(filePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') logger.warn(`Could not delete temporary audio file ${filePath}:`, error.message);
   }
 }
 

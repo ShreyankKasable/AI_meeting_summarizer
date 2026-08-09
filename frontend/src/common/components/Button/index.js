@@ -32,7 +32,8 @@ const BaseButton = styled.button`
     border-radius: var(--Size-CornerRadius-M);
     font-family: var(--body-font);
     font-weight: var(--semi-bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     white-space: nowrap;
     transition:
         transform var(--transition-fast),

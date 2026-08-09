@@ -70,7 +70,8 @@ const Timer = styled.div`
     font-size: clamp(44px, 9vw, 82px);
     font-weight: var(--bold);
     color: var(--Color-Text-Bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
     margin: var(--Size-Gap-XXL) 0;
 `;
 

@@ -14,9 +14,10 @@ export const GlobalStyle = createGlobalStyle`
     @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 
     :root {
-        --heading-font: "Playfair Display", Georgia, "Times New Roman", serif;
-        --body-font: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        --mono-font: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+        --app-font: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+        --heading-font: var(--app-font);
+        --body-font: var(--app-font);
+        --mono-font: var(--app-font);
 
         --h1-d: 48px;
         --h1-m: 32px;
@@ -46,6 +47,9 @@ export const GlobalStyle = createGlobalStyle`
         --letter-spacing-tight: 0;
         --letter-spacing-wide: 0.08em;
         --letter-spacing-widest: 0.12em;
+        --app-letter-spacing: var(--letter-spacing-wide);
+        --app-heading-letter-spacing: var(--letter-spacing-wide);
+        --app-text-transform: uppercase;
 
         --Color-Background-Root: #f9f9f7;
         --Color-Background-Default: #ffffff;
@@ -282,6 +286,8 @@ export const GlobalStyle = createGlobalStyle`
     body {
         margin: 0;
         font-family: var(--body-font);
+        letter-spacing: var(--app-letter-spacing);
+        text-transform: var(--app-text-transform);
         color: var(--Color-Text-Default);
         background:
             radial-gradient(circle at 1px 1px, rgba(120, 86, 0, 0.035) 1px, transparent 0),
@@ -298,6 +304,8 @@ export const GlobalStyle = createGlobalStyle`
     textarea,
     select {
         font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
     }
 
     button {

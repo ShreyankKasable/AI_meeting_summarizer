@@ -1,5 +1,8 @@
 import express from 'express';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import multer from 'multer';
 import { NotFound, UnauthorizedRequest, BadRequest } from '#app/common/error/index.js';
 import config from '#app/common/config.js';
@@ -32,29 +35,50 @@ router.param('id', async (req, res, next, value) => {
 });
 
 const MAX_AUDIO_BYTES = 200 * 1024 * 1024;
+const MAX_AUDIO_CHUNK_BYTES = 25 * 1024 * 1024;
+const TEMP_AUDIO_DIR = path.join(os.tmpdir(), 'meetai-audio');
+
+const audioFileFilter = (req, file, cb) => {
+  if (!file.mimetype.startsWith('audio/')) return cb(new BadRequest(`Unsupported file type: ${file.mimetype}`));
+  return cb(null, true);
+};
 
 const audioUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, config.paths.AUDIO_DIR),
     filename: (req, file, cb) => {
-      const prefix = req.path.endsWith('/audio-chunk') ? 'chunk' : 'meeting';
-      cb(null, `${prefix}_${req.params.id}_${Date.now()}_${crypto.randomUUID()}.wav`);
+      cb(null, `meeting_${req.params.id}_${Date.now()}_${crypto.randomUUID()}.wav`);
     },
   }),
   limits: { fileSize: MAX_AUDIO_BYTES },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('audio/')) return cb(new BadRequest(`Unsupported file type: ${file.mimetype}`));
-    return cb(null, true);
-  },
+  fileFilter: audioFileFilter,
 });
 
-function uploadAudio (req, res, next) {
-  audioUpload.single('audio')(req, res, (err) => {
-    if (!err) return next();
-    if (err instanceof multer.MulterError) return next(new BadRequest(err.message));
-    return next(err);
-  });
+const audioChunkUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      fs.mkdir(TEMP_AUDIO_DIR, { recursive: true }, (err) => cb(err, TEMP_AUDIO_DIR));
+    },
+    filename: (req, file, cb) => {
+      cb(null, `chunk_${req.params.id}_${Date.now()}_${crypto.randomUUID()}.wav`);
+    },
+  }),
+  limits: { fileSize: MAX_AUDIO_CHUNK_BYTES },
+  fileFilter: audioFileFilter,
+});
+
+function handleUpload (upload) {
+  return (req, res, next) => {
+    upload.single('audio')(req, res, (err) => {
+      if (!err) return next();
+      if (err instanceof multer.MulterError) return next(new BadRequest(err.message));
+      return next(err);
+    });
+  };
 }
+
+const uploadAudio = handleUpload(audioUpload);
+const uploadAudioChunk = handleUpload(audioChunkUpload);
 
 router.get('/', async (req, res, next) => {
   try {
@@ -100,7 +124,7 @@ router.post('/:id/audio', uploadAudio, async (req, res, next) => {
   }
 });
 
-router.post('/:id/audio-chunk', uploadAudio, async (req, res, next) => {
+router.post('/:id/audio-chunk', uploadAudioChunk, async (req, res, next) => {
   try {
     if (!req.file) throw new BadRequest('No audio chunk uploaded');
     await processingService.processLiveChunk({

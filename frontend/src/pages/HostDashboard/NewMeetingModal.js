@@ -1,46 +1,165 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import styled from "styled-components";
-import { Mic, Users } from "lucide-react";
+import { Mic, Plus, UserPlus, X } from "lucide-react";
 import Modal from "common/components/Modal";
-import Input from "common/components/Input";
 import Button from "common/components/Button";
-import Badge from "common/components/Badge";
-import { Body3 } from "common/global-styled-components";
+import { H3, Body3 } from "common/global-styled-components";
 import { setHostView } from "common/redux/actions/sessionActions";
 import { HOST_VIEWS } from "common/constants";
 import { toast } from "common/utils/toast";
 import { emitStartRecording } from "services/socket.service";
 
-const Form = styled.form`
+const Shell = styled.form`
     display: flex;
     flex-direction: column;
+    background: var(--Color-Background-Default);
+`;
+
+const Header = styled.header`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--Size-Gap-XL);
+    padding: var(--Size-Padding-XXL) var(--Size-Padding-XXXL);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
+    background: var(--Color-Background-Default);
 `;
 
-const Intro = styled.div`
-    display: grid;
+const CloseButton = styled.button`
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--Size-CornerRadius-Full);
+    background: transparent;
+    color: var(--Color-Icon-Subtle);
+    transition: all var(--transition-fast);
+
+    &:hover {
+        background: var(--Color-Background-Subtle);
+        color: var(--Color-Text-Bold);
+    }
+`;
+
+const Body = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: var(--Size-Gap-XXL);
+    padding: var(--Size-Padding-XXXL);
+    background: var(--Color-Background-Default);
+`;
+
+const Field = styled.label`
+    display: flex;
+    flex-direction: column;
+    gap: var(--Size-Gap-S);
+`;
+
+const FieldLabel = styled.span`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--Size-Gap-M);
-    padding: var(--Size-Padding-XL);
-    margin-bottom: var(--Size-Gap-XL);
-    border: 1px solid var(--Color-Border-Subtle);
-    border-radius: var(--Size-CornerRadius-XL);
-    background: var(--Color-Background-Subtle);
+    color: var(--Color-Text-Subtle);
+    font-family: var(--mono-font);
+    font-size: var(--body-4-d);
+    line-height: var(--line-height-140);
+    font-weight: var(--medium);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
 `;
 
-const IconLine = styled.div`
+const ControlWrap = styled.div`
+    position: relative;
+`;
+
+const controlStyles = `
+    width: 100%;
+    min-height: 44px;
+    padding: 0 var(--Size-Padding-XL);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Subtle);
+    color: var(--Color-Text-Default);
+    font-family: var(--body-font);
+    font-size: var(--body-3-d);
+    line-height: var(--line-height-140);
+    font-weight: var(--regular);
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
+    outline: none;
+    transition: all var(--transition-fast);
+
+    &::placeholder {
+        color: var(--Color-Text-Subtlest);
+    }
+
+    &:focus {
+        border-color: var(--Color-Border-Action);
+        box-shadow: var(--Color-Shadow-Focus);
+        background: var(--Color-Background-Default);
+    }
+`;
+
+const TextInput = styled.input`
+    ${controlStyles}
+`;
+
+const TextArea = styled.textarea`
+    ${controlStyles}
+    min-height: 96px;
+    resize: none;
+    padding: var(--Size-Padding-L) 44px var(--Size-Padding-L) var(--Size-Padding-XL);
+`;
+
+const ParticipantIcon = styled.div`
+    position: absolute;
+    top: var(--Size-Padding-L);
+    right: var(--Size-Padding-L);
+    color: var(--Color-Icon-Subtle);
+    pointer-events: none;
+`;
+
+const HelpText = styled(Body3)`
+    margin-top: var(--Size-Gap-XS);
+    font-size: var(--body-4-d);
+    color: var(--Color-Text-Subtlest);
+`;
+
+const StatusCard = styled.div`
     display: flex;
     align-items: center;
     gap: var(--Size-Gap-M);
+    padding: var(--Size-Padding-L) var(--Size-Padding-XL);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Subtle);
+    color: var(--Color-Text-Subtle);
 `;
 
-const Actions = styled.div`
-    display: flex;
-    gap: var(--Size-Gap-M);
+const StatusIcon = styled.span`
+    display: inline-flex;
+    color: var(--Color-Icon-Action);
+`;
 
-    @media (max-width: 480px) {
+const Footer = styled.footer`
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--Size-Gap-M);
+    padding: var(--Size-Padding-XXL) var(--Size-Padding-XXXL);
+    border-top: 1px solid var(--Color-Border-Subtle);
+    background: var(--Color-Background-Default);
+
+    @media (max-width: 560px) {
         flex-direction: column-reverse;
     }
+`;
+
+const ActionButton = styled(Button)`
+    min-width: 142px;
 `;
 
 const NewMeetingModal = ({ onClose }) => {
@@ -60,44 +179,66 @@ const NewMeetingModal = ({ onClose }) => {
     };
 
     return (
-        <Modal title="New Meeting" onClose={onClose} id="new-meeting-modal">
-            <Intro>
-                <Badge tone="action">
-                    <Mic size={13} />
-                    Recording setup
-                </Badge>
-                <IconLine>
-                    <Users size={16} color="var(--Color-Icon-Subtle)" />
-                    <Body3>Participant names can be added now or cleaned up after transcription.</Body3>
-                </IconLine>
-            </Intro>
-            <Form onSubmit={handleSubmit}>
-                <Input
-                    label="Meeting Title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Weekly product review"
-                    id="new-meeting-title"
-                    autoFocus
-                />
-                <Input
-                    label="Participants"
-                    optional
-                    value={participants}
-                    onChange={(e) => setParticipants(e.target.value)}
-                    placeholder="Comma-separated names"
-                    id="new-meeting-participants"
-                />
-                <Actions>
-                    <Button type="button" mode="secondary" block onClick={onClose}>
+        <Modal
+            title="Start a New Meeting"
+            ariaLabel="Start a New Meeting"
+            hideHeader
+            bare
+            width="560px"
+            onClose={onClose}
+            id="new-meeting-modal"
+        >
+            <Shell onSubmit={handleSubmit}>
+                <Header>
+                    <H3 style={{ fontSize: "var(--h2-d)" }}>Start a New Meeting</H3>
+                    <CloseButton type="button" aria-label="Close dialog" title="Close" onClick={onClose}>
+                        <X size={18} />
+                    </CloseButton>
+                </Header>
+                <Body>
+                    <Field htmlFor="new-meeting-title">
+                        <FieldLabel>Meeting Title</FieldLabel>
+                        <TextInput
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="e.g., Weekly Editorial Sync"
+                            id="new-meeting-title"
+                            autoFocus
+                        />
+                    </Field>
+                    <Field htmlFor="new-meeting-participants">
+                        <FieldLabel>Participant Emails</FieldLabel>
+                        <ControlWrap>
+                            <TextArea
+                                value={participants}
+                                onChange={(e) => setParticipants(e.target.value)}
+                                placeholder="Enter emails or names separated by commas..."
+                                id="new-meeting-participants"
+                                rows={3}
+                            />
+                            <ParticipantIcon>
+                                <UserPlus size={16} />
+                            </ParticipantIcon>
+                        </ControlWrap>
+                        <HelpText>Participants will be saved with this meeting.</HelpText>
+                    </Field>
+                    <StatusCard>
+                        <StatusIcon>
+                            <Mic size={16} />
+                        </StatusIcon>
+                        <Body3>AI recording and transcription ready to initialize.</Body3>
+                    </StatusCard>
+                </Body>
+                <Footer>
+                    <ActionButton type="button" mode="secondary" size="small" onClick={onClose}>
                         Cancel
-                    </Button>
-                    <Button type="submit" block id="start-recording-btn">
-                        <Mic size={16} />
-                        Start Recording
-                    </Button>
-                </Actions>
-            </Form>
+                    </ActionButton>
+                    <ActionButton type="submit" size="small" id="start-recording-btn">
+                        <Plus size={14} />
+                        Create Meeting
+                    </ActionButton>
+                </Footer>
+            </Shell>
         </Modal>
     );
 };

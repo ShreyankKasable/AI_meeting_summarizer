@@ -19,7 +19,8 @@ const TabButton = styled.button`
     color: ${({ active }) => (active ? "var(--Color-Text-Bold)" : "var(--Color-Text-Subtle)")};
     font-size: var(--body-3-d);
     font-weight: var(--semi-bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
     white-space: nowrap;
     transition: color var(--transition-fast);
 

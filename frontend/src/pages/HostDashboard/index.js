@@ -51,7 +51,8 @@ const PageTitle = styled.h2`
     font-size: var(--h1-d);
     line-height: var(--line-height-110);
     font-weight: var(--bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
 `;
 
 const PageSubtitle = styled.p`
@@ -268,7 +269,8 @@ const MeetingTitle = styled.h3`
     font-size: var(--h3-d);
     line-height: var(--Auth-Title-Line-Height);
     font-weight: var(--semi-bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
     transition: color var(--Auth-Transition);
 
     ${MeetingRow}:hover & {

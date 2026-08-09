@@ -84,7 +84,8 @@ const Avatar = styled.div`
     background: var(--Color-Background-Accent-Action);
     color: var(--Color-Text-Action);
     font-weight: var(--bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-letter-spacing);
+    text-transform: var(--app-text-transform);
 `;
 
 const PersonMain = styled.div`

@@ -10,6 +10,11 @@ const List = styled.div`
     flex-direction: column;
     gap: var(--Size-Gap-XL);
     padding: var(--Size-Padding-XXL);
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 `;
 
 const HeaderBlock = styled.div`

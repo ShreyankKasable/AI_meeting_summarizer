@@ -68,7 +68,8 @@ const BrandName = styled.h1`
     font-size: var(--h2-d);
     line-height: 1.1;
     font-weight: var(--semi-bold);
-    letter-spacing: 0;
+    letter-spacing: var(--app-heading-letter-spacing);
+    text-transform: var(--app-text-transform);
 `;
 
 const BrandTag = styled.p`
