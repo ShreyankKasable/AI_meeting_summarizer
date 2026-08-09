@@ -34,6 +34,8 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+k8s/secret.local.yaml
+k8s/*.secret.yaml
 
 # Database
 *.db
