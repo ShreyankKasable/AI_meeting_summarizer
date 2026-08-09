@@ -219,6 +219,8 @@ export async function initDb () {
       ON transcript_chunks(meeting_id, chunk_index);
   `);
 
+  await alignTranscriptEmbeddingDimension(database, vectorDimensions);
+
   try {
     await database.query(`
       CREATE INDEX IF NOT EXISTS idx_transcript_chunks_embedding
@@ -230,6 +232,36 @@ export async function initDb () {
 
   logger.info('PostgreSQL database initialized successfully');
   return database;
+}
+
+async function alignTranscriptEmbeddingDimension (database, vectorDimensions) {
+  const result = await database.query(`
+    SELECT atttypmod
+    FROM pg_attribute
+    WHERE attrelid = 'transcript_chunks'::regclass
+      AND attname = 'embedding'
+      AND NOT attisdropped
+  `);
+
+  const currentTypmod = Number(result.rows[0]?.atttypmod || -1);
+  const expectedTypmod = vectorDimensions + 4;
+  if (currentTypmod <= 0 || currentTypmod === expectedTypmod) return;
+
+  logger.warn(
+    `Changing transcript embedding dimension from ${currentTypmod - 4} to ${vectorDimensions}; existing vectors will be regenerated.`
+  );
+
+  await database.query('DROP INDEX IF EXISTS idx_transcript_chunks_embedding;');
+  await database.query(`ALTER TABLE transcript_chunks ALTER COLUMN embedding TYPE vector(${vectorDimensions}) USING NULL;`);
+  await database.query(`
+    UPDATE meetings
+    SET embedding_status = 'not_started',
+        embedding_error = NULL,
+        embedding_job_id = NULL,
+        embedding_queued_at = NULL,
+        embedding_started_at = NULL,
+        embedding_completed_at = NULL
+  `);
 }
 
 export async function disconnect () {

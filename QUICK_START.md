@@ -20,7 +20,9 @@ Copy `.env.example` to `.env`, then add your provider keys.
 ```env
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/ai_meeting_summarizer
 DATABASE_SSL=false
-EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_PROVIDER=huggingface
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+EMBEDDING_DIMENSIONS=384
 RAG_ENABLED=true
 ```
 

@@ -1,5 +1,12 @@
 const BASE_URL = import.meta.env?.VITE_API_BASE_URL || "";
 
+export const toApiUrl = (pathOrUrl) => {
+    if (!pathOrUrl || typeof pathOrUrl !== "string") return pathOrUrl;
+    if (/^(https?:|blob:|data:)/i.test(pathOrUrl)) return pathOrUrl;
+    if (!BASE_URL) return pathOrUrl;
+    return `${BASE_URL.replace(/\/$/, "")}/${pathOrUrl.replace(/^\//, "")}`;
+};
+
 const URLS = {
     // auth
     signup: `${BASE_URL}/api/auth/signup`,

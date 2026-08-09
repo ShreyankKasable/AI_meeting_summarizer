@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { FastForward, Pause, Play, Rewind, Volume2 } from "lucide-react";
 import { Body3 } from "common/global-styled-components";
 import { formatElapsed } from "common/utils/utils";
+import { toApiUrl } from "common/utils/apiUrls";
 
 const Bar = styled.div`
     position: sticky;
@@ -95,6 +96,7 @@ const AudioScrubber = ({ src }) => {
     const [playing, setPlaying] = useState(false);
     const [currentMs, setCurrentMs] = useState(0);
     const [durationMs, setDurationMs] = useState(0);
+    const resolvedSrc = toApiUrl(src);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -110,9 +112,9 @@ const AudioScrubber = ({ src }) => {
             audio.removeEventListener("loadedmetadata", onLoaded);
             audio.removeEventListener("ended", onEnded);
         };
-    }, [src]);
+    }, [resolvedSrc]);
 
-    if (!src) return null;
+    if (!resolvedSrc) return null;
 
     const togglePlay = () => {
         if (!audioRef.current) return;
@@ -137,7 +139,7 @@ const AudioScrubber = ({ src }) => {
 
     return (
         <Bar>
-            <audio ref={audioRef} src={src} preload="metadata" />
+            <audio ref={audioRef} src={resolvedSrc} preload="metadata" />
             <IconButton type="button" onClick={() => seek(-10)} title="Rewind 10 seconds" aria-label="Rewind 10 seconds">
                 <Rewind size={15} />
             </IconButton>

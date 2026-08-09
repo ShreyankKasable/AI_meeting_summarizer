@@ -29,7 +29,7 @@ chat with the meeting transcript.
 - Redis + BullMQ for background embedding jobs
 - Cloudflare R2 compatible recording storage
 - `pg` for database access
-- OpenAI-compatible, Anthropic, Deepgram, AssemblyAI, Hugging Face, and Notion integrations
+- Hugging Face, Anthropic, OpenAI-compatible, Deepgram, AssemblyAI, and Notion integrations
 
 ## Prerequisites
 
@@ -63,11 +63,14 @@ FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 TRANSCRIPTION_MODEL=deepgram
 DEEPGRAM_API_KEY=your_deepgram_key
 
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your_openai_key
+LLM_PROVIDER=huggingface
+HUGGINGFACE_API_KEY=your_huggingface_token
+HUGGINGFACE_CHAT_MODEL=openai/gpt-oss-20b
 
-EMBEDDING_MODEL=text-embedding-3-small
-EMBEDDING_DIMENSIONS=1536
+EMBEDDING_PROVIDER=huggingface
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+EMBEDDING_DIMENSIONS=384
+HUGGINGFACE_EMBEDDING_PROVIDER=hf-inference
 EMBEDDING_WORKER_CONCURRENCY=2
 
 AUDIO_STORAGE_PROVIDER=local

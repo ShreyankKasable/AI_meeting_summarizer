@@ -76,7 +76,7 @@ export class RagService {
   async retrieveRelevantChunks (meetingId, question, fallbackTranscript = null) {
     const limit = positiveInt(config.get('rag.max_chunks'), 6);
 
-    if (config.get('openai.api_key')) {
+    if (this._hasEmbeddingProvider()) {
       try {
         const [embedding] = await this._embedTexts([question]);
         if (embedding) {
@@ -112,8 +112,8 @@ export class RagService {
   }
 
   async _embedChunks (chunks) {
-    if (!config.get('openai.api_key')) {
-      logger.warn('OPENAI_API_KEY is not configured; transcript chunks will be stored without embeddings.');
+    if (!this._hasEmbeddingProvider()) {
+      logger.warn(`${this._embeddingProviderLabel()} is not configured; transcript chunks will be stored without embeddings.`);
       return chunks.map(() => null);
     }
 
@@ -126,6 +126,13 @@ export class RagService {
   }
 
   async _embedTexts (texts) {
+    const provider = config.get('embedding.provider');
+    if (provider === 'huggingface') return this._embedTextsWithHuggingFace(texts);
+    if (provider === 'openai') return this._embedTextsWithOpenAI(texts);
+    throw new Error(`Unsupported embedding provider: ${provider}`);
+  }
+
+  async _embedTextsWithOpenAI (texts) {
     const { default: OpenAI } = await import('openai');
     const client = new OpenAI({ apiKey: config.get('openai.api_key') });
     const batchSize = positiveInt(config.get('embedding.batch_size'), 32);
@@ -144,6 +151,42 @@ export class RagService {
     }
 
     return embeddings;
+  }
+
+  async _embedTextsWithHuggingFace (texts) {
+    const { InferenceClient } = await import('@huggingface/inference');
+    const client = new InferenceClient(config.get('huggingface.api_key'));
+    const batchSize = positiveInt(config.get('embedding.batch_size'), 32);
+    const embeddings = [];
+
+    for (let start = 0; start < texts.length; start += batchSize) {
+      const batch = texts.slice(start, start + batchSize);
+      const response = await client.featureExtraction({
+        model: config.get('embedding.model'),
+        inputs: batch,
+        provider: config.get('embedding.huggingface_provider'),
+        normalize: true,
+        truncate: true,
+      });
+
+      embeddings.push(...normalizeFeatureExtractionOutput(response, batch.length).map(validateEmbedding));
+    }
+
+    return embeddings;
+  }
+
+  _hasEmbeddingProvider () {
+    const provider = config.get('embedding.provider');
+    if (provider === 'openai') return !!config.get('openai.api_key');
+    if (provider === 'huggingface') return !!config.get('huggingface.api_key');
+    return false;
+  }
+
+  _embeddingProviderLabel () {
+    const provider = config.get('embedding.provider');
+    if (provider === 'openai') return 'OPENAI_API_KEY';
+    if (provider === 'huggingface') return 'HUGGINGFACE_API_KEY';
+    return `Embedding provider "${provider}"`;
   }
 }
 
@@ -294,6 +337,60 @@ function validateEmbedding (embedding) {
     if (!Number.isFinite(number)) throw new Error('Embedding contained a non-finite value');
     return number;
   });
+}
+
+function normalizeFeatureExtractionOutput (output, expectedCount) {
+  if (expectedCount === 1) {
+    if (isNumberArray(output)) return [output];
+    if (isMatrix(output)) {
+      if (output.length === 1 && isNumberArray(output[0])) return [output[0]];
+      return [meanPool(output)];
+    }
+  }
+
+  if (isMatrix(output) && output.length === expectedCount) return output;
+  if (isTensor3(output) && output.length === expectedCount) return output.map(meanPool);
+
+  throw new Error(`Hugging Face returned ${describeShape(output)} embeddings for ${expectedCount} inputs`);
+}
+
+function meanPool (matrix) {
+  if (!matrix.length || !matrix.every(isNumberArray)) throw new Error('Cannot mean-pool invalid embedding output');
+
+  const dimensions = matrix[0].length;
+  const totals = new Array(dimensions).fill(0);
+
+  for (const row of matrix) {
+    if (row.length !== dimensions) throw new Error('Cannot mean-pool embeddings with inconsistent dimensions');
+    row.forEach((value, index) => {
+      totals[index] += Number(value);
+    });
+  }
+
+  return totals.map((total) => total / matrix.length);
+}
+
+function isNumberArray (value) {
+  return Array.isArray(value) && value.length > 0 && value.every((item) => Number.isFinite(Number(item)));
+}
+
+function isMatrix (value) {
+  return Array.isArray(value) && value.length > 0 && value.every(isNumberArray);
+}
+
+function isTensor3 (value) {
+  return Array.isArray(value) && value.length > 0 && value.every(isMatrix);
+}
+
+function describeShape (value) {
+  if (!Array.isArray(value)) return typeof value;
+  const shape = [];
+  let current = value;
+  while (Array.isArray(current)) {
+    shape.push(current.length);
+    current = current[0];
+  }
+  return `[${shape.join(' x ')}]`;
 }
 
 function countWords (text) {

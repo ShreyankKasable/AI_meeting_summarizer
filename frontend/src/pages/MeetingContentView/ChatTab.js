@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { Bot, CornerDownLeft, Send, Sparkles } from "lucide-react";
 import Badge from "common/components/Badge";
+import MarkdownContent from "common/components/MarkdownContent";
 import { H3, Body3 } from "common/global-styled-components";
 
 const Wrapper = styled.div`
@@ -101,6 +102,10 @@ const Bubble = styled(Body3)`
     color: var(--Color-Text-Default);
     box-shadow: ${({ $isUser }) => ($isUser ? "0 8px 18px rgba(120, 86, 0, 0.08)" : "none")};
     white-space: pre-wrap;
+
+    > div {
+        white-space: normal;
+    }
 `;
 
 const EmptyState = styled.div`
@@ -252,7 +257,13 @@ const ChatTab = ({ messages = [], onSend, sending = false }) => {
                     {messages.map((m, index) => (
                         <Row key={m.id || `${m.role}-${index}`} $isUser={m.role === "user"}>
                             <BubbleStack>
-                                <Bubble $isUser={m.role === "user"}>{m.content}</Bubble>
+                                <Bubble $isUser={m.role === "user"}>
+                                    {m.role === "assistant" ? (
+                                        <MarkdownContent variant="chat">{m.content}</MarkdownContent>
+                                    ) : (
+                                        m.content
+                                    )}
+                                </Bubble>
                             </BubbleStack>
                         </Row>
                     ))}

@@ -125,9 +125,11 @@ const config = convict({
     },
   },
   embedding: {
-    model: { format: String, default: 'text-embedding-3-small', env: 'EMBEDDING_MODEL' },
-    dimensions: { format: 'int', default: 1536, env: 'EMBEDDING_DIMENSIONS' },
+    provider: { format: ['openai', 'huggingface'], default: 'huggingface', env: 'EMBEDDING_PROVIDER' },
+    model: { format: String, default: 'sentence-transformers/all-MiniLM-L6-v2', env: 'EMBEDDING_MODEL' },
+    dimensions: { format: 'int', default: 384, env: 'EMBEDDING_DIMENSIONS' },
     batch_size: { format: 'int', default: 32, env: 'EMBEDDING_BATCH_SIZE' },
+    huggingface_provider: { format: String, default: 'hf-inference', env: 'HUGGINGFACE_EMBEDDING_PROVIDER' },
   },
   queues: {
     embeddings: {
