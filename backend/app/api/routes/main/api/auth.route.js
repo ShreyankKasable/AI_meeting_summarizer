@@ -15,20 +15,22 @@ const ACCESS_COOKIE_MAX_AGE_MS = 15 * 60 * 1000;
 const REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 function cookieOptions (maxAge) {
+  const isProduction = config.get('node_env') === 'production';
   return {
     httpOnly: true,
-    secure: config.get('node_env') === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge,
     path: '/',
   };
 }
 
 function clearCookieOptions () {
+  const isProduction = config.get('node_env') === 'production';
   return {
     httpOnly: true,
-    secure: config.get('node_env') === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
   };
 }
