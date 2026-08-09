@@ -163,6 +163,30 @@ const config = convict({
       default: 'local',
       env: 'AUDIO_STORAGE_PROVIDER',
     },
+    compress_recordings: {
+      doc: 'Compress completed recordings before storage',
+      format: Boolean,
+      default: true,
+      env: 'AUDIO_COMPRESS_RECORDINGS',
+    },
+    storage_format: {
+      doc: 'Stored recording format: original | mp3',
+      format: ['original', 'mp3'],
+      default: 'mp3',
+      env: 'AUDIO_STORAGE_FORMAT',
+    },
+    bitrate_kbps: {
+      doc: 'MP3 bitrate for stored recordings',
+      format: 'int',
+      default: 48,
+      env: 'AUDIO_COMPRESSION_BITRATE_KBPS',
+    },
+    compression_timeout_ms: {
+      doc: 'Maximum time allowed for recording compression',
+      format: 'int',
+      default: 600000,
+      env: 'AUDIO_COMPRESSION_TIMEOUT_MS',
+    },
   },
   r2: {
     account_id: { format: String, default: '', env: 'R2_ACCOUNT_ID' },

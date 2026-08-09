@@ -15,6 +15,7 @@ import { meetingsService } from '#app/pkg/meetings/service.js';
 import { transcriptionService } from '#app/pkg/transcription/service.js';
 import { summarizerService } from '#app/pkg/summarizer/service.js';
 import { extractionService } from '#app/pkg/extraction/service.js';
+import { audioCompressionService } from '#app/pkg/audio/compression.service.js';
 import { recordingStorageService } from '#app/pkg/storage/recording.service.js';
 import { enqueueEmbeddingJob } from '#app/queues/embedding.queue.js';
 
@@ -31,7 +32,9 @@ export class ProcessingService {
 
       emit(SOCKET_EVENTS.PROCESSING_STATUS, { meeting_id: meetingId, ...PROCESSING_STATUS.EXTRACTING_ACTIONS });
       const rawItems = await extractionService.extract(transcript, summary);
-      const audioFilePath = await recordingStorageService.persistRecording(audioFile, { meetingId });
+      const storageAudio = await audioCompressionService.compressForStorage(audioFile);
+      const audioFilePath = await recordingStorageService.persistRecording(storageAudio.filePath, { meetingId });
+      await audioCompressionService.removeIfReplaced(audioFile, storageAudio.filePath);
 
       const meeting = await meetingsService.endMeeting(meetingId, {
         transcript,

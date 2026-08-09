@@ -15,6 +15,14 @@ import logger from '#app/common/logger.js';
 
 const AUDIO_ROUTE_PREFIX = '/data/audio/';
 const DEFAULT_AUDIO_CONTENT_TYPE = 'audio/wav';
+const AUDIO_CONTENT_TYPES = {
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.webm': 'audio/webm',
+  '.m4a': 'audio/mp4',
+  '.mp4': 'audio/mp4',
+  '.ogg': 'audio/ogg',
+};
 
 export class RecordingStorageService {
   constructor () {
@@ -112,7 +120,7 @@ export class RecordingStorageService {
       Bucket: r2.bucket,
       Key: key,
       Body: fs.createReadStream(localFile),
-      ContentType: DEFAULT_AUDIO_CONTENT_TYPE,
+      ContentType: contentTypeForPath(localFile),
     }));
     logger.info(`Uploaded recording to R2: ${key}`);
   }
@@ -242,6 +250,10 @@ function pipeObjectBody (body, res) {
 function isMissingObjectError (error) {
   return ['NoSuchKey', 'NotFound', 'NotFoundError'].includes(error?.name)
     || error?.$metadata?.httpStatusCode === 404;
+}
+
+function contentTypeForPath (filePath) {
+  return AUDIO_CONTENT_TYPES[path.extname(filePath).toLowerCase()] || DEFAULT_AUDIO_CONTENT_TYPE;
 }
 
 export const recordingStorageService = new RecordingStorageService();

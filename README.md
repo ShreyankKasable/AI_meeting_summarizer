@@ -70,6 +70,9 @@ EMBEDDING_DIMENSIONS=1536
 EMBEDDING_WORKER_CONCURRENCY=2
 
 AUDIO_STORAGE_PROVIDER=local
+AUDIO_COMPRESS_RECORDINGS=true
+AUDIO_STORAGE_FORMAT=mp3
+AUDIO_COMPRESSION_BITRATE_KBPS=48
 ```
 
 Start the app:
@@ -145,9 +148,21 @@ R2_KEY_PREFIX=recordings
 ```
 
 `R2_ENDPOINT` is optional when `R2_ACCOUNT_ID` is set. The backend keeps a
-temporary local audio file only while transcription and processing run, uploads
-the final recording to R2, deletes the local copy, and streams playback through
-the existing `/data/audio/...` route.
+temporary local WAV file while transcription and processing run, compresses the
+completed recording to MP3, uploads the smaller MP3 to R2, deletes temporary
+local files, and streams playback through the existing `/data/audio/...` route.
+
+Compression is enabled by default:
+
+```env
+AUDIO_COMPRESS_RECORDINGS=true
+AUDIO_STORAGE_FORMAT=mp3
+AUDIO_COMPRESSION_BITRATE_KBPS=48
+AUDIO_COMPRESSION_TIMEOUT_MS=600000
+```
+
+For speech recordings, 48 kbps MP3 is usually much smaller than WAV while still
+being clear enough for playback.
 
 ## Project Structure
 
