@@ -112,6 +112,12 @@ Run only the embedding worker:
 npm run worker:embeddings
 ```
 
+Run the backend API and embedding worker together for single-service hosting:
+
+```bash
+npm run start:combined
+```
+
 Build the frontend:
 
 ```bash
@@ -172,6 +178,34 @@ AUDIO_COMPRESSION_TIMEOUT_MS=600000
 
 For speech recordings, 48 kbps MP3 is usually much smaller than WAV while still
 being clear enough for playback.
+
+## Simple Backend Deployment
+
+For low-traffic deployments, the backend can run as one web service with the API
+and embedding worker in the same process:
+
+```bash
+npm run start:combined
+```
+
+Use this for platforms such as Render Free, where web services are available on
+the free tier but separate background workers are not. The Kubernetes manifests
+in `k8s/` remain the scalable API/worker split for later.
+
+Render settings:
+
+```text
+Root Directory: .
+Build Command: npm ci --omit=dev
+Start Command: npm run start:combined
+Health Check Path: /health
+```
+
+After the backend is live, set the Vercel frontend environment variable:
+
+```env
+VITE_API_BASE_URL=https://your-backend-url
+```
 
 ## Project Structure
 
