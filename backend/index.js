@@ -1,6 +1,6 @@
 /**
  * Entry point (neo style). Boots the HTTP server + Socket.IO for the
- * AI Meeting Summarizer backend and wires graceful shutdown.
+ * EchoDesk AI backend and wires graceful shutdown.
  */
 import config from '#app/common/config.js';
 import logger from '#app/common/logger.js';
@@ -14,7 +14,7 @@ const startTime = Date.now();
 await initDb();
 
 logger.info('='.repeat(60));
-logger.info('AI Meeting Summarizer Backend (neo-style)');
+logger.info('EchoDesk AI Backend (neo-style)');
 logger.info(`Transcription Model: ${config.get('transcription_model')}`);
 logger.info(`Deepgram API Key: ${config.get('deepgram.api_key') ? 'SET' : 'NOT SET'}`);
 logger.info(`Euron API: ${config.get('euron.enabled') ? 'ENABLED' : 'DISABLED'}`);

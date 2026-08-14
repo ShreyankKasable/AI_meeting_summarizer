@@ -1,20 +1,105 @@
 import React from "react";
 import styled from "styled-components";
+import {
+    ArrowRight,
+    AudioLines,
+    CheckCircle2,
+    Cloud,
+    Database,
+    ListTodo,
+    LockKeyhole,
+    LogIn,
+    MessageSquareText,
+    ShieldCheck,
+    Video,
+} from "lucide-react";
+import BrandLogo, { BRAND_NAME } from "common/components/BrandLogo";
+
+const NAV_HEIGHT = "72px";
+
+const capabilities = [
+    {
+        Icon: AudioLines,
+        title: "Record and transcribe",
+        body: "Capture browser audio and stream live transcription updates while the meeting is still in progress.",
+    },
+    {
+        Icon: ListTodo,
+        title: "Summaries and actions",
+        body: "Turn long transcripts into concise summaries, decisions, and follow-up actions with token-aware AI workflows.",
+    },
+    {
+        Icon: MessageSquareText,
+        title: "Meeting-aware chat",
+        body: "Ask grounded questions against the meeting record using transcript chunks, summary context, and chat history.",
+    },
+];
+
+const audiences = [
+    "Product teams reviewing roadmap decisions",
+    "Engineering leads tracking technical follow-ups",
+    "Founders and operators turning calls into execution notes",
+];
+
+const workflow = [
+    {
+        title: "Start a meeting",
+        body: "Create a meeting record and begin browser-based audio capture.",
+    },
+    {
+        title: "Transcribe live",
+        body: "Audio chunks are sent for speech-to-text so the transcript appears during recording.",
+    },
+    {
+        title: "Store the recording",
+        body: "Final audio is compressed to MP3 and stored in cloud storage for durable playback.",
+    },
+    {
+        title: "Index and ask",
+        body: "Transcript content is indexed so AI chat can answer from the meeting record.",
+    },
+];
+
+const trustSignals = [
+    [
+        LockKeyhole,
+        "Protected records",
+        "Meeting audio, transcript, summaries, action items, and chat history stay attached to the same workspace record.",
+    ],
+    [
+        ShieldCheck,
+        "Grounded answers",
+        "AI responses are based on the selected meeting context, so teams can ask questions without losing the original source.",
+    ],
+    [
+        Cloud,
+        "Cloud playback",
+        "Compressed recordings remain available for replay without keeping large audio files in the browser.",
+    ],
+    [
+        Database,
+        "Single source",
+        "Every transcript, summary, action item, and follow-up conversation points back to one meeting record.",
+    ],
+];
 
 const Page = styled.div`
     min-height: 100vh;
     position: relative;
-    background-color: var(--Color-Background-Root);
+    background: var(--Color-Background-Root);
     color: var(--Color-Text-Default);
+    letter-spacing: 0;
+    text-transform: none;
 
     &::before {
         content: "";
         position: fixed;
         inset: 0;
         pointer-events: none;
-        opacity: 0.36;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-        background-repeat: repeat;
+        opacity: 0.32;
+        background:
+            radial-gradient(circle at 1px 1px, rgba(120, 86, 0, 0.045) 1px, transparent 0);
+        background-size: 18px 18px;
     }
 `;
 
@@ -25,14 +110,14 @@ const Nav = styled.nav`
     right: 0;
     width: 100%;
     z-index: 50;
-    background: rgba(249, 249, 247, 0.9);
-    border-bottom: 1px solid var(--Color-Background-Subtle-2);
-    backdrop-filter: blur(8px);
+    background: rgba(249, 249, 247, 0.92);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
+    backdrop-filter: blur(10px);
 `;
 
 const NavInner = styled.div`
     max-width: var(--layout-max);
-    height: 64px;
+    height: ${NAV_HEIGHT};
     margin: 0 auto;
     padding: 0 var(--Size-Padding-XL);
     display: flex;
@@ -46,25 +131,56 @@ const NavInner = styled.div`
 `;
 
 const BrandLink = styled.button`
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: var(--Size-Gap-M);
+    min-width: 0;
     padding: 0;
     border: 0;
     background: transparent;
-    color: var(--Color-Text-Action);
+    color: var(--Color-Text-Bold);
     font-family: var(--heading-font);
-    font-size: var(--h3-d);
-    font-weight: var(--semi-bold);
+    font-size: var(--subtitle-1-d);
+    font-weight: var(--bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    white-space: nowrap;
+
+    svg {
+        color: var(--Color-Text-Action);
+    }
+`;
+
+const BrandMark = styled.span`
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--Color-Border-Action);
+    border-radius: var(--Size-CornerRadius-Full);
+    background: var(--Color-Background-Action);
+    color: var(--Color-Text-Inverse);
+    font-size: var(--body-4-d);
+    font-weight: var(--bold);
+
+    svg {
+        width: 17px;
+        height: 17px;
+        color: var(--Color-Icon-Inverse);
+        stroke-width: 2;
+    }
 `;
 
 const NavLinks = styled.div`
     display: none;
     align-items: center;
     gap: var(--Size-Gap-XXL);
-    color: var(--Color-Text-Bold);
+    color: var(--Color-Text-Subtle);
     font-size: var(--body-3-d);
-    line-height: var(--line-height-160);
+    font-weight: var(--semi-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
 
     a {
         transition: color var(--transition-fast);
@@ -74,7 +190,7 @@ const NavLinks = styled.div`
         color: var(--Color-Text-Action);
     }
 
-    @media (min-width: 768px) {
+    @media (min-width: 940px) {
         display: flex;
     }
 `;
@@ -82,7 +198,7 @@ const NavLinks = styled.div`
 const NavActions = styled.div`
     display: flex;
     align-items: center;
-    gap: var(--Size-Gap-XL);
+    gap: var(--Size-Gap-L);
 `;
 
 const SignIn = styled.button`
@@ -94,8 +210,7 @@ const SignIn = styled.button`
     font-family: var(--mono-font);
     font-size: var(--body-4-d);
     font-weight: var(--medium);
-    line-height: 16px;
-    letter-spacing: var(--app-letter-spacing);
+    letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
     transition: color var(--transition-fast);
 
@@ -103,757 +218,676 @@ const SignIn = styled.button`
         color: var(--Color-Text-Action);
     }
 
-    @media (min-width: 768px) {
-        display: block;
-    }
-`;
-
-const PrimaryLink = styled.button`
-    height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 var(--Size-Padding-XXL);
-    border: 0;
-    border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Action);
-    color: var(--Color-Text-Inverse);
-    font-family: var(--mono-font);
-    font-size: var(--body-4-d);
-    font-weight: var(--medium);
-    line-height: 16px;
-    letter-spacing: var(--app-letter-spacing);
-    text-transform: uppercase;
-    transition: background var(--transition-fast);
-
-    &:hover {
-        background: var(--Color-Background-Action-Hover);
-    }
-`;
-
-const HeroPrimary = styled(PrimaryLink)`
-    width: 100%;
-    height: 48px;
-
     @media (min-width: 640px) {
-        width: auto;
-        padding: 0 var(--Size-Padding-XXXL);
+        display: inline-flex;
     }
 `;
 
-const SecondaryButton = styled.button`
-    width: 100%;
-    height: 48px;
+const Button = styled.button`
+    min-height: ${({ $large }) => ($large ? "48px" : "42px")};
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0 var(--Size-Padding-XXXL);
-    border: 1px solid var(--Color-Border-Default);
+    gap: var(--Size-Gap-M);
+    padding: 0 ${({ $large }) => ($large ? "var(--Size-Padding-XXL)" : "var(--Size-Padding-XL)")};
+    border: 1px solid ${({ $secondary }) => ($secondary ? "var(--Color-Border-Default)" : "var(--Color-Border-Action)")};
     border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Default);
-    color: var(--Color-Text-Bold);
+    background: ${({ $secondary }) => ($secondary ? "var(--Color-Background-Default)" : "var(--Color-Background-Action)")};
+    color: ${({ $secondary }) => ($secondary ? "var(--Color-Text-Bold)" : "var(--Color-Text-Inverse)")};
     font-family: var(--mono-font);
     font-size: var(--body-4-d);
-    font-weight: var(--medium);
-    line-height: 16px;
-    letter-spacing: var(--app-letter-spacing);
+    font-weight: var(--semi-bold);
+    letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
-    transition: border-color var(--transition-fast);
+    white-space: nowrap;
+    box-shadow: ${({ $secondary }) => ($secondary ? "none" : "var(--Color-Shadow-Action)")};
+    transition:
+        background var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast),
+        transform var(--transition-fast);
 
     &:hover {
+        transform: translateY(-1px);
         border-color: var(--Color-Border-Action);
+        background: ${({ $secondary }) => ($secondary ? "var(--Color-Background-Accent-Action)" : "var(--Color-Background-Action-Hover)")};
     }
 
-    @media (min-width: 640px) {
-        width: auto;
+    svg {
+        width: 16px;
+        height: 16px;
+        stroke-width: 2;
     }
 `;
 
 const Main = styled.main`
-    padding-top: 96px;
-    padding-bottom: var(--Size-Gap-5XL);
-`;
-
-const Container = styled.div`
-    max-width: var(--layout-max);
-    margin: 0 auto;
-    padding: 0 var(--Size-Padding-XL);
-
-    @media (min-width: 768px) {
-        padding: 0 var(--Size-Padding-4XL);
-    }
-`;
-
-const HeroSection = styled.section`
-    max-width: var(--layout-max);
-    margin: 0 auto;
-    padding: 64px var(--Size-Padding-XL) var(--Size-Gap-5XL);
     position: relative;
     z-index: 1;
+    padding-top: ${NAV_HEIGHT};
+`;
+
+const Hero = styled.section`
+    max-width: var(--layout-max);
+    margin: 0 auto;
+    padding: 72px var(--Size-Padding-XL) var(--Size-Gap-5XL);
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--Size-Gap-XXL);
+    gap: var(--Size-Gap-XXXL);
+    border-left: 1px solid var(--Color-Border-Subtle);
+    border-right: 1px solid var(--Color-Border-Subtle);
 
-    @media (min-width: 768px) {
-        padding: 128px var(--Size-Padding-4XL) var(--Size-Gap-5XL);
-        grid-template-columns: repeat(12, minmax(0, 1fr));
+    @media (min-width: 980px) {
+        min-height: calc(100vh - ${NAV_HEIGHT});
+        grid-template-columns: minmax(0, 0.92fr) minmax(460px, 0.86fr);
+        align-items: center;
+        padding: 88px var(--Size-Padding-4XL) 80px;
     }
 `;
 
 const HeroCopy = styled.div`
-    grid-column: 1;
-    max-width: 896px;
-    margin: 0 auto 64px;
-    text-align: center;
-    position: relative;
-    z-index: 1;
-
-    @media (min-width: 768px) {
-        grid-column: span 12;
-    }
+    max-width: 720px;
 `;
 
 const Label = styled.span`
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--Size-Gap-M);
     margin-bottom: var(--Size-Gap-XXL);
+    padding: var(--Size-Padding-S) var(--Size-Padding-L);
+    border: 1px solid var(--Color-Border-Default);
+    border-radius: var(--Size-CornerRadius-XS);
+    background: var(--Color-Background-Accent-Action);
     color: var(--Color-Text-Action);
     font-family: var(--mono-font);
     font-size: var(--body-4-d);
-    font-weight: var(--medium);
-    line-height: 16px;
-    letter-spacing: var(--app-letter-spacing);
+    font-weight: var(--semi-bold);
+    letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
+
+    &::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: var(--Size-CornerRadius-Full);
+        background: var(--Color-Background-Action);
+    }
 `;
 
 const HeroTitle = styled.h1`
-    margin: 0 0 var(--Size-Gap-XXXL);
+    max-width: 720px;
+    margin: 0;
     color: var(--Color-Text-Bold);
     font-family: var(--heading-font);
-    font-size: var(--h1-m);
+    font-size: 32px;
     font-weight: var(--bold);
-    line-height: 40px;
-    letter-spacing: var(--app-heading-letter-spacing);
+    line-height: var(--line-height-110);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
 
     span {
         color: var(--Color-Text-Action);
-        font-style: italic;
     }
 
     @media (min-width: 768px) {
-        font-size: var(--h1-d);
-        line-height: 56px;
-        letter-spacing: var(--app-heading-letter-spacing);
+        font-size: 48px;
     }
 `;
 
 const HeroText = styled.p`
-    max-width: 672px;
-    margin: 0 auto 40px;
+    max-width: 640px;
+    margin: var(--Size-Gap-XXL) 0 0;
     color: var(--Color-Text-Subtle);
+    font-family: var(--mono-font);
     font-size: var(--body-1-d);
-    line-height: 32px;
+    line-height: var(--line-height-140);
 `;
 
 const HeroActions = styled.div`
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--Size-Gap-XL);
+    align-items: stretch;
+    gap: var(--Size-Gap-L);
+    margin-top: var(--Size-Gap-XXXL);
 
-    @media (min-width: 640px) {
+    @media (min-width: 560px) {
         flex-direction: row;
+        align-items: center;
     }
 `;
 
-const PreviewWrap = styled.div`
-    grid-column: 1;
-    position: relative;
-    z-index: 1;
+const ProofGrid = styled.div`
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 720px;
+    margin-top: var(--Size-Gap-XXXL);
+    border: 1px solid var(--Color-Border-Subtle);
+    background: rgba(255, 255, 255, 0.74);
 
-    @media (min-width: 768px) {
-        grid-column: span 12;
+    @media (min-width: 680px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 `;
 
-const ProductPreview = styled.div`
-    min-height: 500px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--Color-Background-Default);
-    border: 1px solid var(--Color-Border-Default);
-    border-radius: var(--Size-CornerRadius-XL);
-    box-shadow: 0 4px 24px -4px rgba(120, 86, 0, 0.06);
+const Proof = styled.div`
+    padding: var(--Size-Padding-XL);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
 
-    @media (min-width: 768px) {
-        flex-direction: row;
-    }
-`;
-
-const TranscriptMock = styled.div`
-    width: 100%;
-    min-height: 500px;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    padding: var(--Size-Padding-XXL);
-    background: var(--Color-Background-Default);
-
-    @media (min-width: 768px) {
-        width: 60%;
-        border-right: 1px solid var(--Color-Background-Subtle-2);
-    }
-`;
-
-const PreviewHeader = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--Size-Gap-XL);
-    padding-bottom: var(--Size-Padding-XL);
-    margin-bottom: var(--Size-Padding-XL);
-    border-bottom: 1px solid var(--Color-Background-Subtle-2);
-
-    h3 {
-        margin: 0;
-        font-family: var(--heading-font);
-        font-size: var(--h3-d);
-        font-weight: var(--semi-bold);
-        line-height: 32px;
+    strong {
+        display: block;
+        color: var(--Color-Text-Bold);
+        font-size: var(--body-3-d);
+        letter-spacing: var(--letter-spacing-wide);
+        text-transform: uppercase;
+        margin-bottom: var(--Size-Gap-S);
     }
 
     span {
+        display: block;
         color: var(--Color-Text-Subtle);
         font-family: var(--mono-font);
-        font-size: var(--body-4-d);
-        line-height: 16px;
-        letter-spacing: var(--app-letter-spacing);
-        text-transform: uppercase;
-    }
-`;
-
-const Timeline = styled.div`
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    display: grid;
-    gap: var(--Size-Gap-XXL);
-
-    &::before {
-        content: "";
-        position: absolute;
-        left: 16px;
-        top: 8px;
-        bottom: 0;
-        width: 1px;
-        background: var(--Color-Background-Subtle-2);
+        font-size: var(--body-3-d);
+        line-height: var(--line-height-140);
+        text-transform: none;
     }
 
-    &::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 96px;
-        background: linear-gradient(to top, var(--Color-Background-Default), transparent);
-        pointer-events: none;
-    }
-`;
+    @media (min-width: 680px) {
+        border-bottom: 0;
+        border-right: 1px solid var(--Color-Border-Subtle);
 
-const Turn = styled.div`
-    position: relative;
-    padding-left: 40px;
-
-    &::before {
-        content: "";
-        position: absolute;
-        left: 13px;
-        top: 4px;
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: ${({ $active }) => ($active ? "var(--Color-Background-Action)" : "var(--Color-Background-Subtle-2)")};
-        box-shadow: 0 0 0 4px var(--Color-Background-Default);
-    }
-`;
-
-const TurnMeta = styled.div`
-    display: flex;
-    gap: var(--Size-Gap-M);
-    margin-bottom: var(--Size-Gap-S);
-    color: var(--Color-Text-Subtle);
-    font-family: var(--mono-font);
-    font-size: var(--body-4-d);
-    line-height: 16px;
-    letter-spacing: var(--app-letter-spacing);
-    text-transform: uppercase;
-
-    strong {
-        color: var(--Color-Text-Bold);
-    }
-`;
-
-const TurnText = styled.p`
-    margin: 0;
-    color: var(--Color-Text-Subtle);
-    font-size: var(--body-2-d);
-    line-height: 28px;
-`;
-
-const InsightsPanel = styled.div`
-    width: 100%;
-    min-height: 500px;
-    padding: var(--Size-Padding-XXL);
-    background: var(--Color-Background-Root);
-
-    @media (min-width: 768px) {
-        width: 40%;
-    }
-`;
-
-const InsightsHeader = styled.div`
-    display: flex;
-    align-items: center;
-    gap: var(--Size-Gap-M);
-    padding-bottom: var(--Size-Padding-XL);
-    margin-bottom: var(--Size-Gap-XXL);
-    border-bottom: 1px solid var(--Color-Background-Subtle-2);
-    color: var(--Color-Text-Action);
-
-    h4 {
-        margin: 0;
-        font-family: var(--mono-font);
-        font-size: var(--body-4-d);
-        font-weight: var(--medium);
-        line-height: 16px;
-        letter-spacing: var(--app-letter-spacing);
-        text-transform: uppercase;
-    }
-`;
-
-const InsightStack = styled.div`
-    display: grid;
-    gap: 32px;
-`;
-
-const InsightTitle = styled.h5`
-    margin: 0 0 var(--Size-Gap-M);
-    color: var(--Color-Text-Bold);
-    font-family: var(--heading-font);
-    font-size: 18px;
-    font-weight: var(--semi-bold);
-    line-height: 28px;
-`;
-
-const InsightText = styled.p`
-    margin: 0;
-    color: var(--Color-Text-Subtle);
-    font-size: var(--body-3-d);
-    line-height: 24px;
-`;
-
-const ActionList = styled.ul`
-    display: grid;
-    gap: var(--Size-Gap-L);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-`;
-
-const ActionItem = styled.li`
-    display: flex;
-    align-items: flex-start;
-    gap: var(--Size-Gap-L);
-    color: var(--Color-Text-Subtle);
-    font-size: var(--body-3-d);
-    line-height: 24px;
-`;
-
-const Checkbox = styled.span`
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    margin-top: 4px;
-    border: 1px solid var(--Color-Border-Default);
-    border-radius: var(--Size-CornerRadius-XS);
-`;
-
-const Rule = styled.div`
-    max-width: var(--layout-max);
-    margin: 0 auto;
-    padding: 0 var(--Size-Padding-XL);
-
-    @media (min-width: 768px) {
-        padding: 0 var(--Size-Padding-4XL);
-    }
-
-    div {
-        width: 100%;
-        border-top: 1px solid var(--Color-Background-Subtle-2);
-    }
-`;
-
-const Section = styled.section`
-    max-width: var(--layout-max);
-    margin: 0 auto;
-    padding: var(--Size-Gap-5XL) var(--Size-Padding-XL);
-
-    @media (min-width: 768px) {
-        padding: var(--Size-Gap-5XL) var(--Size-Padding-4XL);
-    }
-`;
-
-const SectionIntro = styled.div`
-    margin-bottom: 48px;
-
-    h2 {
-        margin: 0;
-        color: var(--Color-Text-Bold);
-        font-family: var(--heading-font);
-        font-size: var(--h1-m);
-        font-weight: var(--bold);
-        line-height: 40px;
-        letter-spacing: var(--app-heading-letter-spacing);
-
-        @media (min-width: 768px) {
-            font-size: var(--h2-d);
-            line-height: 40px;
-            letter-spacing: var(--app-heading-letter-spacing);
+        &:last-child {
+            border-right: 0;
         }
     }
 `;
 
-const BentoGrid = styled.div`
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--Size-Gap-XXL);
+const HeroPreview = styled.figure`
+    width: min(820px, 100%);
+    margin: 0;
+    justify-self: center;
 
-    @media (min-width: 768px) {
-        grid-template-columns: repeat(12, minmax(0, 1fr));
+    @media (min-width: 980px) {
+        width: min(840px, 112%);
+        transform: translate(18px, -136px);
     }
 `;
 
-const FeatureCard = styled.div`
-    position: relative;
-    overflow: hidden;
-    padding: var(--Size-Padding-XXXL);
+const HeroPreviewImage = styled.img`
+    display: block;
+    width: 100%;
+    height: 420px;
     border: 1px solid var(--Color-Border-Default);
     border-radius: var(--Size-CornerRadius-XL);
-    background: ${({ $paper }) => ($paper ? "var(--Color-Background-Default)" : "var(--Color-Background-Root)")};
-    box-shadow: ${({ $paper }) => ($paper ? "0 4px 24px -4px rgba(120, 86, 0, 0.06)" : "none")};
+    box-shadow: 0 28px 70px rgba(120, 86, 0, 0.16);
+`;
+
+const Section = styled.section`
+    scroll-margin-top: calc(${NAV_HEIGHT} + 8px);
+    max-width: var(--layout-max);
+    margin: 0 auto;
+    padding: var(--Size-Gap-4XL) var(--Size-Padding-XL);
+    border-top: 1px solid var(--Color-Border-Subtle);
+    border-left: 1px solid var(--Color-Border-Subtle);
+    border-right: 1px solid var(--Color-Border-Subtle);
 
     @media (min-width: 768px) {
-        grid-column: ${({ $span }) => `span ${$span || 4}`};
+        padding: 56px var(--Size-Padding-4XL) 78px;
+    }
+`;
+
+const SectionHead = styled.div`
+    max-width: 920px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--Size-Gap-XXL);
+    align-items: center;
+    margin-bottom: var(--Size-Gap-4XL);
+    padding-bottom: var(--Size-Gap-XXXL);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
+
+    @media (min-width: 860px) {
+        max-width: none;
+        grid-template-columns: auto 2px minmax(0, 1fr);
+        gap: var(--Size-Gap-XXXL);
+    }
+`;
+
+const SectionKicker = styled.div`
+    width: fit-content;
+    min-height: 58px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--Size-Gap-L);
+    padding: var(--Size-Padding-S) var(--Size-Padding-XXL) var(--Size-Padding-S) var(--Size-Padding-S);
+    border: 1px solid var(--Color-Border-Action);
+    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Accent-Action);
+    color: var(--Color-Text-Action);
+    font-family: var(--mono-font);
+    font-size: 32px;
+    font-weight: var(--semi-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    box-shadow: 0 10px 24px rgba(120, 86, 0, 0.08);
+
+    span {
+        width: 50px;
+        height: 50px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        border: 1px solid var(--Color-Border-Action);
+        background: var(--Color-Background-Action);
+        color: var(--Color-Text-Inverse);
+        font-size: var(--body-3-d);
+        font-weight: var(--bold);
     }
 
-    .material-symbols-outlined {
-        display: block;
-        margin-bottom: var(--Size-Gap-XL);
-        color: ${({ $primary }) => ($primary ? "var(--Color-Text-Action)" : "var(--Color-Text-Bold)")};
-        font-size: ${({ $largeIcon }) => ($largeIcon ? "200px" : "30px")};
+    strong {
+        color: var(--Color-Text-Action);
+        font: inherit;
+        line-height: var(--line-height-110);
+    }
+
+    @media (min-width: 768px) {
+        min-height: 70px;
+        font-size: 46px;
+
+        span {
+            width: 62px;
+            height: 62px;
+            font-size: var(--subtitle-2-d);
+        }
+    }
+`;
+
+const SectionDivider = styled.div`
+    width: 72px;
+    height: 2px;
+    background: var(--Color-Background-Action);
+
+    @media (min-width: 860px) {
+        width: 2px;
+        min-height: 96px;
+        align-self: stretch;
+    }
+`;
+
+const SectionTitleGroup = styled.div`
+    min-width: 0;
+`;
+
+const SectionLead = styled.p`
+    max-width: 840px;
+    margin: 0;
+    color: var(--Color-Text-Bold);
+    font-family: var(--mono-font);
+    font-size: var(--subtitle-1-d);
+    font-weight: var(--medium);
+    line-height: var(--line-height-140);
+    letter-spacing: 0;
+    text-transform: none;
+`;
+
+const SectionCopy = styled.p`
+    max-width: 760px;
+    margin: var(--Size-Gap-M) 0 0;
+    color: var(--Color-Text-Subtle);
+    font-family: var(--mono-font);
+    font-size: var(--body-2-d);
+    line-height: var(--line-height-140);
+    letter-spacing: 0;
+    text-transform: none;
+`;
+
+const CardGrid = styled.div`
+    display: grid;
+    grid-template-columns: 1fr;
+    border: 1px solid var(--Color-Border-Default);
+    background: var(--Color-Border-Subtle);
+    gap: 1px;
+
+    @media (min-width: 860px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+`;
+
+const Card = styled.article`
+    min-height: 252px;
+    padding: var(--Size-Padding-XXXL);
+    background: var(--Color-Background-Default);
+    transition:
+        background var(--transition-fast),
+        transform var(--transition-fast);
+
+    &:hover {
+        background: var(--Color-Background-Accent-Action);
+    }
+
+    svg {
+        margin-bottom: var(--Size-Gap-XXL);
+        color: var(--Color-Icon-Action);
+        width: 30px;
+        height: 30px;
+        stroke-width: 1.8;
     }
 
     h3 {
         margin: 0 0 var(--Size-Gap-L);
         color: var(--Color-Text-Bold);
         font-family: var(--heading-font);
-        font-size: var(--h3-d);
-        font-weight: var(--semi-bold);
-        line-height: 32px;
+        font-size: var(--subtitle-2-d);
+        line-height: var(--line-height-120);
+        letter-spacing: var(--letter-spacing-wide);
+        text-transform: uppercase;
     }
 
     p {
         margin: 0;
         color: var(--Color-Text-Subtle);
+        font-family: var(--mono-font);
         font-size: var(--body-2-d);
-        line-height: 28px;
+        line-height: var(--line-height-140);
+        text-transform: none;
     }
 `;
 
-const DecorativeIcon = styled.div`
-    position: absolute;
-    right: -40px;
-    bottom: -40px;
-    opacity: 0.1;
-`;
+const AudienceGrid = styled.div`
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--Size-Gap-L);
 
-const SearchMock = styled.div`
-    width: 100%;
-    height: 128px;
-    padding: var(--Size-Padding-XL);
-    display: flex;
-    flex-direction: column;
-    gap: var(--Size-Gap-M);
-    border: 1px solid var(--Color-Border-Default);
-    border-radius: var(--Size-CornerRadius-M);
-    background: var(--Color-Background-Root);
-
-    @media (min-width: 768px) {
-        width: 256px;
+    @media (min-width: 820px) {
+        grid-template-columns: 0.9fr 1.1fr;
+        align-items: stretch;
     }
 `;
 
-const SearchInputMock = styled.div`
-    height: 32px;
-    display: flex;
-    align-items: center;
-    padding: 0 var(--Size-Padding-L);
+const AudienceNote = styled.div`
+    padding: var(--Size-Padding-XXL);
     border: 1px solid var(--Color-Border-Default);
-    border-radius: var(--Size-CornerRadius-M);
+    background: var(--Color-Background-Accent-Action);
+
+    h3 {
+        margin: 0 0 var(--Size-Gap-L);
+        color: var(--Color-Text-Bold);
+        font-family: var(--heading-font);
+        font-size: var(--h3-m);
+        letter-spacing: var(--letter-spacing-wide);
+        text-transform: uppercase;
+    }
+
+    p {
+        margin: 0;
+        color: var(--Color-Text-Subtle);
+        font-family: var(--mono-font);
+        font-size: var(--body-2-d);
+        line-height: var(--line-height-140);
+        text-transform: none;
+    }
+`;
+
+const AudienceList = styled.div`
+    display: grid;
+    border: 1px solid var(--Color-Border-Default);
     background: var(--Color-Background-Default);
 `;
 
-const SkeletonLine = styled.div`
-    width: ${({ $width }) => $width || "100%"};
-    height: ${({ $height }) => $height || "8px"};
-    border-radius: 999px;
-    background: var(--Color-Background-Subtle-2);
-`;
-
-const ProcessSection = styled(Section)`
-    text-align: center;
-`;
-
-const ProcessGrid = styled.div`
-    position: relative;
+const AudienceItem = styled.div`
     display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--Size-Gap-XXXL);
-    text-align: left;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: var(--Size-Gap-L);
+    align-items: center;
+    min-height: 76px;
+    padding: var(--Size-Padding-L) var(--Size-Padding-XL);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
+    color: var(--Color-Text-Bold);
+    font-size: var(--body-3-d);
+    font-weight: var(--semi-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
 
-    @media (min-width: 768px) {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: var(--Size-Gap-XXL);
+    &:last-child {
+        border-bottom: 0;
+    }
 
-        &::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: calc(50% - 48px);
-            height: 1px;
-            background: var(--Color-Background-Subtle-2);
-            z-index: 0;
-        }
+    svg {
+        color: var(--Color-Icon-Action);
+        width: 18px;
+        height: 18px;
+        stroke-width: 2;
     }
 `;
 
-const Step = styled.div`
-    position: relative;
-    z-index: 1;
-    padding: var(--Size-Padding-XXXL);
+const WorkflowGrid = styled.div`
+    display: grid;
+    grid-template-columns: 1fr;
     border: 1px solid var(--Color-Border-Default);
+    background: var(--Color-Border-Subtle);
+    gap: 1px;
+
+    @media (min-width: 960px) {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+`;
+
+const Step = styled.article`
+    min-height: 240px;
+    padding: var(--Size-Padding-XXL);
     background: ${({ $active }) => ($active ? "var(--Color-Background-Default)" : "var(--Color-Background-Root)")};
-    box-shadow: ${({ $active }) => ($active ? "0 4px 24px -4px rgba(120, 86, 0, 0.06)" : "none")};
+
+    strong {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--Size-Gap-XXL);
+        border: 1px solid var(--Color-Border-Default);
+        background: ${({ $active }) => ($active ? "var(--Color-Background-Action)" : "var(--Color-Background-Default)")};
+        color: ${({ $active }) => ($active ? "var(--Color-Text-Inverse)" : "var(--Color-Text-Action)")};
+        font-size: var(--caption-d);
+    }
 
     h3 {
-        margin: var(--Size-Gap-XL) 0 var(--Size-Gap-L);
+        margin: 0 0 var(--Size-Gap-L);
         color: var(--Color-Text-Bold);
         font-family: var(--heading-font);
-        font-size: 20px;
-        line-height: 28px;
-        font-weight: var(--semi-bold);
+        font-size: var(--subtitle-2-d);
+        letter-spacing: var(--letter-spacing-wide);
+        text-transform: uppercase;
     }
 
     p {
         margin: 0;
         color: var(--Color-Text-Subtle);
-        font-size: var(--body-3-d);
-        line-height: 24px;
+        font-family: var(--mono-font);
+        font-size: var(--body-2-d);
+        line-height: var(--line-height-140);
+        text-transform: none;
     }
 `;
 
-const StepNumber = styled.div`
-    position: absolute;
-    top: -16px;
-    left: 32px;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    border: ${({ $active }) => ($active ? "none" : "1px solid var(--Color-Border-Default)")};
-    background: ${({ $active }) => ($active ? "var(--Color-Background-Action)" : "var(--Color-Background-Default)")};
-    color: ${({ $active }) => ($active ? "var(--Color-Text-Inverse)" : "var(--Color-Text-Action)")};
-    font-family: var(--mono-font);
-    font-size: var(--body-4-d);
-    font-weight: var(--medium);
-`;
-
-const PricingHeader = styled.div`
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--Size-Gap-XL);
-    margin-bottom: 48px;
-
-    @media (min-width: 768px) {
-        flex-direction: row;
-        align-items: end;
-    }
-`;
-
-const PricingGrid = styled.div`
+const OutcomeGrid = styled.div`
     display: grid;
     grid-template-columns: 1fr;
-    overflow: hidden;
-    border: 1px solid var(--Color-Border-Default);
-    border-radius: var(--Size-CornerRadius-XL);
+    gap: var(--Size-Gap-XXL);
 
-    @media (min-width: 768px) {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    @media (min-width: 920px) {
+        grid-template-columns: 1.15fr 0.85fr;
     }
 `;
 
-const Plan = styled.div`
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    padding: 40px;
-    background: ${({ $active }) => ($active ? "var(--Color-Background-Default)" : "var(--Color-Background-Root)")};
-    border-bottom: 1px solid var(--Color-Border-Default);
-
-    @media (min-width: 768px) {
-        border-bottom: 0;
-        border-right: ${({ $rightRule }) => ($rightRule ? "1px solid var(--Color-Border-Default)" : "none")};
-    }
+const OutcomePanel = styled.div`
+    padding: var(--Size-Padding-XXL);
+    border: 1px solid var(--Color-Border-Default);
+    background: var(--Color-Background-Default);
 
     h3 {
-        margin: 0 0 var(--Size-Gap-M);
+        margin: 0 0 var(--Size-Gap-L);
         color: var(--Color-Text-Bold);
         font-family: var(--heading-font);
-        font-size: var(--h3-d);
-        line-height: 32px;
-        font-weight: var(--semi-bold);
+        font-size: var(--h3-m);
+        letter-spacing: var(--letter-spacing-wide);
+        text-transform: uppercase;
+    }
+
+    p {
+        margin: 0;
+        color: var(--Color-Text-Subtle);
+        font-family: var(--mono-font);
+        font-size: var(--body-2-d);
+        line-height: var(--line-height-140);
+        text-transform: none;
     }
 `;
 
-const Price = styled.div`
-    margin-bottom: var(--Size-Gap-XXL);
+const MetricGrid = styled.div`
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--Size-Gap-L);
+
+    @media (min-width: 560px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+`;
+
+const Metric = styled.div`
+    padding: var(--Size-Padding-XL);
+    border: 1px solid var(--Color-Border-Default);
+    background: var(--Color-Background-Accent-Action);
 
     strong {
+        display: block;
+        margin-bottom: var(--Size-Gap-S);
         color: var(--Color-Text-Bold);
-        font-family: var(--heading-font);
-        font-size: var(--h2-d);
-        line-height: 40px;
-        font-weight: var(--semi-bold);
+        font-size: var(--subtitle-2-d);
+        letter-spacing: var(--letter-spacing-wide);
+        text-transform: uppercase;
     }
 
     span {
         color: var(--Color-Text-Subtle);
+        font-family: var(--mono-font);
         font-size: var(--body-3-d);
-        line-height: 24px;
+        line-height: var(--line-height-140);
+        text-transform: none;
     }
 `;
 
-const PlanCopy = styled.p`
-    height: 48px;
-    margin: 0 0 var(--Size-Gap-XXXL);
-    color: var(--Color-Text-Subtle);
-    font-size: var(--body-3-d);
-    line-height: 24px;
+const TrustRows = styled.div`
+    border: 1px solid var(--Color-Border-Default);
+    background: var(--Color-Background-Default);
 `;
 
-const PlanList = styled.ul`
-    flex: 1;
+const TrustRow = styled.div`
     display: grid;
+    grid-template-columns: 32px 160px minmax(0, 1fr);
     gap: var(--Size-Gap-XL);
-    margin: 0 0 40px;
-    padding: 0;
-    list-style: none;
-`;
+    align-items: start;
+    padding: var(--Size-Padding-XL);
+    border-bottom: 1px solid var(--Color-Border-Subtle);
 
-const PlanFeature = styled.li`
-    display: flex;
-    align-items: center;
-    gap: var(--Size-Gap-L);
-    color: var(--Color-Text-Bold);
-    font-size: var(--body-3-d);
-    line-height: 24px;
+    &:last-child {
+        border-bottom: 0;
+    }
 
-    .material-symbols-outlined {
-        color: var(--Color-Text-Action);
-        font-size: 16px;
+    svg {
+        width: 19px;
+        height: 19px;
+        color: var(--Color-Icon-Action);
+        stroke-width: 1.8;
+    }
+
+    strong {
+        color: var(--Color-Text-Bold);
+        font-size: var(--body-3-d);
+        letter-spacing: var(--letter-spacing-wide);
+        text-transform: uppercase;
+    }
+
+    span {
+        color: var(--Color-Text-Subtle);
+        font-family: var(--mono-font);
+        font-size: var(--body-2-d);
+        line-height: var(--line-height-140);
+        text-transform: none;
+    }
+
+    @media (max-width: 640px) {
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: var(--Size-Gap-S);
+
+        span {
+            grid-column: 2;
+        }
     }
 `;
 
-const PlanButton = styled.button`
-    width: 100%;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: ${({ $primary }) => ($primary ? "0" : "1px solid var(--Color-Border-Default)")};
-    border-radius: var(--Size-CornerRadius-M);
-    background: ${({ $primary }) => ($primary ? "var(--Color-Background-Action)" : "transparent")};
-    color: ${({ $primary }) => ($primary ? "var(--Color-Text-Inverse)" : "var(--Color-Text-Bold)")};
-    font-family: var(--mono-font);
-    font-size: var(--body-4-d);
-    font-weight: var(--medium);
-    line-height: 16px;
-    letter-spacing: var(--app-letter-spacing);
-    text-transform: uppercase;
-    transition: all var(--transition-fast);
-
-    &:hover {
-        border-color: var(--Color-Border-Action);
-        background: ${({ $primary }) => ($primary ? "var(--Color-Background-Action-Hover)" : "transparent")};
-    }
-`;
-
-const Recommended = styled.div`
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 4px var(--Size-Padding-L);
-    background: var(--Color-Background-Action);
+const Cta = styled.section`
+    max-width: var(--layout-max);
+    margin: 0 auto;
+    padding: var(--Size-Gap-5XL) var(--Size-Padding-XL);
+    border: 1px solid var(--Color-Border-Subtle);
+    border-bottom: 0;
+    background: var(--Color-Background-Bold);
     color: var(--Color-Text-Inverse);
-    font-family: var(--mono-font);
-    font-size: 10px;
-    line-height: 16px;
-    letter-spacing: var(--app-letter-spacing);
+    text-align: center;
+
+    @media (min-width: 768px) {
+        padding: 88px var(--Size-Padding-4XL);
+    }
+`;
+
+const CtaTitle = styled.h2`
+    max-width: 760px;
+    margin: 0 auto;
+    color: inherit;
+    font-family: var(--heading-font);
+    font-size: 28px;
+    line-height: var(--line-height-120);
+    letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
+
+    @media (min-width: 768px) {
+        font-size: 34px;
+    }
+`;
+
+const CtaText = styled.p`
+    max-width: 640px;
+    margin: var(--Size-Gap-XXL) auto 0;
+    color: rgba(255, 255, 255, 0.74);
+    font-family: var(--mono-font);
+    font-size: var(--body-1-d);
+    line-height: var(--line-height-140);
+    text-transform: none;
 `;
 
 const Footer = styled.footer`
-    padding: var(--Size-Gap-XXL) 0;
-    background: var(--Color-Background-Default);
-    border-top: 1px solid var(--Color-Border-Default);
+    position: relative;
+    z-index: 1;
+    max-width: var(--layout-max);
+    margin: 0 auto;
+    padding: var(--Size-Padding-XXL) var(--Size-Padding-XL);
+    border: 1px solid var(--Color-Border-Subtle);
+    background: var(--Color-Background-Subtle);
+
+    @media (min-width: 768px) {
+        padding: var(--Size-Padding-XXL) var(--Size-Padding-4XL);
+    }
 `;
 
-const FooterInner = styled(Container)`
+const FooterInner = styled.div`
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--Size-Gap-XL);
     color: var(--Color-Text-Subtle);
-    font-size: var(--body-3-d);
-    line-height: 24px;
-
-    @media (min-width: 768px) {
-        flex-direction: row;
-    }
-`;
-
-const FooterBrand = styled.div`
-    color: var(--Color-Text-Action);
-    font-family: var(--mono-font);
     font-size: var(--body-4-d);
-    line-height: 16px;
-    letter-spacing: var(--app-letter-spacing);
+    letter-spacing: var(--letter-spacing-wide);
     text-transform: uppercase;
-`;
-
-const FooterLinks = styled.div`
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--Size-Gap-XXL);
 `;
 
 const LandingPage = ({ onSignIn, onRegister, onJoin }) => {
@@ -864,301 +898,250 @@ const LandingPage = ({ onSignIn, onRegister, onJoin }) => {
             <Nav>
                 <NavInner>
                     <BrandLink type="button" onClick={goTop}>
-                        <span className="material-symbols-outlined fill-icon">edit_document</span>
-                        MeetAI
+                        <BrandLogo width="190px" maxHeight="50px" />
                     </BrandLink>
                     <NavLinks aria-label="Primary navigation">
-                        <a href="#features">Features</a>
-                        <a href="#how-it-works">Process</a>
-                        <a href="#pricing">Pricing</a>
+                        <a href="#product">Product</a>
+                        <a href="#workflow">Workflow</a>
+                        <a href="#outcomes">Outcomes</a>
+                        <a href="#trust">Trust</a>
                     </NavLinks>
                     <NavActions>
                         <SignIn type="button" onClick={onSignIn}>
                             Sign In
                         </SignIn>
-                        <PrimaryLink type="button" onClick={onRegister}>
-                            Get Started
-                        </PrimaryLink>
+                        <Button type="button" onClick={onRegister}>
+                            Start
+                            <ArrowRight aria-hidden="true" />
+                        </Button>
                     </NavActions>
                 </NavInner>
             </Nav>
 
             <Main>
-                <HeroSection>
+                <Hero>
                     <HeroCopy>
-                        <Label>The editorial workspace for meetings</Label>
+                        <Label>AI meeting workspace</Label>
                         <HeroTitle>
-                            Meeting Intelligence, <br />
-                            <span>Refined.</span>
+                            Record meetings. Summarize decisions. <span>Chat with the transcript.</span>
                         </HeroTitle>
                         <HeroText>
-                            Transform ephemeral conversations into a structured, searchable memory. A
-                            sophisticated AI utility designed for clarity, retaining the essence of your
-                            meetings without the clutter.
+                            EchoDesk AI turns conversations into a searchable meeting record with live transcription,
+                            compressed cloud audio, summaries, action items, and grounded AI chat.
                         </HeroText>
                         <HeroActions>
-                            <HeroPrimary type="button" onClick={onRegister}>
-                                Get Started
-                            </HeroPrimary>
-                            <SecondaryButton type="button" onClick={onJoin}>
-                                Join Meeting
-                            </SecondaryButton>
+                            <Button type="button" $large onClick={onRegister}>
+                                Create Workspace
+                                <ArrowRight aria-hidden="true" />
+                            </Button>
+                            <Button type="button" $large $secondary onClick={onJoin}>
+                                Join Shared Meeting
+                                <Video aria-hidden="true" />
+                            </Button>
                         </HeroActions>
+                        <ProofGrid aria-label={`${BRAND_NAME} core signals`}>
+                            <Proof>
+                                <strong>Live Transcript</strong>
+                                <span>Speech-to-text while recording</span>
+                            </Proof>
+                            <Proof>
+                                <strong>Grounded Chat</strong>
+                                <span>AI answers stay tied to the transcript</span>
+                            </Proof>
+                            <Proof>
+                                <strong>Cloud Audio</strong>
+                                <span>Compressed MP3 recordings stored in the cloud</span>
+                            </Proof>
+                        </ProofGrid>
                     </HeroCopy>
 
-                    <PreviewWrap>
-                        <ProductPreview>
-                            <TranscriptMock>
-                                <PreviewHeader>
-                                    <h3>Weekly Strategy Sync</h3>
-                                    <span>10:00 AM - Oct 24</span>
-                                </PreviewHeader>
-                                <Timeline>
-                                    <Turn $active>
-                                        <TurnMeta>
-                                            <strong>Sarah J.</strong>
-                                            <span>10:04 AM</span>
-                                        </TurnMeta>
-                                        <TurnText>
-                                            The Q4 metrics are showing a 15% uptick in engagement,
-                                            specifically around the new editorial features. We need to
-                                            capitalize on this momentum.
-                                        </TurnText>
-                                    </Turn>
-                                    <Turn>
-                                        <TurnMeta>
-                                            <strong>David M.</strong>
-                                            <span>10:06 AM</span>
-                                        </TurnMeta>
-                                        <TurnText>
-                                            Agreed. I'll prioritize allocating more resources to the content
-                                            team for the next sprint. We should also look at streamlining the
-                                            publishing workflow.
-                                        </TurnText>
-                                    </Turn>
-                                </Timeline>
-                            </TranscriptMock>
+                    <HeroPreview aria-label={`${BRAND_NAME} product preview`}>
+                        <HeroPreviewImage
+                            src="/brand/echodesk-ai-product-preview.png"
+                            alt="EchoDesk AI meeting workspace interface preview"
+                        />
+                    </HeroPreview>
+                </Hero>
 
-                            <InsightsPanel>
-                                <InsightsHeader>
-                                    <span className="material-symbols-outlined">auto_awesome</span>
-                                    <h4>AI Insights</h4>
-                                </InsightsHeader>
-                                <InsightStack>
-                                    <div>
-                                        <InsightTitle>Executive Summary</InsightTitle>
-                                        <InsightText>
-                                            The team recognized a significant 15% increase in user engagement
-                                            driven by recent editorial features. Consensus reached to double
-                                            down on this area for Q4.
-                                        </InsightText>
-                                    </div>
-                                    <div>
-                                        <InsightTitle>Action Items</InsightTitle>
-                                        <ActionList>
-                                            <ActionItem>
-                                                <Checkbox />
-                                                <span>Allocate resources to content team for next sprint (David M.)</span>
-                                            </ActionItem>
-                                            <ActionItem>
-                                                <Checkbox />
-                                                <span>Review and propose streamlined publishing workflow (Team)</span>
-                                            </ActionItem>
-                                        </ActionList>
-                                    </div>
-                                </InsightStack>
-                            </InsightsPanel>
-                        </ProductPreview>
-                    </PreviewWrap>
-                </HeroSection>
-
-                <Rule>
-                    <div />
-                </Rule>
-
-                <Section id="features">
-                    <SectionIntro>
-                        <Label>Capabilities</Label>
-                        <h2>Designed for clarity, built for retention.</h2>
-                    </SectionIntro>
-                    <BentoGrid>
-                        <FeatureCard $span={8} $paper $primary>
-                            <div style={{ position: "relative", zIndex: 1, maxWidth: 660 }}>
-                                <span className="material-symbols-outlined">record_voice_over</span>
-                                <h3>Immaculate Transcription</h3>
-                                <p>
-                                    Our proprietary models capture every nuance, formatting conversation into
-                                    readable, editorial-quality text. Speaker diarization and context-aware
-                                    punctuation ensure absolute accuracy.
-                                </p>
-                            </div>
-                            <DecorativeIcon>
-                                <span className="material-symbols-outlined">description</span>
-                            </DecorativeIcon>
-                        </FeatureCard>
-                        <FeatureCard $span={4}>
-                            <span className="material-symbols-outlined">summarize</span>
-                            <h3 style={{ fontSize: 20 }}>Intelligent Summaries</h3>
-                            <p>Distill hour-long discussions into precise, actionable briefs tailored to your role.</p>
-                        </FeatureCard>
-                        <FeatureCard $span={4}>
-                            <span className="material-symbols-outlined">forum</span>
-                            <h3 style={{ fontSize: 20 }}>Interactive Chat</h3>
-                            <p>
-                                Query your meeting archives. Ask questions to past transcripts as if conversing
-                                with a knowledgeable assistant.
-                            </p>
-                        </FeatureCard>
-                        <FeatureCard $span={8} $paper $primary>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-                                <div style={{ flex: 1 }}>
-                                    <span className="material-symbols-outlined">search</span>
-                                    <h3>Universal Search</h3>
-                                    <p>
-                                        A robust indexing system that makes your entire organizational knowledge
-                                        base instantly retrievable across all recorded sessions.
-                                    </p>
-                                </div>
-                                <SearchMock>
-                                    <SearchInputMock>
-                                        <span
-                                            className="material-symbols-outlined"
-                                            style={{ fontSize: 14, color: "var(--Color-Text-Subtle)", marginRight: 8 }}
-                                        >
-                                            search
-                                        </span>
-                                        <SkeletonLine $width="64px" />
-                                    </SearchInputMock>
-                                    <SkeletonLine />
-                                    <SkeletonLine $width="75%" />
-                                </SearchMock>
-                            </div>
-                        </FeatureCard>
-                    </BentoGrid>
+                <Section id="product">
+                    <SectionHead>
+                        <SectionKicker>
+                            <span>01</span>
+                            <strong>Product</strong>
+                        </SectionKicker>
+                        <SectionDivider aria-hidden="true" />
+                        <SectionTitleGroup>
+                            <SectionLead>One meeting workspace for audio, transcript, summary, actions, and AI chat.</SectionLead>
+                            <SectionCopy>
+                                Capture the conversation once, then reuse it as a complete meeting record instead of
+                                scattered notes and disconnected recordings.
+                            </SectionCopy>
+                        </SectionTitleGroup>
+                    </SectionHead>
+                    <CardGrid>
+                        {capabilities.map((item) => (
+                            <Card key={item.title}>
+                                <item.Icon aria-hidden="true" />
+                                <h3>{item.title}</h3>
+                                <p>{item.body}</p>
+                            </Card>
+                        ))}
+                    </CardGrid>
                 </Section>
 
-                <Rule>
-                    <div />
-                </Rule>
-
-                <ProcessSection id="how-it-works">
-                    <SectionIntro style={{ marginLeft: "auto", marginRight: "auto", textAlign: "center" }}>
-                        <Label>The process</Label>
-                        <h2>From conversation to structured insight.</h2>
-                    </SectionIntro>
-                    <ProcessGrid>
-                        <Step>
-                            <StepNumber>01</StepNumber>
-                            <h3>Connect</h3>
+                <Section id="audience">
+                    <SectionHead>
+                        <SectionKicker>
+                            <span>02</span>
+                            <strong>Audience</strong>
+                        </SectionKicker>
+                        <SectionDivider aria-hidden="true" />
+                        <SectionTitleGroup>
+                            <SectionLead>Built for teams that need decisions to survive beyond the call.</SectionLead>
+                            <SectionCopy>
+                                The workflow is focused on product, engineering, and operating conversations where
+                                follow-up accuracy matters.
+                            </SectionCopy>
+                        </SectionTitleGroup>
+                    </SectionHead>
+                    <AudienceGrid>
+                        <AudienceNote>
+                            <h3>For product and engineering conversations</h3>
                             <p>
-                                Integrate MeetAI with your calendar. The bot silently joins your scheduled
-                                calls across Zoom, Meet, or Teams, observing without interruption.
+                                EchoDesk AI is strongest when meetings contain technical context, decisions, risks,
+                                and follow-ups that need to be searched or revisited later.
                             </p>
-                        </Step>
-                        <Step $active>
-                            <StepNumber $active>02</StepNumber>
-                            <h3>Process</h3>
-                            <p>
-                                Audio is securely captured and instantly transcribed, applying context-aware
-                                formatting to structure the raw dialogue into a readable script.
-                            </p>
-                        </Step>
-                        <Step>
-                            <StepNumber>03</StepNumber>
-                            <h3>Insight</h3>
-                            <p>
-                                Within minutes of concluding, a polished executive summary, complete with
-                                action items and key decisions, is delivered to your workspace.
-                            </p>
-                        </Step>
-                    </ProcessGrid>
-                </ProcessSection>
-
-                <Rule>
-                    <div />
-                </Rule>
-
-                <Section id="pricing">
-                    <PricingHeader>
-                        <div>
-                            <Label>Membership</Label>
-                            <SectionIntro style={{ marginBottom: 0 }}>
-                                <h2>Transparent access.</h2>
-                            </SectionIntro>
-                        </div>
-                        <InsightText>Billed annually.</InsightText>
-                    </PricingHeader>
-                    <PricingGrid>
-                        <Plan $rightRule>
-                            <h3>Standard Edition</h3>
-                            <Price>
-                                <strong>$15</strong>
-                                <span>/mo</span>
-                            </Price>
-                            <PlanCopy>
-                                Essential intelligence for individuals seeking to retain meeting context.
-                            </PlanCopy>
-                            <PlanList>
-                                <PlanFeature>
-                                    <span className="material-symbols-outlined">check</span>
-                                    Unlimited transcriptions
-                                </PlanFeature>
-                                <PlanFeature>
-                                    <span className="material-symbols-outlined">check</span>
-                                    Basic AI Summaries
-                                </PlanFeature>
-                                <PlanFeature>
-                                    <span className="material-symbols-outlined">check</span>
-                                    30-day archive history
-                                </PlanFeature>
-                            </PlanList>
-                            <PlanButton type="button" onClick={onRegister}>
-                                Select Standard
-                            </PlanButton>
-                        </Plan>
-                        <Plan $active>
-                            <Recommended>Recommended</Recommended>
-                            <h3>Editorial Workspace</h3>
-                            <Price>
-                                <strong>$29</strong>
-                                <span>/mo</span>
-                            </Price>
-                            <PlanCopy>The complete suite with interactive chat and infinite retention.</PlanCopy>
-                            <PlanList>
-                                <PlanFeature>
-                                    <span className="material-symbols-outlined">check</span>
-                                    Everything in Standard
-                                </PlanFeature>
-                                <PlanFeature>
-                                    <span className="material-symbols-outlined">check</span>
-                                    Interactive Chat interface
-                                </PlanFeature>
-                                <PlanFeature>
-                                    <span className="material-symbols-outlined">check</span>
-                                    Customizable summary templates
-                                </PlanFeature>
-                                <PlanFeature>
-                                    <span className="material-symbols-outlined">check</span>
-                                    Infinite archive history
-                                </PlanFeature>
-                            </PlanList>
-                            <PlanButton type="button" $primary onClick={onRegister}>
-                                Select Workspace
-                            </PlanButton>
-                        </Plan>
-                    </PricingGrid>
+                        </AudienceNote>
+                        <AudienceList>
+                            {audiences.map((item) => (
+                                <AudienceItem key={item}>
+                                    <CheckCircle2 aria-hidden="true" />
+                                    <span>{item}</span>
+                                </AudienceItem>
+                            ))}
+                        </AudienceList>
+                    </AudienceGrid>
                 </Section>
+
+                <Section id="workflow">
+                    <SectionHead>
+                        <SectionKicker>
+                            <span>03</span>
+                            <strong>Workflow</strong>
+                        </SectionKicker>
+                        <SectionDivider aria-hidden="true" />
+                        <SectionTitleGroup>
+                            <SectionLead>From microphone input to grounded meeting intelligence.</SectionLead>
+                            <SectionCopy>
+                                Start recording, watch the transcript appear, save the meeting record, then ask
+                                questions from the same source of truth.
+                            </SectionCopy>
+                        </SectionTitleGroup>
+                    </SectionHead>
+                    <WorkflowGrid>
+                        {workflow.map((item, index) => (
+                            <Step key={item.title} $active={index === 0}>
+                                <strong>{String(index + 1).padStart(2, "0")}</strong>
+                                <h3>{item.title}</h3>
+                                <p>{item.body}</p>
+                            </Step>
+                        ))}
+                    </WorkflowGrid>
+                </Section>
+
+                <Section id="outcomes">
+                    <SectionHead>
+                        <SectionKicker>
+                            <span>04</span>
+                            <strong>Outcomes</strong>
+                        </SectionKicker>
+                        <SectionDivider aria-hidden="true" />
+                        <SectionTitleGroup>
+                            <SectionLead>Less meeting drift, more reusable context.</SectionLead>
+                            <SectionCopy>
+                                Teams can search, replay, summarize, and ask questions from the same source of truth
+                                after the meeting ends.
+                            </SectionCopy>
+                        </SectionTitleGroup>
+                    </SectionHead>
+                    <OutcomeGrid>
+                        <OutcomePanel>
+                            <h3>Every meeting becomes a source of truth</h3>
+                            <p>
+                                Instead of scattered notes and lost recordings, EchoDesk AI keeps the original transcript,
+                                compressed audio, AI summary, action items, participant access, and chat history tied
+                                to the same record.
+                            </p>
+                        </OutcomePanel>
+                        <MetricGrid>
+                            <Metric>
+                                <strong>Search</strong>
+                                <span>Ask specific questions instead of scanning full transcripts</span>
+                            </Metric>
+                            <Metric>
+                                <strong>Share</strong>
+                                <span>Give participants controlled access to meeting records</span>
+                            </Metric>
+                            <Metric>
+                                <strong>Replay</strong>
+                                <span>Stream cloud audio without storing recordings locally</span>
+                            </Metric>
+                        </MetricGrid>
+                    </OutcomeGrid>
+                </Section>
+
+                <Section id="trust">
+                    <SectionHead>
+                        <SectionKicker>
+                            <span>05</span>
+                            <strong>Trust</strong>
+                        </SectionKicker>
+                        <SectionDivider aria-hidden="true" />
+                        <SectionTitleGroup>
+                            <SectionLead>Private meeting records your team can rely on.</SectionLead>
+                            <SectionCopy>
+                                Keep the conversation, replayable audio, AI summary, actions, and grounded chat in one
+                                place after the meeting ends.
+                            </SectionCopy>
+                        </SectionTitleGroup>
+                    </SectionHead>
+                    <TrustRows>
+                        {trustSignals.map(([Icon, label, value]) => (
+                            <TrustRow key={label}>
+                                <Icon aria-hidden="true" />
+                                <strong>{label}</strong>
+                                <span>{value}</span>
+                            </TrustRow>
+                        ))}
+                    </TrustRows>
+                </Section>
+
+                <Cta>
+                    <CtaTitle>Turn your next meeting into a searchable, summarized record.</CtaTitle>
+                    <CtaText>
+                        Create a workspace, record a meeting, and keep the transcript, summary, action items, and AI
+                        chat connected.
+                    </CtaText>
+                    <HeroActions style={{ justifyContent: "center" }}>
+                        <Button type="button" $large onClick={onRegister}>
+                            Start Now
+                            <ArrowRight aria-hidden="true" />
+                        </Button>
+                        <Button type="button" $large $secondary onClick={onSignIn}>
+                            Sign In
+                            <LogIn aria-hidden="true" />
+                        </Button>
+                    </HeroActions>
+                </Cta>
             </Main>
 
             <Footer>
                 <FooterInner>
-                    <FooterBrand>MeetAI</FooterBrand>
-                    <FooterLinks>
-                        <a href="#privacy">Privacy Policy</a>
-                        <a href="#terms">Terms of Service</a>
-                        <a href="mailto:contact@meetai.studio">Contact Support</a>
-                    </FooterLinks>
-                    <span>© 2024 MeetAI Editorial. All rights reserved.</span>
+                    <BrandLink type="button" onClick={goTop}>
+                        <BrandLogo width="174px" maxHeight="46px" />
+                    </BrandLink>
+                    <span>Meeting records with transcript-aware AI chat</span>
+                    <span>Audio + summary + actions in one workspace</span>
                 </FooterInner>
             </Footer>
         </Page>

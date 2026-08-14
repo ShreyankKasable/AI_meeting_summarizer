@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { ArrowRight, AudioWaveform, Clock3, HelpCircle, History, Home, KeyRound, ShieldCheck } from "lucide-react";
+import { ArrowRight, Clock3, HelpCircle, History, Home, KeyRound, ShieldCheck } from "lucide-react";
+import BrandLogo from "common/components/BrandLogo";
 import Button from "common/components/Button";
 import Input from "common/components/Input";
 import Alert from "common/components/Alert";
@@ -157,10 +158,7 @@ const InvalidToken = () => {
             <Grid>
                 <MainCard>
                     <Brand>
-                        <BrandMark>
-                            <AudioWaveform size={18} />
-                        </BrandMark>
-                        MeetAI
+                        <BrandLogo width="178px" maxHeight="50px" />
                     </Brand>
                     <IconCircle>
                         <History size={28} />
@@ -177,7 +175,7 @@ const InvalidToken = () => {
                             <Home size={16} />
                             Home
                         </Button>
-                        <Button mode="secondary" onClick={() => window.location.assign("mailto:support@meetai.studio")}>
+                        <Button mode="secondary" onClick={() => window.location.assign("mailto:support@echodesk.ai")}>
                             <HelpCircle size={16} />
                             Contact Support
                         </Button>

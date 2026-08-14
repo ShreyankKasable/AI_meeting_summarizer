@@ -1,7 +1,8 @@
 import React from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import BrandLogo, { BRAND_NAME } from "common/components/BrandLogo";
 import { Breakpoints } from "GlobalStyle";
 
 const Screen = styled.div`
@@ -254,9 +255,8 @@ const AuthShell = ({ title, subtitle, children, footer, onBackToLanding }) => {
 
                     <Panel initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}>
                         <Header>
-                            <Brand type="button" onClick={onBackToLanding} aria-label="MeetAI home">
-                                <Sparkles aria-hidden="true" />
-                                <BrandText>MeetAI</BrandText>
+                            <Brand type="button" onClick={onBackToLanding} aria-label={`${BRAND_NAME} home`}>
+                                <BrandLogo width="190px" maxHeight="54px" />
                             </Brand>
                             <Title>{title}</Title>
                             <Subtitle>{subtitle}</Subtitle>

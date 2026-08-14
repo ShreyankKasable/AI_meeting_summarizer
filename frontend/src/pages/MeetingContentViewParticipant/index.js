@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import styled from "styled-components";
-import { ArrowLeft, AudioWaveform, Calendar, Clock3, Home, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Calendar, Clock3, Home, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
+import BrandLogo from "common/components/BrandLogo";
 import Tabs from "common/components/Tabs";
 import Badge from "common/components/Badge";
 import Button from "common/components/Button";
@@ -291,14 +292,11 @@ const MeetingContentViewParticipant = ({ token }) => {
                 <TopNav>
                     <TopNavInner>
                         <Brand>
-                            <BrandMark>
-                                <AudioWaveform size={16} />
-                            </BrandMark>
-                        MeetAI
-                    </Brand>
-                    <Badge tone="neutral">Shared meeting</Badge>
-                </TopNavInner>
-            </TopNav>
+                            <BrandLogo width="160px" maxHeight="44px" />
+                        </Brand>
+                        <Badge tone="neutral">Shared meeting</Badge>
+                    </TopNavInner>
+                </TopNav>
                 <LoadingShell>
                     <SkeletonStack>
                         <SkeletonBlock width="180px" height="16px" />
@@ -365,10 +363,7 @@ const MeetingContentViewParticipant = ({ token }) => {
             <TopNav>
                 <TopNavInner>
                     <Brand>
-                        <BrandMark>
-                            <AudioWaveform size={16} />
-                        </BrandMark>
-                        MeetAI
+                        <BrandLogo width="160px" maxHeight="44px" />
                     </Brand>
                     <RightActions>
                         <Button mode="secondary" size="small" onClick={handleBackToJoin}>
@@ -440,10 +435,7 @@ const AccessStatePage = ({ status, message, checking, onRefresh }) => {
             <TopNav>
                 <TopNavInner>
                     <Brand>
-                        <BrandMark>
-                            <AudioWaveform size={16} />
-                        </BrandMark>
-                        MeetAI
+                        <BrandLogo width="160px" maxHeight="44px" />
                     </Brand>
                     <Badge tone={copy.badgeTone}>{copy.badge}</Badge>
                 </TopNavInner>

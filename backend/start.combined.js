@@ -18,7 +18,7 @@ const startTime = Date.now();
 await initDb();
 
 logger.info('='.repeat(60));
-logger.info('AI Meeting Summarizer Backend + Worker');
+logger.info('EchoDesk AI Backend + Worker');
 logger.info(`Transcription Model: ${config.get('transcription_model')}`);
 logger.info(`Deepgram API Key: ${config.get('deepgram.api_key') ? 'SET' : 'NOT SET'}`);
 logger.info(`Euron API: ${config.get('euron.enabled') ? 'ENABLED' : 'DISABLED'}`);

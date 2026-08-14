@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
 import {
@@ -12,7 +12,7 @@ import {
     Video,
     X,
 } from "lucide-react";
-import Avatar from "common/components/Avatar";
+import BrandLogo from "common/components/BrandLogo";
 import { HOST_VIEWS, UI_EVENTS } from "common/constants";
 import { setHostView, logout } from "common/redux/actions/sessionActions";
 import { Breakpoints } from "GlobalStyle";
@@ -42,45 +42,12 @@ const SidebarInner = styled.div`
 const Brand = styled.button`
     display: flex;
     align-items: center;
-    gap: var(--Sidebar-Brand-Gap);
     width: 100%;
     padding: 0 var(--Sidebar-Brand-Padding-X);
     margin-bottom: var(--Sidebar-Section-Gap);
     border: 0;
     background: transparent;
     text-align: left;
-`;
-
-const BrandAvatar = styled(Avatar)`
-    width: var(--Sidebar-Brand-Avatar-Size);
-    height: var(--Sidebar-Brand-Avatar-Size);
-    border-color: var(--Color-Border-Default);
-`;
-
-const BrandText = styled.div`
-    min-width: 0;
-`;
-
-const BrandName = styled.h1`
-    margin: 0;
-    color: var(--Color-Text-Action);
-    font-family: var(--heading-font);
-    font-size: var(--h2-d);
-    line-height: 1.1;
-    font-weight: var(--semi-bold);
-    letter-spacing: var(--app-heading-letter-spacing);
-    text-transform: var(--app-text-transform);
-`;
-
-const BrandTag = styled.p`
-    margin: var(--Size-Gap-S) 0 0;
-    color: var(--Color-Text-Subtle);
-    font-family: var(--mono-font);
-    font-size: var(--body-4-d);
-    line-height: var(--Auth-Label-Line-Height);
-    font-weight: var(--medium);
-    letter-spacing: var(--Auth-Label-Tracking);
-    text-transform: uppercase;
 `;
 
 const CtaWrap = styled.div`
@@ -211,12 +178,6 @@ const MobileBrand = styled.button`
     color: var(--Color-Text-Action);
 `;
 
-const MobileBrandName = styled.span`
-    font-family: var(--heading-font);
-    font-size: var(--h3-d);
-    font-weight: var(--semi-bold);
-`;
-
 const MenuButton = styled.button`
     width: var(--Auth-Control-Height);
     height: var(--Auth-Control-Height);
@@ -257,11 +218,8 @@ const NavItems = ({ hostView, onSelect }) => (
 const Navbar = () => {
     const dispatch = useDispatch();
     const hostView = useSelector((state) => state.sessionDetails.hostView);
-    const user = useSelector((state) => state.sessionDetails.user);
     const [menuOpen, setMenuOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
-
-    const displayName = useMemo(() => user?.name || user?.email || "Host", [user]);
 
     const selectView = (view) => {
         dispatch(setHostView(view));
@@ -282,11 +240,7 @@ const Navbar = () => {
             <Sidebar>
                 <SidebarInner>
                     <Brand type="button" onClick={() => selectView(HOST_VIEWS.Dashboard)}>
-                        <BrandAvatar name={displayName} size="large" />
-                        <BrandText>
-                            <BrandName>MeetAI</BrandName>
-                            <BrandTag>Editorial Workspace</BrandTag>
-                        </BrandText>
+                        <BrandLogo width="214px" maxHeight="60px" />
                     </Brand>
 
                     <CtaWrap>
@@ -301,7 +255,7 @@ const Navbar = () => {
                     <SupportNav>
                         <NavItem
                             type="button"
-                            onClick={() => window.location.assign("mailto:support@meetai.studio")}
+                            onClick={() => window.location.assign("mailto:support@echodesk.ai")}
                         >
                             <HelpCircle aria-hidden="true" />
                             Help
@@ -327,8 +281,7 @@ const Navbar = () => {
 
             <MobileBar>
                 <MobileBrand type="button" onClick={() => selectView(HOST_VIEWS.Dashboard)}>
-                    <BrandAvatar name={displayName} size="default" />
-                    <MobileBrandName>MeetAI</MobileBrandName>
+                    <BrandLogo width="156px" maxHeight="42px" />
                 </MobileBrand>
                 <MenuButton type="button" onClick={() => setMenuOpen((value) => !value)} id="mobile-menu-toggle">
                     {menuOpen ? <X size={18} /> : <Menu size={18} />}

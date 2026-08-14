@@ -143,7 +143,7 @@ const Settings = () => {
                         }}
                     >
                         Configure account context, providers, integrations, notifications, and data
-                        policies for the MeetAI workspace.
+                        policies for the EchoDesk AI workspace.
                     </Body2>
                 </div>
                 {saving ? (

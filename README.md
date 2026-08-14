@@ -1,6 +1,6 @@
-# AI Meeting Summarizer
+# EchoDesk AI
 
-AI Meeting Summarizer records meetings, transcribes the audio, generates a
+EchoDesk AI records meetings, transcribes the audio, generates a
 meeting summary, extracts action items, and lets hosts or shared participants
 chat with the meeting transcript.
 
